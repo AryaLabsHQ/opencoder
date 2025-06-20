@@ -233,8 +233,21 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.showCompletionDialog = false
 		a.lastSubmittedMessage = msg.Text
 		cmd := a.app.SendChatMessage(context.Background(), msg.Text, msg.Attachments)
-		titleCmd := tea.SetWindowTitle(formatWindowTitle(msg.Text))
-		cmds = append(cmds, cmd, titleCmd)
+		cmds = append(cmds, cmd)
+		
+		// Generate title asynchronously
+		cmds = append(cmds, func() tea.Msg {
+			title, err := a.app.GenerateWindowTitle(context.Background(), msg.Text)
+			if err != nil {
+				slog.Debug("Failed to generate window title", "error", err)
+				// Fall back to truncated message
+				title = formatWindowTitle(msg.Text)
+			} else {
+				// Prepend "opencode: " to AI-generated title
+				title = "opencode: " + title
+			}
+			return app.WindowTitleMsg{Title: title}
+		})
 	case dialog.CompletionDialogCloseMsg:
 		a.showCompletionDialog = false
 	case client.EventInstallationUpdated:
@@ -288,6 +301,8 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.app.Messages = messages
 		a.lastSubmittedMessage = ""
 		cmds = append(cmds, tea.SetWindowTitle("opencode"))
+	case app.WindowTitleMsg:
+		return a, tea.SetWindowTitle(msg.Title)
 	case app.ModelSelectedMsg:
 		a.app.Provider = &msg.Provider
 		a.app.Model = &msg.Model
