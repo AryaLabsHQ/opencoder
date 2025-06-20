@@ -245,14 +245,12 @@ export namespace Session {
 
       const model = await Provider.getModel(verbProviderID, verbModelID)
 
-      const verbPrompt = `Analyze this message and come up with a single positive, cheerful and delightful verb in gerund form that's related to the message. Only include the word with no other text or punctuation. The word should have the first letter capitalized. Add some whimsy and surprise to entertain the user. Ensure the word is highly relevant to the user's message. Synonyms are welcome, including obscure words. Be careful to avoid words that might look alarming or concerning to the software engineer seeing it as a status notification, such as Connecting, Disconnecting, Retrying, Lagging, Freezing, etc.`
-
       const result = await generateText({
         model: model.language,
         messages: [
           {
             role: "system",
-            content: verbPrompt
+            content: SystemPrompt.verb()
           },
           {
             role: "user",
