@@ -50,15 +50,15 @@ type EditorComponent interface {
 }
 
 type editorComponent struct {
-	app               *app.App
-	width, height     int
-	textarea          textarea.Model
-	attachments       []app.Attachment
-	history           []string
-	historyIndex      int
-	currentMessage    string
-	spinner           spinner.Model
-	lastProcessedText string
+	app            *app.App
+	width, height  int
+	textarea       textarea.Model
+	attachments    []app.Attachment
+	history        []string
+	historyIndex   int
+	currentMessage string
+	spinner        spinner.Model
+	verbText       string
 }
 
 func (m *editorComponent) Init() tea.Cmd {
@@ -86,7 +86,6 @@ func (m *editorComponent) generateVerbCmd(text string) tea.Cmd {
 		defer cancel()
 
 		verb, err := m.app.GenerateStatusVerb(ctx, text)
-
 		if err != nil {
 			return NoOpMsg{}
 		}
@@ -107,17 +106,20 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case generateVerbTriggerMsg:
-		if cmd := m.generateVerbCmd(msg.text); cmd != nil {
-			return m, cmd
+		// Only generate if we haven't already for this text
+		if msg.text != m.verbText {
+			m.verbText = msg.text
+			if cmd := m.generateVerbCmd(msg.text); cmd != nil {
+				return m, cmd
+			}
 		}
 		return m, nil
 
 	case VerbGeneratedMsg:
 		currentText := strings.TrimSpace(m.textarea.Value())
-		if currentText == "" || msg.Text == currentText {
+		if currentText == msg.Text {
 			m.app.AddPromptVerb(msg.Verb)
 			m.app.VerbIndex = 0
-			m.lastProcessedText = msg.Text
 		}
 		return m, nil
 
@@ -138,13 +140,14 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Text != "" {
 			if m.textarea.Value() == "" {
 				m.app.ResetPromptVerbs()
+				m.verbText = ""
 			}
 
 			m.textarea, cmd = m.textarea.Update(msg)
 			cmds = append(cmds, cmd)
 
 			currentText := strings.TrimSpace(m.textarea.Value())
-			if currentText != m.lastProcessedText && len(currentText) >= 3 {
+			if len(currentText) >= 3 {
 				cmds = append(cmds, tea.Tick(800*time.Millisecond, func(t time.Time) tea.Msg {
 					if strings.TrimSpace(m.textarea.Value()) == currentText {
 						return generateVerbTriggerMsg{text: currentText}
@@ -273,7 +276,9 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
-	needVerbGeneration := value != m.lastProcessedText
+
+	// Check if we need to generate verb before clearing
+	needVerb := len(value) >= 3 && value != m.verbText
 
 	updated, cmd := m.Clear()
 	m = updated.(*editorComponent)
@@ -282,14 +287,13 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 	attachments := m.attachments
 	m.attachments = []app.Attachment{}
 
-	m.app.ResetPromptVerbs()
-
 	cmds = append(cmds, util.CmdHandler(app.SendMsg{
 		Text:        value,
 		Attachments: attachments,
 	}))
 
-	if needVerbGeneration {
+	// Generate verb for submitted text only if we haven't already
+	if needVerb {
 		if verbCmd := m.generateVerbCmd(value); verbCmd != nil {
 			cmds = append(cmds, verbCmd)
 		}
@@ -300,7 +304,7 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 
 func (m *editorComponent) Clear() (tea.Model, tea.Cmd) {
 	m.textarea.Reset()
-	m.lastProcessedText = ""
+	m.verbText = ""
 	return m, nil
 }
 
@@ -415,12 +419,12 @@ func NewEditorComponent(app *app.App) EditorComponent {
 	ta := createTextArea(nil)
 
 	return &editorComponent{
-		app:               app,
-		textarea:          ta,
-		history:           []string{},
-		historyIndex:      0,
-		currentMessage:    "",
-		spinner:           s,
-		lastProcessedText: "",
+		app:            app,
+		textarea:       ta,
+		history:        []string{},
+		historyIndex:   0,
+		currentMessage: "",
+		spinner:        s,
+		verbText:       "",
 	}
 }
