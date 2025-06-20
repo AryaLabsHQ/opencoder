@@ -215,6 +215,65 @@ export namespace Session {
     })
   }
 
+  export async function generateStatusVerb(userMessage: string, providerID: string): Promise<string> {
+    const log = Log.create({ service: "verb-generator" })
+    const fallback = "Processing"
+    try {
+      let verbModelID: string | undefined
+      let verbProviderID: string | undefined
+      switch (providerID) {
+        case "anthropic":
+          verbModelID = "claude-3-5-haiku-20241022"
+          verbProviderID = "anthropic"
+          break
+        case "openai":
+          verbModelID = "gpt-4o-mini"
+          verbProviderID = "openai"
+          break
+        default:
+      }
+
+      if (!verbModelID || !verbProviderID) {
+        return fallback
+      }
+
+      try {
+        await Provider.getModel(verbProviderID, verbModelID)
+      } catch {
+        return fallback
+      }
+
+      const model = await Provider.getModel(verbProviderID, verbModelID)
+
+      const verbPrompt = `Analyze this message and come up with a single positive, cheerful and delightful verb in gerund form that's related to the message. Only include the word with no other text or punctuation. The word should have the first letter capitalized. Add some whimsy and surprise to entertain the user. Ensure the word is highly relevant to the user's message. Synonyms are welcome, including obscure words. Be careful to avoid words that might look alarming or concerning to the software engineer seeing it as a status notification, such as Connecting, Disconnecting, Retrying, Lagging, Freezing, etc.`
+
+      const result = await generateText({
+        model: model.language,
+        messages: [
+          {
+            role: "system",
+            content: verbPrompt
+          },
+          {
+            role: "user",
+            content: userMessage
+          }],
+        maxTokens: 10,
+      })
+
+      const verb = result.text?.trim() || "Processing"
+
+      if (verb.length > 20 || verb.includes(' ') || !/^[A-Z][a-z]+ing$/.test(verb)) {
+        return fallback
+      }
+
+      return verb
+    } catch (error) {
+      log.error("Failed to generate status verb", { error })
+      return fallback
+    }
+  }
+
   export async function chat(input: {
     sessionID: string
     providerID: string
@@ -239,7 +298,7 @@ export namespace Session {
       if (
         model.info.limit.context &&
         tokens >
-          (model.info.limit.context - (model.info.limit.output ?? 0)) * 0.9
+        (model.info.limit.context - (model.info.limit.output ?? 0)) * 0.9
       ) {
         await summarize({
           sessionID: input.sessionID,
@@ -287,7 +346,7 @@ export namespace Session {
               draft.title = result.text
             })
         })
-        .catch(() => {})
+        .catch(() => { })
     }
     const msg: Message.Info = {
       role: "user",
@@ -551,7 +610,7 @@ export namespace Session {
           case "tool-call": {
             const [match] = next.parts.flatMap((p) =>
               p.type === "tool-invocation" &&
-              p.toolInvocation.toolCallId === value.toolCallId
+                p.toolInvocation.toolCallId === value.toolCallId
                 ? [p]
                 : [],
             )
