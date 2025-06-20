@@ -422,6 +422,54 @@
         }
       }
     },
+    "/session_generate_verb": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Generated status verb",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "verb": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "verb"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postSession_generate_verb",
+        "parameters": [],
+        "description": "Generate a contextual status verb for typing preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "providerID": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text",
+                  "providerID"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/provider_list": {
       "post": {
         "responses": {
@@ -1535,7 +1583,8 @@
             },
             "description": "MCP (Model Context Protocol) server configurations"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Config.Keybinds": {
         "type": "object",
@@ -1648,7 +1697,8 @@
             "type": "string",
             "description": "Exit the application"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Provider.Info": {
         "type": "object",
@@ -1776,7 +1826,8 @@
         "required": [
           "type",
           "command"
-        ]
+        ],
+        "additionalProperties": false
       },
       "Config.McpRemote": {
         "type": "object",
@@ -1794,7 +1845,8 @@
         "required": [
           "type",
           "url"
-        ]
+        ],
+        "additionalProperties": false
       },
       "Error": {
         "type": "object",
