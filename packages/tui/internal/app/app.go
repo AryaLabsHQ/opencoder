@@ -20,17 +20,20 @@ import (
 var RootPath string
 
 type App struct {
-	Info      client.AppInfo
-	Version   string
-	StatePath string
-	Config    *client.ConfigInfo
-	Client    *client.ClientWithResponses
-	State     *config.State
-	Provider  *client.ProviderInfo
-	Model     *client.ModelInfo
-	Session   *client.SessionInfo
-	Messages  []client.MessageInfo
-	Commands  commands.CommandRegistry
+	Info              client.AppInfo
+	Version           string
+	StatePath         string
+	Config            *client.ConfigInfo
+	Client            *client.ClientWithResponses
+	State             *config.State
+	Provider          *client.ProviderInfo
+	Model             *client.ModelInfo
+	Session           *client.SessionInfo
+	Messages          []client.MessageInfo
+	Commands          commands.CommandRegistry
+	CurrentStatusVerb string
+	VerbHistory       []string
+	VerbCycleIndex    int
 }
 
 type SessionSelectedMsg = *client.SessionInfo
@@ -92,15 +95,18 @@ func New(
 	slog.Debug("Loaded config", "config", configInfo)
 
 	app := &App{
-		Info:      appInfo,
-		Version:   version,
-		StatePath: appStatePath,
-		Config:    configInfo,
-		State:     appState,
-		Client:    httpClient,
-		Session:   &client.SessionInfo{},
-		Messages:  []client.MessageInfo{},
-		Commands:  commands.LoadFromConfig(configInfo),
+		Info:              appInfo,
+		Version:           version,
+		StatePath:         appStatePath,
+		Config:            configInfo,
+		State:             appState,
+		Client:            httpClient,
+		Session:           &client.SessionInfo{},
+		Messages:          []client.MessageInfo{},
+		Commands:          commands.LoadFromConfig(configInfo),
+		CurrentStatusVerb: "Working",
+		VerbHistory:       []string{},
+		VerbCycleIndex:    0,
 	}
 
 	return app, nil
@@ -195,6 +201,29 @@ func (a *App) IsBusy() bool {
 
 	lastMessage := a.Messages[len(a.Messages)-1]
 	return lastMessage.Metadata.Time.Completed == nil
+}
+
+func (a *App) GetStatusVerb() string {
+	return a.CurrentStatusVerb
+}
+
+func (a *App) AddVerbToHistory(verb string) {
+	if len(a.VerbHistory) == 0 || a.VerbHistory[len(a.VerbHistory)-1] != verb {
+		a.VerbHistory = append(a.VerbHistory, verb)
+		if len(a.VerbHistory) > 10 {
+			a.VerbHistory = a.VerbHistory[len(a.VerbHistory)-10:]
+		}
+	}
+}
+
+func (a *App) CycleToNextVerb() {
+	if len(a.VerbHistory) == 0 {
+		return
+	}
+
+	a.VerbCycleIndex = (a.VerbCycleIndex + 1) % len(a.VerbHistory)
+	reverseIndex := len(a.VerbHistory) - 1 - a.VerbCycleIndex
+	a.CurrentStatusVerb = a.VerbHistory[reverseIndex]
 }
 
 func (a *App) SaveState() {
@@ -387,6 +416,28 @@ func (a *App) ListProviders(ctx context.Context) ([]client.ProviderInfo, error) 
 
 	providers := *resp.JSON200
 	return providers.Providers, nil
+}
+
+func (a *App) GenerateStatusVerb(ctx context.Context, text string) (string, error) {
+	if a.Provider == nil {
+		return "Working", fmt.Errorf("no provider configured")
+	}
+
+	requestBody := client.PostSessionGenerateVerbJSONRequestBody{
+		Text:       text,
+		ProviderID: a.Provider.Id,
+	}
+
+	response, err := a.Client.PostSessionGenerateVerbWithResponse(ctx, requestBody)
+	if err != nil {
+		return "Working", err
+	}
+
+	if response.StatusCode() != 200 || response.JSON200 == nil {
+		return "Working", fmt.Errorf("failed to generate verb: status %d", response.StatusCode())
+	}
+
+	return response.JSON200.Verb, nil
 }
 
 // func (a *App) loadCustomKeybinds() {
