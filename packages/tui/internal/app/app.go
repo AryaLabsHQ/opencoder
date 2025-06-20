@@ -20,20 +20,19 @@ import (
 var RootPath string
 
 type App struct {
-	Info              client.AppInfo
-	Version           string
-	StatePath         string
-	Config            *client.ConfigInfo
-	Client            *client.ClientWithResponses
-	State             *config.State
-	Provider          *client.ProviderInfo
-	Model             *client.ModelInfo
-	Session           *client.SessionInfo
-	Messages          []client.MessageInfo
-	Commands          commands.CommandRegistry
-	CurrentStatusVerb string
-	VerbHistory       []string
-	VerbCycleIndex    int
+	Info        client.AppInfo
+	Version     string
+	StatePath   string
+	Config      *client.ConfigInfo
+	Client      *client.ClientWithResponses
+	State       *config.State
+	Provider    *client.ProviderInfo
+	Model       *client.ModelInfo
+	Session     *client.SessionInfo
+	Messages    []client.MessageInfo
+	Commands    commands.CommandRegistry
+	PromptVerbs []string
+	VerbIndex   int
 }
 
 type SessionSelectedMsg = *client.SessionInfo
@@ -95,18 +94,17 @@ func New(
 	slog.Debug("Loaded config", "config", configInfo)
 
 	app := &App{
-		Info:              appInfo,
-		Version:           version,
-		StatePath:         appStatePath,
-		Config:            configInfo,
-		State:             appState,
-		Client:            httpClient,
-		Session:           &client.SessionInfo{},
-		Messages:          []client.MessageInfo{},
-		Commands:          commands.LoadFromConfig(configInfo),
-		CurrentStatusVerb: "Working",
-		VerbHistory:       []string{},
-		VerbCycleIndex:    0,
+		Info:        appInfo,
+		Version:     version,
+		StatePath:   appStatePath,
+		Config:      configInfo,
+		State:       appState,
+		Client:      httpClient,
+		Session:     &client.SessionInfo{},
+		Messages:    []client.MessageInfo{},
+		Commands:    commands.LoadFromConfig(configInfo),
+		PromptVerbs: []string{},
+		VerbIndex:   0,
 	}
 
 	return app, nil
@@ -204,26 +202,35 @@ func (a *App) IsBusy() bool {
 }
 
 func (a *App) GetStatusVerb() string {
-	return a.CurrentStatusVerb
+	if len(a.PromptVerbs) == 0 {
+		return "Working"
+	}
+	if a.VerbIndex >= len(a.PromptVerbs) {
+		a.VerbIndex = 0
+	}
+	reverseIndex := len(a.PromptVerbs) - 1 - a.VerbIndex
+	return a.PromptVerbs[reverseIndex]
 }
 
-func (a *App) AddVerbToHistory(verb string) {
-	if len(a.VerbHistory) == 0 || a.VerbHistory[len(a.VerbHistory)-1] != verb {
-		a.VerbHistory = append(a.VerbHistory, verb)
-		if len(a.VerbHistory) > 10 {
-			a.VerbHistory = a.VerbHistory[len(a.VerbHistory)-10:]
+func (a *App) AddPromptVerb(verb string) {
+	if len(a.PromptVerbs) == 0 || a.PromptVerbs[len(a.PromptVerbs)-1] != verb {
+		a.PromptVerbs = append(a.PromptVerbs, verb)
+		if len(a.PromptVerbs) > 10 {
+			a.PromptVerbs = a.PromptVerbs[len(a.PromptVerbs)-10:]
 		}
 	}
 }
 
 func (a *App) CycleToNextVerb() {
-	if len(a.VerbHistory) == 0 {
+	if len(a.PromptVerbs) == 0 {
 		return
 	}
+	a.VerbIndex = (a.VerbIndex + 1) % len(a.PromptVerbs)
+}
 
-	a.VerbCycleIndex = (a.VerbCycleIndex + 1) % len(a.VerbHistory)
-	reverseIndex := len(a.VerbHistory) - 1 - a.VerbCycleIndex
-	a.CurrentStatusVerb = a.VerbHistory[reverseIndex]
+func (a *App) ResetPromptVerbs() {
+	a.PromptVerbs = []string{}
+	a.VerbIndex = 0
 }
 
 func (a *App) SaveState() {

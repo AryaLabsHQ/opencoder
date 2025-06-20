@@ -115,9 +115,8 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case VerbGeneratedMsg:
 		currentText := strings.TrimSpace(m.textarea.Value())
 		if currentText == "" || msg.Text == currentText {
-			m.app.CurrentStatusVerb = msg.Verb
-			m.app.AddVerbToHistory(msg.Verb)
-			m.app.VerbCycleIndex = 0
+			m.app.AddPromptVerb(msg.Verb)
+			m.app.VerbIndex = 0
 			m.lastProcessedText = msg.Text
 		}
 		return m, nil
@@ -137,9 +136,8 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		// Maximize editor responsiveness for printable characters
 		if msg.Text != "" {
-			if m.textarea.Value() == "" && m.app.CurrentStatusVerb != "Working" {
-				m.app.CurrentStatusVerb = "Working"
-				m.app.VerbCycleIndex = 0
+			if m.textarea.Value() == "" {
+				m.app.ResetPromptVerbs()
 			}
 
 			m.textarea, cmd = m.textarea.Update(msg)
@@ -270,7 +268,6 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if len(value) > 0 && value[len(value)-1] == '\\' {
-		// If the last character is a backslash, remove it and add a newline
 		m.textarea.SetValue(value[:len(value)-1] + "\n")
 		return m, nil
 	}
@@ -283,19 +280,14 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	attachments := m.attachments
+	m.attachments = []app.Attachment{}
 
-	// Save to history if not empty and not a duplicate of the last entry
-	if value != "" {
-		if len(m.history) == 0 || m.history[len(m.history)-1] != value {
-			m.history = append(m.history, value)
-		}
-		m.historyIndex = len(m.history)
-		m.currentMessage = ""
-	}
+	m.app.ResetPromptVerbs()
 
-	m.attachments = nil
-
-	cmds = append(cmds, util.CmdHandler(app.SendMsg{Text: value, Attachments: attachments}))
+	cmds = append(cmds, util.CmdHandler(app.SendMsg{
+		Text:        value,
+		Attachments: attachments,
+	}))
 
 	if needVerbGeneration {
 		if verbCmd := m.generateVerbCmd(value); verbCmd != nil {
