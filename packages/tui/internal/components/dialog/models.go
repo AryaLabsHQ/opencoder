@@ -3,6 +3,7 @@ package dialog
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -30,6 +31,14 @@ const (
 	TurboModelPane
 )
 
+type SortMode int
+
+const (
+	SortByName SortMode = iota
+	SortByLastUpdated
+	SortByReleaseDate
+)
+
 // ModelDialog interface for the model selection dialog
 type ModelDialog interface {
 	layout.Modal
@@ -52,6 +61,7 @@ type modelDialog struct {
 
 	// UI state
 	activePane      ActivePane
+	sortMode        SortMode
 	width           int
 	height          int
 	hScrollPossible bool
@@ -65,6 +75,7 @@ type modelKeyMap struct {
 	Left   key.Binding
 	Right  key.Binding
 	Tab    key.Binding
+	Sort   key.Binding
 	Enter  key.Binding
 	Escape key.Binding
 }
@@ -89,6 +100,10 @@ var modelKeys = modelKeyMap{
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "switch pane"),
+	),
+	Sort: key.NewBinding(
+		key.WithKeys("s"),
+		key.WithHelp("s", "change sort mode"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
@@ -172,6 +187,8 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, modelKeys.Tab):
 			m.switchPane()
+		case key.Matches(msg, modelKeys.Sort):
+			m.cycleSortMode()
 		case key.Matches(msg, modelKeys.Enter):
 			// Get selected models from both panes
 			mainModels := m.getModelsForProvider(m.mainProvider)
@@ -206,13 +223,79 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []client.ModelInfo {
-	var models []client.ModelInfo
-	for _, model := range provider.Models {
-		models = append(models, model)
+	models := slices.Collect(maps.Values(provider.Models))
+	
+	switch m.sortMode {
+	case SortByLastUpdated:
+		slices.SortFunc(models, func(a, b client.ModelInfo) int {
+			// Sort by last_updated date (newest first)
+			aDate := m.getModelDate(a, true)
+			bDate := m.getModelDate(b, true)
+			
+			// Models without dates go to the end
+			if aDate == "" && bDate == "" {
+				if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
+					return cmp
+				}
+				return strings.Compare(a.Id, b.Id)
+			}
+			if aDate == "" {
+				return 1
+			}
+			if bDate == "" {
+				return -1
+			}
+			
+			// Compare dates (reverse for newest first)
+			if cmp := strings.Compare(bDate, aDate); cmp != 0 {
+				return cmp
+			}
+			
+			// If dates are equal, use name as stable tiebreaker
+			if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
+				return cmp
+			}
+			// Final tiebreaker: use ID for absolute stability
+			return strings.Compare(a.Id, b.Id)
+		})
+	case SortByReleaseDate:
+		slices.SortFunc(models, func(a, b client.ModelInfo) int {
+			// Sort by release_date (newest first)
+			aDate := m.getModelDate(a, false)
+			bDate := m.getModelDate(b, false)
+			
+			// Models without dates go to the end
+			if aDate == "" && bDate == "" {
+				if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
+					return cmp
+				}
+				return strings.Compare(a.Id, b.Id)
+			}
+			if aDate == "" {
+				return 1
+			}
+			if bDate == "" {
+				return -1
+			}
+			
+			// Compare dates (reverse for newest first)
+			if cmp := strings.Compare(bDate, aDate); cmp != 0 {
+				return cmp
+			}
+			
+			// If dates are equal, use name as stable tiebreaker
+			if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
+				return cmp
+			}
+			// Final tiebreaker: use ID for absolute stability
+			return strings.Compare(a.Id, b.Id)
+		})
+	default: // SortByName
+		slices.SortFunc(models, func(a, b client.ModelInfo) int {
+			return strings.Compare(a.Name, b.Name)
+		})
 	}
-	slices.SortFunc(models, func(a, b client.ModelInfo) int {
-		return strings.Compare(a.Name, b.Name)
-	})
+	
 	return models
 }
 
@@ -296,7 +379,7 @@ func (m *modelDialog) switchProvider(offset int) {
 		m.mainSelectedIdx = 0
 		m.mainScrollOffset = 0
 		// Update modal title like the original when switching main provider
-		m.modal.SetTitle(fmt.Sprintf("Select Models - %s", m.mainProvider.Name))
+		m.updateModalTitle()
 	} else {
 		currentIdx := 0
 		for i, p := range m.availableProviders {
@@ -323,6 +406,43 @@ func (m *modelDialog) switchPane() {
 	} else {
 		m.activePane = MainModelPane
 	}
+}
+
+func (m *modelDialog) cycleSortMode() {
+	m.sortMode = (m.sortMode + 1) % 3
+	// Reset scroll positions when changing sort mode
+	m.mainSelectedIdx = 0
+	m.mainScrollOffset = 0
+	m.turboSelectedIdx = 0
+	m.turboScrollOffset = 0
+	// Update title to show new sort mode
+	m.updateModalTitle()
+}
+
+func (m *modelDialog) getModelDate(model client.ModelInfo, useLastUpdated bool) string {
+	if useLastUpdated && model.LastUpdated != nil {
+		return *model.LastUpdated
+	}
+	if model.ReleaseDate != nil {
+		return *model.ReleaseDate
+	}
+	return ""
+}
+
+func (m *modelDialog) getSortModeString() string {
+	switch m.sortMode {
+	case SortByLastUpdated:
+		return "Last Updated"
+	case SortByReleaseDate:
+		return "Release Date"
+	default:
+		return "Name"
+	}
+}
+
+func (m *modelDialog) updateModalTitle() {
+	title := fmt.Sprintf("Select Models - %s (Sort: %s)", m.mainProvider.Name, m.getSortModeString())
+	m.modal.SetTitle(title)
 }
 
 func (m *modelDialog) View() string {
@@ -548,7 +668,9 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 
 	// Add tab hint
 	if indicator != "" {
-		indicator += " • [Tab] Switch pane"
+		indicator += " • [Tab] Switch pane • [S] Sort"
+	} else {
+		indicator = "[S] Sort"
 	}
 	
 	// Add emoji legend
@@ -625,13 +747,13 @@ func NewModelDialog(app *app.App) ModelDialog {
 		turboProvider:      turboProvider,
 		hScrollPossible:    len(availableProviders) > 1,
 		activePane:         MainModelPane,
-		modal: modal.New(
-			modal.WithTitle("Select Models"),
-		),
+		sortMode:           SortByName,
+		modal:              modal.New(modal.WithTitle("Select Models")),
 	}
 
 	// Initialize will set up the selections based on current models
 	dialog.Init()
+	dialog.updateModalTitle()
 
 	return dialog
 }
