@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"log/slog"
@@ -22,24 +21,29 @@ import (
 var RootPath string
 
 type App struct {
-	Info      client.AppInfo
-	Version   string
-	StatePath string
-	Config    *client.ConfigInfo
-	Client    *client.ClientWithResponses
-	State     *config.State
-	Provider  *client.ProviderInfo
-	Model     *client.ModelInfo
-	Session   *client.SessionInfo
-	Messages  []client.MessageInfo
-	Commands  commands.CommandRegistry
+	Info          client.AppInfo
+	Version       string
+	StatePath     string
+	Config        *client.ConfigInfo
+	Client        *client.ClientWithResponses
+	State         *config.State
+	MainProvider  *client.ProviderInfo
+	MainModel     *client.ModelInfo
+	LightProvider *client.ProviderInfo
+	LightModel    *client.ModelInfo
+	Session       *client.SessionInfo
+	Messages      []client.MessageInfo
+	Commands      commands.CommandRegistry
 }
 
 type SessionSelectedMsg = *client.SessionInfo
 type ModelSelectedMsg struct {
-	Provider client.ProviderInfo
-	Model    client.ModelInfo
+	MainProvider        client.ProviderInfo
+	MainModel           client.ModelInfo
+	LightweightProvider client.ProviderInfo
+	LightweightModel    client.ModelInfo
 }
+
 type SessionClearedMsg struct{}
 type CompactSessionMsg struct{}
 type SendMsg struct {
@@ -88,9 +92,10 @@ func New(
 		appState.Theme = *configInfo.Theme
 	}
 	if configInfo.Model != nil {
-		splits := strings.Split(*configInfo.Model, "/")
-		appState.Provider = splits[0]
-		appState.Model = strings.Join(splits[1:], "/")
+		appState.MainProvider, appState.MainModel = util.ParseModel(*configInfo.Model)
+	}
+	if configInfo.LightweightModel != nil {
+		appState.LightProvider, appState.LightModel = util.ParseModel(*configInfo.LightweightModel)
 	}
 
 	// Load themes from all directories
@@ -167,11 +172,11 @@ func (a *App) InitializeProvider() tea.Cmd {
 		var currentProvider *client.ProviderInfo
 		var currentModel *client.ModelInfo
 		for _, provider := range providers {
-			if provider.Id == a.State.Provider {
+			if provider.Id == a.State.MainProvider {
 				currentProvider = &provider
 
 				for _, model := range provider.Models {
-					if model.Id == a.State.Model {
+					if model.Id == a.State.MainModel {
 						currentModel = &model
 					}
 				}
@@ -182,10 +187,40 @@ func (a *App) InitializeProvider() tea.Cmd {
 			currentModel = defaultModel
 		}
 
+		// Initialize lightweight model based on config or defaults
+		lightProvider := currentProvider
+		lightModel := currentModel
+
+		if a.State.LightProvider != "" && a.State.LightModel != "" {
+			lightProviderID, lightModelID := a.State.LightProvider, a.State.LightModel
+			// Find provider/model
+			for _, provider := range providers {
+				if provider.Id == lightProviderID {
+					lightProvider = &provider
+					for _, model := range provider.Models {
+						if model.Id == lightModelID {
+							lightModel = &model
+							break
+						}
+					}
+					break
+				}
+			}
+		} else {
+			// Try to find a default lightweight model for the provider
+			lightModel = getDefaultLightweightModel(*currentProvider)
+			if lightModel == nil {
+				// Fall back to the main model
+				lightModel = currentModel
+			}
+		}
+
 		// TODO: handle no provider or model setup, yet
 		return ModelSelectedMsg{
-			Provider: *currentProvider,
-			Model:    *currentModel,
+			MainProvider:        *currentProvider,
+			MainModel:           *currentModel,
+			LightweightProvider: *lightProvider,
+			LightweightModel:    *lightModel,
 		}
 	}
 }
@@ -200,6 +235,20 @@ func getDefaultModel(response *client.PostProviderListResponse, provider client.
 		}
 	}
 	return nil
+}
+
+func getDefaultLightweightModel(provider client.ProviderInfo) *client.ModelInfo {
+	// Select the cheapest model whose Cost.Output <= 4
+	var selected *client.ModelInfo
+	for _, model := range provider.Models {
+		if model.Cost.Output <= 4 {
+			if selected == nil || model.Cost.Output < selected.Cost.Output {
+				tmp := model // create copy to take address of loop variable safely
+				selected = &tmp
+			}
+		}
+	}
+	return selected
 }
 
 type Attachment struct {
@@ -240,8 +289,8 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 	go func() {
 		response, err := a.Client.PostSessionInitialize(ctx, client.PostSessionInitializeJSONRequestBody{
 			SessionID:  a.Session.Id,
-			ProviderID: a.Provider.Id,
-			ModelID:    a.Model.Id,
+			ProviderID: a.MainProvider.Id,
+			ModelID:    a.MainModel.Id,
 		})
 		if err != nil {
 			slog.Error("Failed to initialize project", "error", err)
@@ -260,8 +309,8 @@ func (a *App) CompactSession(ctx context.Context) tea.Cmd {
 	go func() {
 		response, err := a.Client.PostSessionSummarizeWithResponse(ctx, client.PostSessionSummarizeJSONRequestBody{
 			SessionID:  a.Session.Id,
-			ProviderID: a.Provider.Id,
-			ModelID:    a.Model.Id,
+			ProviderID: a.MainProvider.Id,
+			ModelID:    a.MainModel.Id,
 		})
 		if err != nil {
 			slog.Error("Failed to compact session", "error", err)
@@ -338,8 +387,8 @@ func (a *App) SendChatMessage(ctx context.Context, text string, attachments []At
 		response, err := a.Client.PostSessionChat(ctx, client.PostSessionChatJSONRequestBody{
 			SessionID:  a.Session.Id,
 			Parts:      parts,
-			ProviderID: a.Provider.Id,
-			ModelID:    a.Model.Id,
+			ProviderID: a.MainProvider.Id,
+			ModelID:    a.MainModel.Id,
 		})
 		if err != nil {
 			errormsg := fmt.Sprintf("failed to send message: %v", err)
