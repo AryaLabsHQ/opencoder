@@ -54,6 +54,9 @@ type ConfigInfo struct {
 	DisabledProviders *[]string       `json:"disabled_providers,omitempty"`
 	Keybinds          *ConfigKeybinds `json:"keybinds,omitempty"`
 
+	// LightweightModel Lightweight model to use for tasks like window title generation
+	LightweightModel *string `json:"lightweight_model,omitempty"`
+
 	// Mcp MCP (Model Context Protocol) server configurations
 	Mcp *map[string]ConfigInfo_Mcp_AdditionalProperties `json:"mcp,omitempty"`
 
@@ -587,7 +590,7 @@ type PostSessionSummarizeJSONRequestBody PostSessionSummarizeJSONBody
 // PostSessionUnshareJSONRequestBody defines body for PostSessionUnshare for application/json ContentType.
 type PostSessionUnshareJSONRequestBody PostSessionUnshareJSONBody
 
-// Getter for additional properties for MessageMetadata_Tool_AdditionalProperties. Returns the specified
+// Getter for additional properties for MessageInfo_Metadata_Tool_AdditionalProperties. Returns the specified
 // element and whether it was found
 func (a MessageMetadata_Tool_AdditionalProperties) Get(fieldName string) (value interface{}, found bool) {
 	if a.AdditionalProperties != nil {

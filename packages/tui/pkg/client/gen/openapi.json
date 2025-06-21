@@ -1524,6 +1524,10 @@
             "type": "string",
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2"
           },
+          "lightweight_model": {
+            "type": "string",
+            "description": "Lightweight model to use for tasks like window title generation"
+          },
           "provider": {
             "type": "object",
             "additionalProperties": {
