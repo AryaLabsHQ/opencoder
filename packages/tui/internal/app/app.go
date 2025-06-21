@@ -307,10 +307,18 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 
 func (a *App) CompactSession(ctx context.Context) tea.Cmd {
 	go func() {
+		// Use lightweight model for summarization if available
+		providerID := a.MainProvider.Id
+		modelID := a.MainModel.Id
+		if a.LightProvider != nil && a.LightModel != nil {
+			providerID = a.LightProvider.Id
+			modelID = a.LightModel.Id
+		}
+
 		response, err := a.Client.PostSessionSummarizeWithResponse(ctx, client.PostSessionSummarizeJSONRequestBody{
 			SessionID:  a.Session.Id,
-			ProviderID: a.MainProvider.Id,
-			ModelID:    a.MainModel.Id,
+			ProviderID: providerID,
+			ModelID:    modelID,
 		})
 		if err != nil {
 			slog.Error("Failed to compact session", "error", err)
