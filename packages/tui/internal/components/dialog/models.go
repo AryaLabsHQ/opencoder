@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -9,10 +10,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/components/list"
 	"github.com/sst/opencode/internal/components/modal"
 	"github.com/sst/opencode/internal/layout"
-
 	"github.com/sst/opencode/internal/theme"
 	"github.com/sst/opencode/internal/util"
 	"github.com/sst/opencode/pkg/client"
@@ -22,7 +21,6 @@ const (
 	numVisibleModels = 10
 	paneWidth        = 40
 	totalDialogWidth = paneWidth*2 + 3 // 2 panes + divider
-	maxDialogWidth   = 60
 )
 
 type ActivePane int
@@ -40,27 +38,29 @@ type ModelDialog interface {
 type modelDialog struct {
 	app                *app.App
 	availableProviders []client.ProviderInfo
-
+	
 	// Main model selection
-	mainProvider    client.ProviderInfo
-	mainModelList   list.List[list.StringItem]
-	mainHScrollOffset int
-
+	mainProvider      client.ProviderInfo
+	mainSelectedIdx   int
+	mainScrollOffset  int
+	
 	// Lightweight model selection
-	lightProvider    client.ProviderInfo
-	lightModelList   list.List[list.StringItem]
-	lightHScrollOffset int
-
+	lightProvider      client.ProviderInfo
+	lightSelectedIdx   int
+	lightScrollOffset  int
+	
 	// UI state
 	activePane      ActivePane
 	width           int
 	height          int
 	hScrollPossible bool
-
+	
 	modal *modal.Modal
 }
 
 type modelKeyMap struct {
+	Up     key.Binding
+	Down   key.Binding
 	Left   key.Binding
 	Right  key.Binding
 	Tab    key.Binding
@@ -69,6 +69,14 @@ type modelKeyMap struct {
 }
 
 var modelKeys = modelKeyMap{
+	Up: key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("↑", "previous model"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("↓", "next model"),
+	),
 	Left: key.NewBinding(
 		key.WithKeys("left", "h"),
 		key.WithHelp("←", "previous provider"),
@@ -92,8 +100,6 @@ var modelKeys = modelKeyMap{
 }
 
 func (m *modelDialog) Init() tea.Cmd {
-	m.setupModelsForProvider(m.mainProvider.Id, MainModelPane)
-	m.setupModelsForProvider(m.lightProvider.Id, LightweightModelPane)
 	return nil
 }
 
@@ -101,49 +107,27 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, modelKeys.Up):
+			m.moveSelectionUp()
+		case key.Matches(msg, modelKeys.Down):
+			m.moveSelectionDown()
 		case key.Matches(msg, modelKeys.Left):
 			if m.hScrollPossible {
 				m.switchProvider(-1)
 			}
-			return m, nil
 		case key.Matches(msg, modelKeys.Right):
 			if m.hScrollPossible {
 				m.switchProvider(1)
 			}
-			return m, nil
 		case key.Matches(msg, modelKeys.Tab):
-			// Switch between main and lightweight model panes
-			if m.activePane == MainModelPane {
-				m.activePane = LightweightModelPane
-			} else {
-				m.activePane = MainModelPane
-			}
-			return m, nil
+			m.switchPane()
 		case key.Matches(msg, modelKeys.Enter):
 			// Get selected models from both panes
-			mainSelectedItem, _ := m.mainModelList.GetSelectedItem()
-			lightSelectedItem, _ := m.lightModelList.GetSelectedItem()
+			mainModels := m.getModelsForProvider(m.mainProvider)
+			lightModels := m.getModelsForProvider(m.lightProvider)
 			
-			mainModels := m.modelsForProvider(m.mainProvider)
-			lightModels := m.modelsForProvider(m.lightProvider)
-			
-			var mainSelectedModel, lightSelectedModel client.ModelInfo
-			
-			// Find main model
-			for _, model := range mainModels {
-				if model.Name == string(mainSelectedItem) {
-					mainSelectedModel = model
-					break
-				}
-			}
-			
-			// Find lightweight model
-			for _, model := range lightModels {
-				if model.Name == string(lightSelectedItem) {
-					lightSelectedModel = model
-					break
-				}
-			}
+			mainSelectedModel := mainModels[m.mainSelectedIdx]
+			lightSelectedModel := lightModels[m.lightSelectedIdx]
 			
 			return m, tea.Sequence(
 				util.CmdHandler(modal.CloseModalMsg{}),
@@ -163,19 +147,10 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 	}
 
-	// Update the active list component
-	if m.activePane == MainModelPane {
-		updatedList, cmd := m.mainModelList.Update(msg)
-		m.mainModelList = updatedList.(list.List[list.StringItem])
-		return m, cmd
-	} else {
-		updatedList, cmd := m.lightModelList.Update(msg)
-		m.lightModelList = updatedList.(list.List[list.StringItem])
-		return m, cmd
-	}
+	return m, nil
 }
 
-func (m *modelDialog) modelsForProvider(provider client.ProviderInfo) []client.ModelInfo {
+func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []client.ModelInfo {
 	var models []client.ModelInfo
 	for _, model := range provider.Models {
 		models = append(models, model)
@@ -186,161 +161,311 @@ func (m *modelDialog) modelsForProvider(provider client.ProviderInfo) []client.M
 	return models
 }
 
-func (m *modelDialog) switchProvider(offset int) {
+func (m *modelDialog) moveSelectionUp() {
 	if m.activePane == MainModelPane {
-		newOffset := m.mainHScrollOffset + offset
-		if newOffset < 0 {
-			newOffset = len(m.availableProviders) - 1
-		} else if newOffset >= len(m.availableProviders) {
-			newOffset = 0
+		models := m.getModelsForProvider(m.mainProvider)
+		if m.mainSelectedIdx > 0 {
+			m.mainSelectedIdx--
+		} else {
+			m.mainSelectedIdx = len(models) - 1
+			m.mainScrollOffset = max(0, len(models)-numVisibleModels)
 		}
-		m.mainHScrollOffset = newOffset
-		m.mainProvider = m.availableProviders[newOffset]
-		m.setupModelsForProvider(m.mainProvider.Id, MainModelPane)
+		
+		// Keep selection visible
+		if m.mainSelectedIdx < m.mainScrollOffset {
+			m.mainScrollOffset = m.mainSelectedIdx
+		}
 	} else {
-		newOffset := m.lightHScrollOffset + offset
-		if newOffset < 0 {
-			newOffset = len(m.availableProviders) - 1
-		} else if newOffset >= len(m.availableProviders) {
-			newOffset = 0
+		models := m.getModelsForProvider(m.lightProvider)
+		if m.lightSelectedIdx > 0 {
+			m.lightSelectedIdx--
+		} else {
+			m.lightSelectedIdx = len(models) - 1
+			m.lightScrollOffset = max(0, len(models)-numVisibleModels)
 		}
-		m.lightHScrollOffset = newOffset
-		m.lightProvider = m.availableProviders[newOffset]
-		m.setupModelsForProvider(m.lightProvider.Id, LightweightModelPane)
+		
+		// Keep selection visible
+		if m.lightSelectedIdx < m.lightScrollOffset {
+			m.lightScrollOffset = m.lightSelectedIdx
+		}
 	}
 }
 
-func (m *modelDialog) setupModelsForProvider(providerId string, pane ActivePane) {
-	var provider client.ProviderInfo
-	for _, p := range m.availableProviders {
-		if p.Id == providerId {
-			provider = p
-			break
+func (m *modelDialog) moveSelectionDown() {
+	if m.activePane == MainModelPane {
+		models := m.getModelsForProvider(m.mainProvider)
+		if m.mainSelectedIdx < len(models)-1 {
+			m.mainSelectedIdx++
+		} else {
+			m.mainSelectedIdx = 0
+			m.mainScrollOffset = 0
 		}
-	}
-	
-	models := m.modelsForProvider(provider)
-	modelNames := make([]string, len(models))
-	for i, model := range models {
-		modelNames[i] = model.Name
-	}
-
-	newList := list.NewStringList(modelNames, numVisibleModels, "No models available", true)
-	newList.SetMaxWidth(paneWidth - 2)
-	
-	if pane == MainModelPane {
-		m.mainModelList = newList
-		m.mainProvider = provider
 		
-		// Try to select the current model if it exists
-		if m.app.MainModel != nil {
-			for _, model := range models {
-				if model.Id == m.app.MainModel.Id {
-					// The list component doesn't expose SetSelectedIdx, so we'll rely on it being set during creation
-					break
-				}
-			}
+		// Keep selection visible
+		if m.mainSelectedIdx >= m.mainScrollOffset+numVisibleModels {
+			m.mainScrollOffset = m.mainSelectedIdx - (numVisibleModels - 1)
 		}
 	} else {
-		m.lightModelList = newList
-		m.lightProvider = provider
+		models := m.getModelsForProvider(m.lightProvider)
+		if m.lightSelectedIdx < len(models)-1 {
+			m.lightSelectedIdx++
+		} else {
+			m.lightSelectedIdx = 0
+			m.lightScrollOffset = 0
+		}
 		
-		// Try to select the current lightweight model if it exists
-		if m.app.LightModel != nil {
-			for _, model := range models {
-				if model.Id == m.app.LightModel.Id {
-					// The list component doesn't expose SetSelectedIdx, so we'll rely on it being set during creation
-					break
-				}
-			}
+		// Keep selection visible
+		if m.lightSelectedIdx >= m.lightScrollOffset+numVisibleModels {
+			m.lightScrollOffset = m.lightSelectedIdx - (numVisibleModels - 1)
 		}
 	}
+}
+
+func (m *modelDialog) switchProvider(offset int) {
+	newIdx := 0
+	if m.activePane == MainModelPane {
+		currentIdx := 0
+		for i, p := range m.availableProviders {
+			if p.Id == m.mainProvider.Id {
+				currentIdx = i
+				break
+			}
+		}
+		newIdx = currentIdx + offset
+		if newIdx < 0 {
+			newIdx = len(m.availableProviders) - 1
+		} else if newIdx >= len(m.availableProviders) {
+			newIdx = 0
+		}
+		m.mainProvider = m.availableProviders[newIdx]
+		m.mainSelectedIdx = 0
+		m.mainScrollOffset = 0
+		// Update modal title like the original when switching main provider
+		m.modal.SetTitle(fmt.Sprintf("Select Models - %s", m.mainProvider.Name))
+	} else {
+		currentIdx := 0
+		for i, p := range m.availableProviders {
+			if p.Id == m.lightProvider.Id {
+				currentIdx = i
+				break
+			}
+		}
+		newIdx = currentIdx + offset
+		if newIdx < 0 {
+			newIdx = len(m.availableProviders) - 1
+		} else if newIdx >= len(m.availableProviders) {
+			newIdx = 0
+		}
+		m.lightProvider = m.availableProviders[newIdx]
+		m.lightSelectedIdx = 0
+		m.lightScrollOffset = 0
+	}
+}
+
+func (m *modelDialog) switchPane() {
+	if m.activePane == MainModelPane {
+		m.activePane = LightweightModelPane
+	} else {
+		m.activePane = MainModelPane
+	}
+}
+
+func (m *modelDialog) View() string {
+	t := theme.CurrentTheme()
+
+	// Base style for the content
+	baseStyle := lipgloss.NewStyle().
+		Background(t.BackgroundElement()).
+		Foreground(t.Text())
+
+	// Render main model pane
+	mainPane := m.renderPane(
+		"Main Model",
+		m.mainProvider,
+		m.mainSelectedIdx,
+		m.mainScrollOffset,
+		m.activePane == MainModelPane,
+		baseStyle,
+	)
+
+	// Render lightweight model pane
+	lightPane := m.renderPane(
+		"Lightweight Model",
+		m.lightProvider,
+		m.lightSelectedIdx,
+		m.lightScrollOffset,
+		m.activePane == LightweightModelPane,
+		baseStyle,
+	)
+
+	// Create divider with background
+	dividerHeight := 1 + numVisibleModels + 1 // 1 header + models + 1 scroll line
+	dividerLines := make([]string, dividerHeight)
+	for i := range dividerLines {
+		dividerLines[i] = "│"
+	}
+	divider := lipgloss.NewStyle().
+		Background(t.BackgroundElement()).
+		Foreground(t.TextMuted()).
+		Render(strings.Join(dividerLines, "\n"))
+
+	// Join panes horizontally
+	content := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		mainPane,
+		divider,
+		lightPane,
+	)
+
+	// Apply background to entire content area
+	content = baseStyle.
+		Width(totalDialogWidth).
+		Height(dividerHeight).
+		Render(content)
+
+	// Scroll indicators like the original dialog
+	scrollIndicator := m.getScrollIndicators(totalDialogWidth)
+
+	// Final join with consistent background
+	if scrollIndicator != "" {
+		return baseStyle.
+			Width(totalDialogWidth).
+			Render(lipgloss.JoinVertical(
+				lipgloss.Left,
+				content,
+				scrollIndicator,
+			))
+	}
+
+	return content
+}
+
+func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, selectedIdx, scrollOffset int, isActive bool, baseStyle lipgloss.Style) string {
+	t := theme.CurrentTheme()
+
+	// Simple header like in the original dialog
+	headerText := fmt.Sprintf("%s (%s)", title, provider.Name)
+	headerStyle := lipgloss.NewStyle().
+		Width(paneWidth).
+		Align(lipgloss.Center).
+		Bold(true).
+		Background(t.BackgroundElement())
+
+	if isActive {
+		headerStyle = headerStyle.Foreground(t.Primary())
+	} else {
+		headerStyle = headerStyle.Foreground(t.TextMuted())
+	}
+
+	headerRendered := headerStyle.Render(headerText)
+
+	// Render models
+	models := m.getModelsForProvider(provider)
+	endIdx := min(scrollOffset+numVisibleModels, len(models))
+	modelItems := make([]string, 0, endIdx-scrollOffset)
+
+	for i := scrollOffset; i < endIdx; i++ {
+		model := models[i]
+		isLightweight := isLightweightModel(model)
+
+		// Build model display name
+		modelName := model.Name
+		if isLightweight {
+			modelName = fmt.Sprintf("⚡ %s", modelName)
+		}
+
+		// Apply styling based on selection and pane state
+		itemStyle := baseStyle.Width(paneWidth)
+		if i == selectedIdx {
+			if isActive {
+				// Active selection - use primary color like the original dialog
+				itemStyle = itemStyle.
+					Background(t.Primary()).
+					Foreground(t.BackgroundElement()).
+					Bold(true)
+			} else {
+				// Inactive selection - use accent color to show selection
+				itemStyle = itemStyle.
+					Background(t.BackgroundElement()).
+					Foreground(t.Accent()).
+					Bold(true)
+			}
+		}
+
+		modelItems = append(modelItems, itemStyle.Render(modelName))
+	}
+
+	// Pad to ensure consistent height
+	for len(modelItems) < numVisibleModels {
+		modelItems = append(modelItems, baseStyle.Width(paneWidth).Render(" "))
+	}
+
+	// Join all models
+	modelsRendered := strings.Join(modelItems, "\n")
+
+	// Scroll indicator at bottom
+	scrollIndicator := ""
+	if scrollOffset > 0 || endIdx < len(models) {
+		scrollText := fmt.Sprintf("%d-%d of %d", scrollOffset+1, endIdx, len(models))
+		scrollIndicator = baseStyle.
+			Width(paneWidth).
+			Align(lipgloss.Center).
+			Foreground(t.TextMuted()).
+			Render(scrollText)
+	} else {
+		scrollIndicator = baseStyle.Width(paneWidth).Render(" ")
+	}
+
+	// Combine all parts
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		headerRendered,
+		modelsRendered,
+		scrollIndicator,
+	)
+}
+
+func (m *modelDialog) getScrollIndicators(width int) string {
+	t := theme.CurrentTheme()
+	
+	if !m.hScrollPossible {
+		return ""
+	}
+
+	// Show provider navigation hint
+	return lipgloss.NewStyle().
+		Width(width).
+		Align(lipgloss.Center).
+		Foreground(t.TextMuted()).
+		Background(t.BackgroundElement()).
+		Render("← → to switch providers • Tab to switch panes")
+}
+
+func isLightweightModel(model client.ModelInfo) bool {
+	// Models that are good for lightweight tasks
+	lightweightModels := []string{
+		"gpt-3.5-turbo",
+		"gpt-4o-mini",
+		"claude-3-haiku",
+		"gemini-1.5-flash",
+		"llama-3.2",
+		"deepseek-chat",
+	}
+	
+	modelLower := strings.ToLower(model.Id)
+	for _, lm := range lightweightModels {
+		if strings.Contains(modelLower, lm) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *modelDialog) Render(background string) string {
 	if m.modal != nil {
-		var mainPane, lightPane string
-		
-		// Main model pane
-		mainPaneStyle := lipgloss.NewStyle().
-			Width(paneWidth).
-			Height(m.height - 10).
-			Padding(1).
-			Border(lipgloss.RoundedBorder())
-		
-		t := theme.CurrentTheme()
-		if m.activePane == MainModelPane {
-			mainPaneStyle = mainPaneStyle.BorderForeground(t.Primary())
-		} else {
-			mainPaneStyle = mainPaneStyle.BorderForeground(t.Border())
-		}
-		
-		mainTitle := lipgloss.NewStyle().
-			Bold(true).
-			Foreground(t.Primary()).
-			Render("Main Model")
-		
-		mainProviderName := lipgloss.NewStyle().
-			Foreground(t.Secondary()).
-			Render(m.mainProvider.Name)
-		
-		mainPane = mainPaneStyle.Render(
-			lipgloss.JoinVertical(lipgloss.Left,
-				mainTitle,
-				mainProviderName,
-				"",
-				m.mainModelList.View(),
-			),
-		)
-		
-		// Lightweight model pane
-		lightPaneStyle := lipgloss.NewStyle().
-			Width(paneWidth).
-			Height(m.height - 10).
-			Padding(1).
-			Border(lipgloss.RoundedBorder())
-		
-		if m.activePane == LightweightModelPane {
-			lightPaneStyle = lightPaneStyle.BorderForeground(t.Primary())
-		} else {
-			lightPaneStyle = lightPaneStyle.BorderForeground(t.Border())
-		}
-		
-		lightTitle := lipgloss.NewStyle().
-			Bold(true).
-			Foreground(t.Primary()).
-			Render("Lightweight Model")
-		
-		lightProviderName := lipgloss.NewStyle().
-			Foreground(t.Secondary()).
-			Render(m.lightProvider.Name)
-		
-		lightPane = lightPaneStyle.Render(
-			lipgloss.JoinVertical(lipgloss.Left,
-				lightTitle,
-				lightProviderName,
-				"",
-				m.lightModelList.View(),
-			),
-		)
-		
-		// Combine panes
-		content := lipgloss.JoinHorizontal(lipgloss.Top, mainPane, " ", lightPane)
-		
-		// Add help text
-		helpText := lipgloss.NewStyle().
-			Foreground(t.Secondary()).
-			Render("tab: switch pane • ←/→: change provider • ↑/↓: select model • enter: save • esc: cancel")
-		
-		fullContent := lipgloss.JoinVertical(lipgloss.Center, content, "", helpText)
-		
-		return m.modal.Render(fullContent, background)
+		return m.modal.Render(m.View(), background)
 	}
 	return ""
-}
-
-func (m *modelDialog) View() string {
-	return m.Render("")
 }
 
 func (m *modelDialog) IsVisible() bool {
@@ -385,18 +510,36 @@ func NewModelDialog(app *app.App) ModelDialog {
 		hScrollPossible:    len(availableProviders) > 1,
 		activePane:         MainModelPane,
 		modal: modal.New(
-			modal.WithTitle("Select Models"),
-			modal.WithMaxWidth(totalDialogWidth+4),
+			modal.WithTitle(fmt.Sprintf("Select Models - %s", mainProvider.Name)),
 		),
 	}
 	
-	// Find initial scroll offsets
-	for i, p := range availableProviders {
-		if p.Id == mainProvider.Id {
-			dialog.mainHScrollOffset = i
+	// Set initial selections based on current models
+	if app.MainModel != nil {
+		models := dialog.getModelsForProvider(mainProvider)
+		for i, model := range models {
+			if model.Id == app.MainModel.Id {
+				dialog.mainSelectedIdx = i
+				// Adjust scroll position to keep selected model visible
+				if dialog.mainSelectedIdx >= numVisibleModels {
+					dialog.mainScrollOffset = dialog.mainSelectedIdx - (numVisibleModels - 1)
+				}
+				break
+			}
 		}
-		if p.Id == lightProvider.Id {
-			dialog.lightHScrollOffset = i
+	}
+	
+	if app.LightModel != nil {
+		models := dialog.getModelsForProvider(lightProvider)
+		for i, model := range models {
+			if model.Id == app.LightModel.Id {
+				dialog.lightSelectedIdx = i
+				// Adjust scroll position to keep selected model visible
+				if dialog.lightSelectedIdx >= numVisibleModels {
+					dialog.lightScrollOffset = dialog.lightSelectedIdx - (numVisibleModels - 1)
+				}
+				break
+			}
 		}
 	}
 	
