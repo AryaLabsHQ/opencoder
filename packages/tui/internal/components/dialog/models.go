@@ -224,14 +224,14 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []client.ModelInfo {
 	models := slices.Collect(maps.Values(provider.Models))
-	
+
 	switch m.sortMode {
 	case SortByLastUpdated:
 		slices.SortFunc(models, func(a, b client.ModelInfo) int {
 			// Sort by last_updated date (newest first)
 			aDate := m.getModelDate(a, true)
 			bDate := m.getModelDate(b, true)
-			
+
 			// Models without dates go to the end
 			if aDate == "" && bDate == "" {
 				if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
@@ -245,12 +245,12 @@ func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []clien
 			if bDate == "" {
 				return -1
 			}
-			
+
 			// Compare dates (reverse for newest first)
 			if cmp := strings.Compare(bDate, aDate); cmp != 0 {
 				return cmp
 			}
-			
+
 			// If dates are equal, use name as stable tiebreaker
 			if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
 				return cmp
@@ -263,7 +263,7 @@ func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []clien
 			// Sort by release_date (newest first)
 			aDate := m.getModelDate(a, false)
 			bDate := m.getModelDate(b, false)
-			
+
 			// Models without dates go to the end
 			if aDate == "" && bDate == "" {
 				if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
@@ -277,12 +277,12 @@ func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []clien
 			if bDate == "" {
 				return -1
 			}
-			
+
 			// Compare dates (reverse for newest first)
 			if cmp := strings.Compare(bDate, aDate); cmp != 0 {
 				return cmp
 			}
-			
+
 			// If dates are equal, use name as stable tiebreaker
 			if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
 				return cmp
@@ -295,7 +295,7 @@ func (m *modelDialog) getModelsForProvider(provider client.ProviderInfo) []clien
 			return strings.Compare(a.Name, b.Name)
 		})
 	}
-	
+
 	return models
 }
 
@@ -441,7 +441,7 @@ func (m *modelDialog) getSortModeString() string {
 }
 
 func (m *modelDialog) updateModalTitle() {
-	title := fmt.Sprintf("Select Models - %s (Sort: %s)", m.mainProvider.Name, m.getSortModeString())
+	title := fmt.Sprintf("Select Models - (Sort: %s)", m.getSortModeString())
 	m.modal.SetTitle(title)
 }
 
@@ -555,7 +555,7 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 
 		// Build model display name
 		modelName := model.Name
-		
+
 		// Build capability indicators
 		var capabilities []string
 		if isTurbo {
@@ -567,17 +567,17 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 		if model.ToolCall {
 			capabilities = append(capabilities, "🔧")
 		}
-		
+
 		// Calculate spacing to right-align capabilities
 		capabilityStr := strings.Join(capabilities, "")
 		modelNameWidth := lipgloss.Width(modelName)
 		capabilityWidth := lipgloss.Width(capabilityStr)
 		availableSpace := paneWidth - modelNameWidth - capabilityWidth - 2 // 2 for padding
-		
+
 		if availableSpace < 1 {
 			availableSpace = 1 // At least one space
 		}
-		
+
 		spacer := strings.Repeat(" ", availableSpace)
 		displayText := modelName + spacer + capabilityStr
 
@@ -661,6 +661,17 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 		}
 	}
 
+	// Check if turbo models have scroll
+	turboModels := len(m.turboProvider.Models)
+	if turboModels > numVisibleModels {
+		if m.turboScrollOffset > 0 {
+			indicator += "↑ "
+		}
+		if m.turboScrollOffset+numVisibleModels < turboModels {
+			indicator += "↓ "
+		}
+	}
+
 	// Add horizontal scroll indicators
 	if m.hScrollPossible {
 		indicator = "← " + indicator + "→"
@@ -672,7 +683,7 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 	} else {
 		indicator = "[S] Sort"
 	}
-	
+
 	// Add emoji legend
 	legend := "⚡ turbo • 🧠 reasoning • 🔧 tools"
 	if indicator != "" {
