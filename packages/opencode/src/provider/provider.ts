@@ -42,12 +42,12 @@ export namespace Provider {
     async anthropic(provider) {
       const access = await AuthAnthropic.access()
       if (!access) return false
-      for (const model of Object.values(provider.models)) {
-        model.cost = {
-          input: 0,
-          output: 0,
-        }
-      }
+      // for (const model of Object.values(provider.models)) {
+      //   model.cost = {
+      //     input: 0,
+      //     output: 0,
+      //   }
+      // }
       return {
         options: {
           apiKey: "",
