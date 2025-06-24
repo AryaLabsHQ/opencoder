@@ -435,9 +435,31 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 
 		// Build model display name
 		modelName := model.Name
+		
+		// Build capability indicators
+		var capabilities []string
 		if isTurbo {
-			modelName = fmt.Sprintf("⚡ %s", modelName)
+			capabilities = append(capabilities, "⚡")
 		}
+		if model.Reasoning {
+			capabilities = append(capabilities, "🧠")
+		}
+		if model.ToolCall {
+			capabilities = append(capabilities, "🔧")
+		}
+		
+		// Calculate spacing to right-align capabilities
+		capabilityStr := strings.Join(capabilities, "")
+		modelNameWidth := lipgloss.Width(modelName)
+		capabilityWidth := lipgloss.Width(capabilityStr)
+		availableSpace := paneWidth - modelNameWidth - capabilityWidth - 2 // 2 for padding
+		
+		if availableSpace < 1 {
+			availableSpace = 1 // At least one space
+		}
+		
+		spacer := strings.Repeat(" ", availableSpace)
+		displayText := modelName + spacer + capabilityStr
 
 		// Apply styling based on selection and pane state
 		itemStyle := baseStyle.Width(paneWidth)
@@ -457,7 +479,7 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 			}
 		}
 
-		modelItems = append(modelItems, itemStyle.Render(modelName))
+		modelItems = append(modelItems, itemStyle.Render(displayText))
 	}
 
 	// Pad to ensure consistent height
@@ -527,6 +549,14 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 	// Add tab hint
 	if indicator != "" {
 		indicator += " • [Tab] Switch pane"
+	}
+	
+	// Add emoji legend
+	legend := "⚡ turbo • 🧠 reasoning • 🔧 tools"
+	if indicator != "" {
+		indicator += " • " + legend
+	} else {
+		indicator = legend
 	}
 
 	if indicator == "" {
