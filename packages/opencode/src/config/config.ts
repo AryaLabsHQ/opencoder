@@ -154,9 +154,9 @@ export namespace Config {
           "Model to use in the format of provider/model, eg anthropic/claude-2",
         )
         .optional(),
-      lightweight_model: z
+      turbo_model: z
         .string()
-        .describe("Lightweight model to use for tasks like window title generation")
+        .describe("Turbo model to use for tasks like window title generation")
         .optional(),
       provider: z
         .record(

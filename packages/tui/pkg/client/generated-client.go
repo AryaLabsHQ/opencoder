@@ -54,9 +54,6 @@ type ConfigInfo struct {
 	DisabledProviders *[]string       `json:"disabled_providers,omitempty"`
 	Keybinds          *ConfigKeybinds `json:"keybinds,omitempty"`
 
-	// LightweightModel Lightweight model to use for tasks like window title generation
-	LightweightModel *string `json:"lightweight_model,omitempty"`
-
 	// Mcp MCP (Model Context Protocol) server configurations
 	Mcp *map[string]ConfigInfo_Mcp_AdditionalProperties `json:"mcp,omitempty"`
 
@@ -94,6 +91,9 @@ type ConfigInfo struct {
 
 	// Theme Theme name to use for the interface
 	Theme *string `json:"theme,omitempty"`
+
+	// TurboModel Turbo model to use for tasks like window title generation
+	TurboModel *string `json:"turbo_model,omitempty"`
 }
 
 // ConfigInfo_Mcp_AdditionalProperties defines model for Config.Info.mcp.AdditionalProperties.

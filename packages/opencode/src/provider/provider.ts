@@ -386,17 +386,17 @@ export namespace Provider {
     }
   }
 
-  export async function getLightweightModel(providerID: string): Promise<{ info: ModelsDev.Model; language: LanguageModel } | null> {
+  export async function getTurboModel(providerID: string): Promise<{ info: ModelsDev.Model; language: LanguageModel } | null> {
     const cfg = await Config.get()
     
     // Check user override
-    if (cfg.lightweight_model) {
+    if (cfg.turbo_model) {
       try {
-        // Parse the lightweight model to get its provider
-        const { providerID: lightweightProviderID, modelID } = parseModel(cfg.lightweight_model)
-        return await getModel(lightweightProviderID, modelID)
+        // Parse the turbo model to get its provider
+        const { providerID: turboProviderID, modelID } = parseModel(cfg.turbo_model)
+        return await getModel(turboProviderID, modelID)
       } catch (e) {
-        log.warn("Failed to get configured lightweight model", { lightweight_model: cfg.lightweight_model, error: e })
+        log.warn("Failed to get configured turbo model", { turbo_model: cfg.turbo_model, error: e })
       }
     }
     
@@ -404,7 +404,7 @@ export namespace Provider {
     const provider = providers[providerID]
     if (!provider) return null
 
-    // Select cheapest model whose cost.output <= 4
+    // Select cheapest model whose cost.output <= 4 for turbo tasks
     let selected: { info: ModelsDev.Model; language: LanguageModel } | null = null
     for (const model of Object.values(provider.info.models)) {
       if (model.cost.output <= 4) {

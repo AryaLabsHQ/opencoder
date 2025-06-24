@@ -29,8 +29,8 @@ type App struct {
 	State         *config.State
 	MainProvider  *client.ProviderInfo
 	MainModel     *client.ModelInfo
-	LightProvider *client.ProviderInfo
-	LightModel    *client.ModelInfo
+	TurboProvider *client.ProviderInfo
+	TurboModel    *client.ModelInfo
 	Session       *client.SessionInfo
 	Messages      []client.MessageInfo
 	Commands      commands.CommandRegistry
@@ -38,10 +38,10 @@ type App struct {
 
 type SessionSelectedMsg = *client.SessionInfo
 type ModelSelectedMsg struct {
-	MainProvider        client.ProviderInfo
-	MainModel           client.ModelInfo
-	LightweightProvider client.ProviderInfo
-	LightweightModel    client.ModelInfo
+	MainProvider  client.ProviderInfo
+	MainModel     client.ModelInfo
+	TurboProvider client.ProviderInfo
+	TurboModel    client.ModelInfo
 }
 
 type SessionClearedMsg struct{}
@@ -94,8 +94,8 @@ func New(
 	if configInfo.Model != nil {
 		appState.MainProvider, appState.MainModel = util.ParseModel(*configInfo.Model)
 	}
-	if configInfo.LightweightModel != nil {
-		appState.LightProvider, appState.LightModel = util.ParseModel(*configInfo.LightweightModel)
+	if configInfo.TurboModel != nil {
+		appState.TurboProvider, appState.TurboModel = util.ParseModel(*configInfo.TurboModel)
 	}
 
 	// Load themes from all directories
@@ -187,19 +187,19 @@ func (a *App) InitializeProvider() tea.Cmd {
 			currentModel = defaultModel
 		}
 
-		// Initialize lightweight model based on config or defaults
-		lightProvider := currentProvider
-		lightModel := currentModel
+		// Initialize turbo model based on config or defaults
+		turboProvider := currentProvider
+		turboModel := currentModel
 
-		if a.State.LightProvider != "" && a.State.LightModel != "" {
-			lightProviderID, lightModelID := a.State.LightProvider, a.State.LightModel
+		if a.State.TurboProvider != "" && a.State.TurboModel != "" {
+			turboProviderID, turboModelID := a.State.TurboProvider, a.State.TurboModel
 			// Find provider/model
 			for _, provider := range providers {
-				if provider.Id == lightProviderID {
-					lightProvider = &provider
+				if provider.Id == turboProviderID {
+					turboProvider = &provider
 					for _, model := range provider.Models {
-						if model.Id == lightModelID {
-							lightModel = &model
+						if model.Id == turboModelID {
+							turboModel = &model
 							break
 						}
 					}
@@ -207,20 +207,20 @@ func (a *App) InitializeProvider() tea.Cmd {
 				}
 			}
 		} else {
-			// Try to find a default lightweight model for the provider
-			lightModel = getDefaultLightweightModel(*currentProvider)
-			if lightModel == nil {
+			// Try to find a default turbo model for the provider
+			turboModel = getDefaultTurboModel(*currentProvider)
+			if turboModel == nil {
 				// Fall back to the main model
-				lightModel = currentModel
+				turboModel = currentModel
 			}
 		}
 
 		// TODO: handle no provider or model setup, yet
 		return ModelSelectedMsg{
-			MainProvider:        *currentProvider,
-			MainModel:           *currentModel,
-			LightweightProvider: *lightProvider,
-			LightweightModel:    *lightModel,
+			MainProvider:  *currentProvider,
+			MainModel:     *currentModel,
+			TurboProvider: *turboProvider,
+			TurboModel:    *turboModel,
 		}
 	}
 }
@@ -237,7 +237,7 @@ func getDefaultModel(response *client.PostProviderListResponse, provider client.
 	return nil
 }
 
-func getDefaultLightweightModel(provider client.ProviderInfo) *client.ModelInfo {
+func getDefaultTurboModel(provider client.ProviderInfo) *client.ModelInfo {
 	// Select the cheapest model whose Cost.Output <= 4
 	var selected *client.ModelInfo
 	for _, model := range provider.Models {
@@ -307,12 +307,12 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 
 func (a *App) CompactSession(ctx context.Context) tea.Cmd {
 	go func() {
-		// Use lightweight model for summarization if available
+		// Use turbo model for summarization if available
 		providerID := a.MainProvider.Id
 		modelID := a.MainModel.Id
-		if a.LightProvider != nil && a.LightModel != nil {
-			providerID = a.LightProvider.Id
-			modelID = a.LightModel.Id
+		if a.TurboProvider != nil && a.TurboModel != nil {
+			providerID = a.TurboProvider.Id
+			modelID = a.TurboModel.Id
 		}
 
 		response, err := a.Client.PostSessionSummarizeWithResponse(ctx, client.PostSessionSummarizeJSONRequestBody{

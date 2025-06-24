@@ -335,12 +335,12 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case app.ModelSelectedMsg:
 		a.app.MainProvider = &msg.MainProvider
 		a.app.MainModel = &msg.MainModel
-		a.app.LightProvider = &msg.LightweightProvider
-		a.app.LightModel = &msg.LightweightModel
+		a.app.TurboProvider = &msg.TurboProvider
+		a.app.TurboModel = &msg.TurboModel
 		a.app.State.MainProvider = msg.MainProvider.Id
 		a.app.State.MainModel = msg.MainModel.Id
-		a.app.State.LightProvider = msg.LightweightProvider.Id
-		a.app.State.LightModel = msg.LightweightModel.Id
+		a.app.State.TurboProvider = msg.TurboProvider.Id
+		a.app.State.TurboModel = msg.TurboModel.Id
 
 		// Save state and config
 		a.app.SaveState()

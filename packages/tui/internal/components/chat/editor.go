@@ -131,12 +131,12 @@ func (m *editorComponent) Content() string {
 	if m.app.MainModel != nil && m.app.MainProvider != nil {
 		model = muted(m.app.MainProvider.Name) + base(" "+m.app.MainModel.Name)
 
-		// show lightweight model if configured
-		if m.app.LightModel != nil && m.app.LightProvider != nil {
-			if m.app.LightProvider.Id == m.app.MainProvider.Id {
-				model = model + muted(" (⚡"+m.app.LightModel.Name+")")
+		// show turbo model if configured
+		if m.app.TurboModel != nil && m.app.TurboProvider != nil {
+			if m.app.TurboProvider.Id == m.app.MainProvider.Id {
+				model = model + muted(" (⚡"+m.app.TurboModel.Name+")")
 			} else {
-				model = model + muted(" (⚡"+m.app.LightProvider.Name+"/"+m.app.LightModel.Name+")")
+				model = model + muted(" (⚡"+m.app.TurboProvider.Name+"/"+m.app.TurboModel.Name+")")
 			}
 		}
 	}

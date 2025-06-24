@@ -27,7 +27,7 @@ type ActivePane int
 
 const (
 	MainModelPane ActivePane = iota
-	LightweightModelPane
+	TurboModelPane
 )
 
 // ModelDialog interface for the model selection dialog
@@ -38,23 +38,23 @@ type ModelDialog interface {
 type modelDialog struct {
 	app                *app.App
 	availableProviders []client.ProviderInfo
-	
+
 	// Main model selection
-	mainProvider      client.ProviderInfo
-	mainSelectedIdx   int
-	mainScrollOffset  int
-	
-	// Lightweight model selection
-	lightProvider      client.ProviderInfo
-	lightSelectedIdx   int
-	lightScrollOffset  int
-	
+	mainProvider     client.ProviderInfo
+	mainSelectedIdx  int
+	mainScrollOffset int
+
+	// Turbo model selection
+	turboProvider     client.ProviderInfo
+	turboSelectedIdx  int
+	turboScrollOffset int
+
 	// UI state
 	activePane      ActivePane
 	width           int
 	height          int
 	hScrollPossible bool
-	
+
 	modal *modal.Modal
 }
 
@@ -122,29 +122,29 @@ func (m *modelDialog) Init() tea.Cmd {
 		m.mainProvider = m.availableProviders[0]
 	}
 
-	// Initialize lightweight provider and model
-	m.lightProvider = m.mainProvider // Default to same as main
+	// Initialize turbo provider and model
+	m.turboProvider = m.mainProvider // Default to same as main
 
-	if m.app.LightProvider != nil && m.app.LightModel != nil {
-		m.lightProvider = *m.app.LightProvider
+	if m.app.TurboProvider != nil && m.app.TurboModel != nil {
+		m.turboProvider = *m.app.TurboProvider
 
-		models := m.getModelsForProvider(m.lightProvider)
+		models := m.getModelsForProvider(m.turboProvider)
 		for i, model := range models {
-			if model.Id == m.app.LightModel.Id {
-				m.lightSelectedIdx = i
+			if model.Id == m.app.TurboModel.Id {
+				m.turboSelectedIdx = i
 				// Adjust scroll position to keep selected model visible
-				if m.lightSelectedIdx >= numVisibleModels {
-					m.lightScrollOffset = m.lightSelectedIdx - (numVisibleModels - 1)
+				if m.turboSelectedIdx >= numVisibleModels {
+					m.turboScrollOffset = m.turboSelectedIdx - (numVisibleModels - 1)
 				}
 				break
 			}
 		}
 	} else {
-		// If no lightweight model is set, try to select a lightweight model by default
-		models := m.getModelsForProvider(m.lightProvider)
+		// If no turbo model is set, try to select a turbo model by default
+		models := m.getModelsForProvider(m.turboProvider)
 		for i, model := range models {
-			if isLightweightModel(model) {
-				m.lightSelectedIdx = i
+			if isTurboModel(model) {
+				m.turboSelectedIdx = i
 				break
 			}
 		}
@@ -174,23 +174,23 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, modelKeys.Enter):
 			// Get selected models from both panes
 			mainModels := m.getModelsForProvider(m.mainProvider)
-			lightModels := m.getModelsForProvider(m.lightProvider)
-			
-			if len(mainModels) == 0 || len(lightModels) == 0 {
+			turboModels := m.getModelsForProvider(m.turboProvider)
+
+			if len(mainModels) == 0 || len(turboModels) == 0 {
 				return m, nil
 			}
-			
+
 			mainSelectedModel := mainModels[m.mainSelectedIdx]
-			lightSelectedModel := lightModels[m.lightSelectedIdx]
-			
+			turboSelectedModel := turboModels[m.turboSelectedIdx]
+
 			return m, tea.Sequence(
 				util.CmdHandler(modal.CloseModalMsg{}),
 				util.CmdHandler(
 					app.ModelSelectedMsg{
-						MainProvider:        m.mainProvider,
-						MainModel:           mainSelectedModel,
-						LightweightProvider: m.lightProvider,
-						LightweightModel:    lightSelectedModel,
+						MainProvider:  m.mainProvider,
+						MainModel:     mainSelectedModel,
+						TurboProvider: m.turboProvider,
+						TurboModel:    turboSelectedModel,
 					}),
 			)
 		case key.Matches(msg, modelKeys.Escape):
@@ -224,23 +224,23 @@ func (m *modelDialog) moveSelectionUp() {
 			m.mainSelectedIdx = len(models) - 1
 			m.mainScrollOffset = max(0, len(models)-numVisibleModels)
 		}
-		
+
 		// Keep selection visible
 		if m.mainSelectedIdx < m.mainScrollOffset {
 			m.mainScrollOffset = m.mainSelectedIdx
 		}
 	} else {
-		models := m.getModelsForProvider(m.lightProvider)
-		if m.lightSelectedIdx > 0 {
-			m.lightSelectedIdx--
+		models := m.getModelsForProvider(m.turboProvider)
+		if m.turboSelectedIdx > 0 {
+			m.turboSelectedIdx--
 		} else {
-			m.lightSelectedIdx = len(models) - 1
-			m.lightScrollOffset = max(0, len(models)-numVisibleModels)
+			m.turboSelectedIdx = len(models) - 1
+			m.turboScrollOffset = max(0, len(models)-numVisibleModels)
 		}
-		
+
 		// Keep selection visible
-		if m.lightSelectedIdx < m.lightScrollOffset {
-			m.lightScrollOffset = m.lightSelectedIdx
+		if m.turboSelectedIdx < m.turboScrollOffset {
+			m.turboScrollOffset = m.turboSelectedIdx
 		}
 	}
 }
@@ -254,23 +254,23 @@ func (m *modelDialog) moveSelectionDown() {
 			m.mainSelectedIdx = 0
 			m.mainScrollOffset = 0
 		}
-		
+
 		// Keep selection visible
 		if m.mainSelectedIdx >= m.mainScrollOffset+numVisibleModels {
 			m.mainScrollOffset = m.mainSelectedIdx - (numVisibleModels - 1)
 		}
 	} else {
-		models := m.getModelsForProvider(m.lightProvider)
-		if m.lightSelectedIdx < len(models)-1 {
-			m.lightSelectedIdx++
+		models := m.getModelsForProvider(m.turboProvider)
+		if m.turboSelectedIdx < len(models)-1 {
+			m.turboSelectedIdx++
 		} else {
-			m.lightSelectedIdx = 0
-			m.lightScrollOffset = 0
+			m.turboSelectedIdx = 0
+			m.turboScrollOffset = 0
 		}
-		
+
 		// Keep selection visible
-		if m.lightSelectedIdx >= m.lightScrollOffset+numVisibleModels {
-			m.lightScrollOffset = m.lightSelectedIdx - (numVisibleModels - 1)
+		if m.turboSelectedIdx >= m.turboScrollOffset+numVisibleModels {
+			m.turboScrollOffset = m.turboSelectedIdx - (numVisibleModels - 1)
 		}
 	}
 }
@@ -299,7 +299,7 @@ func (m *modelDialog) switchProvider(offset int) {
 	} else {
 		currentIdx := 0
 		for i, p := range m.availableProviders {
-			if p.Id == m.lightProvider.Id {
+			if p.Id == m.turboProvider.Id {
 				currentIdx = i
 				break
 			}
@@ -310,15 +310,15 @@ func (m *modelDialog) switchProvider(offset int) {
 		} else if newIdx >= len(m.availableProviders) {
 			newIdx = 0
 		}
-		m.lightProvider = m.availableProviders[newIdx]
-		m.lightSelectedIdx = 0
-		m.lightScrollOffset = 0
+		m.turboProvider = m.availableProviders[newIdx]
+		m.turboSelectedIdx = 0
+		m.turboScrollOffset = 0
 	}
 }
 
 func (m *modelDialog) switchPane() {
 	if m.activePane == MainModelPane {
-		m.activePane = LightweightModelPane
+		m.activePane = TurboModelPane
 	} else {
 		m.activePane = MainModelPane
 	}
@@ -352,13 +352,13 @@ func (m *modelDialog) View() string {
 		baseStyle,
 	)
 
-	// Render lightweight model pane
-	lightPane := m.renderPane(
-		"Lightweight Model",
-		m.lightProvider,
-		m.lightSelectedIdx,
-		m.lightScrollOffset,
-		m.activePane == LightweightModelPane,
+	// Render turbo model pane
+	turboPane := m.renderPane(
+		"Turbo Model",
+		m.turboProvider,
+		m.turboSelectedIdx,
+		m.turboScrollOffset,
+		m.activePane == TurboModelPane,
 		baseStyle,
 	)
 
@@ -378,7 +378,7 @@ func (m *modelDialog) View() string {
 		lipgloss.Top,
 		mainPane,
 		divider,
-		lightPane,
+		turboPane,
 	)
 
 	// Apply background to entire content area
@@ -430,11 +430,11 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 
 	for i := scrollOffset; i < endIdx; i++ {
 		model := models[i]
-		isLightweight := isLightweightModel(model)
+		isTurbo := isTurboModel(model)
 
 		// Build model display name
 		modelName := model.Name
-		if isLightweight {
+		if isTurbo {
 			modelName = fmt.Sprintf("⚡ %s", modelName)
 		}
 
@@ -504,7 +504,7 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 
 func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 	t := theme.CurrentTheme()
-	
+
 	var indicator string
 
 	// Check if main models have scroll
@@ -543,9 +543,9 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 		Render(indicator)
 }
 
-func isLightweightModel(model client.ModelInfo) bool {
-	// Models that are good for lightweight tasks
-	lightweightModels := []string{
+func isTurboModel(model client.ModelInfo) bool {
+	// Models that are good for turbo tasks
+	turboModels := []string{
 		"gpt-3.5-turbo",
 		"gpt-4o-mini",
 		"claude-3-haiku",
@@ -553,9 +553,9 @@ func isLightweightModel(model client.ModelInfo) bool {
 		"llama-3.2",
 		"deepseek-chat",
 	}
-	
+
 	modelLower := strings.ToLower(model.Id)
-	for _, lm := range lightweightModels {
+	for _, lm := range turboModels {
 		if strings.Contains(modelLower, lm) {
 			return true
 		}
@@ -593,13 +593,13 @@ func NewModelDialog(app *app.App) ModelDialog {
 
 	// Set up initial providers
 	mainProvider := availableProviders[0]
-	lightProvider := availableProviders[0]
-	
+	turboProvider := availableProviders[0]
+
 	dialog := &modelDialog{
 		app:                app,
 		availableProviders: availableProviders,
 		mainProvider:       mainProvider,
-		lightProvider:      lightProvider,
+		turboProvider:      turboProvider,
 		hScrollPossible:    len(availableProviders) > 1,
 		activePane:         MainModelPane,
 		modal: modal.New(
@@ -614,10 +614,10 @@ func NewModelDialog(app *app.App) ModelDialog {
 }
 
 // UpdateModelContext updates the context with selected models
-func UpdateModelContext(ctx context.Context, mainProvider client.ProviderInfo, mainModel client.ModelInfo, lightProvider client.ProviderInfo, lightModel client.ModelInfo) context.Context {
+func UpdateModelContext(ctx context.Context, mainProvider client.ProviderInfo, mainModel client.ModelInfo, turboProvider client.ProviderInfo, turboModel client.ModelInfo) context.Context {
 	ctx = context.WithValue(ctx, "main_provider", mainProvider)
 	ctx = context.WithValue(ctx, "main_model", mainModel)
-	ctx = context.WithValue(ctx, "light_provider", lightProvider)
-	ctx = context.WithValue(ctx, "light_model", lightModel)
+	ctx = context.WithValue(ctx, "turbo_provider", turboProvider)
+	ctx = context.WithValue(ctx, "turbo_model", turboModel)
 	return ctx
 }
