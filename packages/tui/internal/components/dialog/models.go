@@ -38,6 +38,7 @@ type ModelDialog interface {
 type modelDialog struct {
 	app                *app.App
 	availableProviders []client.ProviderInfo
+	turboCostThreshold float32
 
 	// Main model selection
 	mainProvider     client.ProviderInfo
@@ -143,7 +144,7 @@ func (m *modelDialog) Init() tea.Cmd {
 		// If no turbo model is set, try to select a turbo model by default
 		models := m.getModelsForProvider(m.turboProvider)
 		for i, model := range models {
-			if isTurboModel(model) {
+			if isTurboModel(model, m.turboCostThreshold) {
 				m.turboSelectedIdx = i
 				break
 			}
@@ -430,7 +431,7 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 
 	for i := scrollOffset; i < endIdx; i++ {
 		model := models[i]
-		isTurbo := isTurboModel(model)
+		isTurbo := isTurboModel(model, m.turboCostThreshold)
 
 		// Build model display name
 		modelName := model.Name
@@ -543,24 +544,9 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 		Render(indicator)
 }
 
-func isTurboModel(model client.ModelInfo) bool {
-	// Models that are good for turbo tasks
-	turboModels := []string{
-		"gpt-3.5-turbo",
-		"gpt-4o-mini",
-		"claude-3-haiku",
-		"gemini-1.5-flash",
-		"llama-3.2",
-		"deepseek-chat",
-	}
-
-	modelLower := strings.ToLower(model.Id)
-	for _, lm := range turboModels {
-		if strings.Contains(modelLower, lm) {
-			return true
-		}
-	}
-	return false
+func isTurboModel(model client.ModelInfo, threshold float32) bool {
+	// A model is considered a turbo model if its output cost is below the threshold
+	return model.Cost.Output <= threshold
 }
 
 func (m *modelDialog) Render(background string) string {
@@ -595,15 +581,22 @@ func NewModelDialog(app *app.App) ModelDialog {
 	mainProvider := availableProviders[0]
 	turboProvider := availableProviders[0]
 
+	// Get turbo cost threshold from config or use default
+	turboCostThreshold := float32(4.0)
+	if app.Config != nil && app.Config.TurboCostThreshold != nil {
+		turboCostThreshold = *app.Config.TurboCostThreshold
+	}
+
 	dialog := &modelDialog{
 		app:                app,
 		availableProviders: availableProviders,
+		turboCostThreshold: turboCostThreshold,
 		mainProvider:       mainProvider,
 		turboProvider:      turboProvider,
 		hScrollPossible:    len(availableProviders) > 1,
 		activePane:         MainModelPane,
 		modal: modal.New(
-			modal.WithTitle(fmt.Sprintf("Select Models - %s", mainProvider.Name)),
+			modal.WithTitle("Select Models"),
 		),
 	}
 

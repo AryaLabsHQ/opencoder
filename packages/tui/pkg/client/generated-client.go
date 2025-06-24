@@ -92,6 +92,9 @@ type ConfigInfo struct {
 	// Theme Theme name to use for the interface
 	Theme *string `json:"theme,omitempty"`
 
+	// TurboCostThreshold Maximum output cost for a model to be considered a turbo model (default: 4)
+	TurboCostThreshold *float32 `json:"turbo_cost_threshold,omitempty"`
+
 	// TurboModel Turbo model to use for tasks like window title generation
 	TurboModel *string `json:"turbo_model,omitempty"`
 }

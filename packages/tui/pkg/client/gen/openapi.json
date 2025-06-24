@@ -1528,6 +1528,11 @@
             "type": "string",
             "description": "Turbo model to use for tasks like window title generation"
           },
+          "turbo_cost_threshold": {
+            "type": "number",
+            "description": "Maximum output cost for a model to be considered a turbo model (default: 4)",
+            "default": 4
+          },
           "provider": {
             "type": "object",
             "additionalProperties": {

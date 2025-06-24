@@ -386,6 +386,12 @@ export namespace Provider {
     }
   }
 
+  export async function isTurboModel(model: ModelsDev.Model): Promise<boolean> {
+    const cfg = await Config.get()
+    const threshold = cfg.turbo_cost_threshold ?? 4
+    return model.cost.output <= threshold
+  }
+
   export async function getTurboModel(providerID: string): Promise<{ info: ModelsDev.Model; language: LanguageModel } | null> {
     const cfg = await Config.get()
     
@@ -404,10 +410,13 @@ export namespace Provider {
     const provider = providers[providerID]
     if (!provider) return null
 
-    // Select cheapest model whose cost.output <= 4 for turbo tasks
+    // Use configured threshold or default to 4
+    const threshold = cfg.turbo_cost_threshold ?? 4
+    
+    // Select cheapest model whose cost.output <= threshold for turbo tasks
     let selected: { info: ModelsDev.Model; language: LanguageModel } | null = null
     for (const model of Object.values(provider.info.models)) {
-      if (model.cost.output <= 4) {
+      if (model.cost.output <= threshold) {
         try {
           const m = await getModel(providerID, model.id)
           if (!selected || m.info.cost.output < selected.info.cost.output) {
