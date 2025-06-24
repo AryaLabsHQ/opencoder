@@ -39,7 +39,7 @@ export namespace Provider {
   type Source = "env" | "config" | "custom" | "api"
 
   const CUSTOM_LOADERS: Record<string, CustomLoader> = {
-    async anthropic(provider) {
+    async anthropic() {
       const access = await AuthAnthropic.access()
       if (!access) return false
       // for (const model of Object.values(provider.models)) {
