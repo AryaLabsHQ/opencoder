@@ -188,32 +188,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 
 		// Initialize turbo model based on config or defaults
-		turboProvider := currentProvider
-		turboModel := currentModel
-
-		if a.State.TurboProvider != "" && a.State.TurboModel != "" {
-			turboProviderID, turboModelID := a.State.TurboProvider, a.State.TurboModel
-			// Find provider/model
-			for _, provider := range providers {
-				if provider.Id == turboProviderID {
-					turboProvider = &provider
-					for _, model := range provider.Models {
-						if model.Id == turboModelID {
-							turboModel = &model
-							break
-						}
-					}
-					break
-				}
-			}
-		} else {
-			// Try to find a default turbo model for the provider
-			turboModel = getDefaultTurboModel(*currentProvider)
-			if turboModel == nil {
-				// Fall back to the main model
-				turboModel = currentModel
-			}
-		}
+		turboProvider, turboModel := findTurboModel(a.State, a.Config, providers, currentProvider, currentModel)
 
 		// TODO: handle no provider or model setup, yet
 		return ModelSelectedMsg{
@@ -237,18 +212,42 @@ func getDefaultModel(response *client.PostProviderListResponse, provider client.
 	return nil
 }
 
-func getDefaultTurboModel(provider client.ProviderInfo) *client.ModelInfo {
-	// Select the cheapest model whose Cost.Output <= 4
-	var selected *client.ModelInfo
-	for _, model := range provider.Models {
-		if model.Cost.Output <= 4 {
-			if selected == nil || model.Cost.Output < selected.Cost.Output {
-				tmp := model // create copy to take address of loop variable safely
-				selected = &tmp
+func findTurboModel(state *config.State, config *client.ConfigInfo, providers []client.ProviderInfo, currentProvider *client.ProviderInfo, currentModel *client.ModelInfo) (*client.ProviderInfo, *client.ModelInfo) {
+	// If turbo model is configured in state, use it
+	if state.TurboProvider != "" && state.TurboModel != "" {
+		for _, provider := range providers {
+			if provider.Id == state.TurboProvider {
+				for _, model := range provider.Models {
+					if model.Id == state.TurboModel {
+						return &provider, &model
+					}
+				}
 			}
 		}
 	}
-	return selected
+
+	// Get threshold from config or use default
+	threshold := float32(4.0)
+	if config != nil && config.TurboCostThreshold != nil {
+		threshold = *config.TurboCostThreshold
+	}
+
+	// Find the cheapest model in the current provider that qualifies as turbo
+	var turboModel *client.ModelInfo
+	for _, model := range currentProvider.Models {
+		if model.Cost.Output <= threshold {
+			if turboModel == nil || model.Cost.Output < turboModel.Cost.Output {
+				tmp := model
+				turboModel = &tmp
+			}
+		}
+	}
+
+	// Return turbo model if found, otherwise fall back to main model
+	if turboModel != nil {
+		return currentProvider, turboModel
+	}
+	return currentProvider, currentModel
 }
 
 type Attachment struct {
