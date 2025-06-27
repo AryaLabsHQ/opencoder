@@ -86,7 +86,7 @@ export const RunCommand = cmd({
         await Session.share(session.id)
         UI.println(
           UI.Style.TEXT_INFO_BOLD +
-            "~  https://opencode.ai/s/" +
+            "~  https://opencoder.aryalabs.ai/s/" +
             session.id.slice(-8),
         )
       }

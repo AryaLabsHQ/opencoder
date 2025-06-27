@@ -116,7 +116,7 @@ export default {
       return new Response(
         JSON.stringify({
           secret,
-          url: "https://opencode.ai/s/" + short,
+          url: "https://opencoder.aryalabs.ai/s/" + short,
         }),
         {
           headers: { "Content-Type": "application/json" },
