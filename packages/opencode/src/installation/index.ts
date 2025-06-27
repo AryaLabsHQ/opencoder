@@ -49,7 +49,7 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl"
+    if (process.execPath.includes(path.join(".opencoder", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
     const checks = [
@@ -71,7 +71,7 @@ export namespace Installation {
       },
       {
         name: "brew" as const,
-        command: () => $`brew list --formula opencode-ai`.throws(false).text(),
+        command: () => $`brew list --formula opencoder-ai`.throws(false).text(),
       },
     ]
 
@@ -85,7 +85,7 @@ export namespace Installation {
 
     for (const check of checks) {
       const output = await check.command()
-      if (output.includes("opencode-ai")) {
+      if (output.includes("opencoder-ai")) {
         return check.name
       }
     }
@@ -104,18 +104,18 @@ export namespace Installation {
     const cmd = (() => {
       switch (method) {
         case "curl":
-          return $`curl -fsSL https://opencode.ai/install | bash`.env({
+          return $`curl -fsSL https://raw.githubusercontent.com/AryaLabsHQ/opencode/refs/heads/dev/install | bash`.env({
             ...process.env,
             VERSION: target,
           })
         case "npm":
-          return $`npm install -g opencode-ai@${target}`
+          return $`npm install -g opencoder-ai@${target}`
         case "pnpm":
-          return $`pnpm install -g opencode-ai@${target}`
+          return $`pnpm install -g opencoder-ai@${target}`
         case "bun":
-          return $`bun install -g opencode-ai@${target}`
+          return $`bun install -g opencoder-ai@${target}`
         case "brew":
-          return $`brew install sst/tap/opencode`.env({
+          return $`brew install AryaLabsHQ/tap/opencoder`.env({
             HOMEBREW_NO_AUTO_UPDATE: "1",
           })
         default:
