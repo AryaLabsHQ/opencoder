@@ -5,9 +5,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
 )
 
 // InitDialogCmp is a component that asks the user if they want to initialize the project.
@@ -94,7 +94,7 @@ func (m InitDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View implements tea.Model.
 func (m InitDialogCmp) View() string {
 	t := theme.CurrentTheme()
-	baseStyle := styles.BaseStyle()
+	baseStyle := styles.NewStyle().Foreground(t.Text())
 
 	// Calculate width needed for content
 	maxWidth := 60 // Width for explanation text

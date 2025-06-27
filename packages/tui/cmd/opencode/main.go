@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/tui"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/tui"
-	"github.com/sst/opencode/pkg/client"
 )
 
 var Version = "dev"
@@ -26,7 +26,11 @@ func main() {
 
 	appInfoStr := os.Getenv("OPENCODE_APP_INFO")
 	var appInfo client.AppInfo
-	json.Unmarshal([]byte(appInfoStr), &appInfo)
+	err := json.Unmarshal([]byte(appInfoStr), &appInfo)
+	if err != nil {
+		slog.Error("Failed to unmarshal app info", "error", err)
+		os.Exit(1)
+	}
 
 	logfile := filepath.Join(appInfo.Path.Data, "log", "tui.log")
 	if _, err := os.Stat(filepath.Dir(logfile)); os.IsNotExist(err) {
@@ -44,6 +48,8 @@ func main() {
 	defer file.Close()
 	logger := slog.New(slog.NewTextHandler(file, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
+
+	slog.Debug("TUI launched", "app", appInfo)
 
 	httpClient, err := client.NewClientWithResponses(url)
 	if err != nil {

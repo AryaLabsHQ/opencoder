@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 // ShowToastMsg is a message to display a toast notification
@@ -90,9 +90,9 @@ func (tm *ToastManager) Update(msg tea.Msg) (*ToastManager, tea.Cmd) {
 func (tm *ToastManager) renderSingleToast(toast Toast) string {
 	t := theme.CurrentTheme()
 
-	baseStyle := styles.BaseStyle().
-		Background(t.BackgroundElement()).
+	baseStyle := styles.NewStyle().
 		Foreground(t.Text()).
+		Background(t.BackgroundElement()).
 		Padding(1, 2)
 
 	maxWidth := max(40, layout.Current.Viewport.Width/3)
@@ -101,15 +101,14 @@ func (tm *ToastManager) renderSingleToast(toast Toast) string {
 	// Build content with wrapping
 	var content strings.Builder
 	if toast.Title != nil {
-		titleStyle := lipgloss.NewStyle().
-			Foreground(toast.Color).
+		titleStyle := styles.NewStyle().Foreground(toast.Color).
 			Bold(true)
 		content.WriteString(titleStyle.Render(*toast.Title))
 		content.WriteString("\n")
 	}
 
 	// Wrap message text
-	messageStyle := lipgloss.NewStyle()
+	messageStyle := styles.NewStyle()
 	contentWidth := lipgloss.Width(toast.Message)
 	if contentWidth > contentMaxWidth {
 		messageStyle = messageStyle.Width(contentMaxWidth)

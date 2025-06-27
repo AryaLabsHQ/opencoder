@@ -38,6 +38,8 @@ For more info on how to configure opencode [**head over to our docs**](https://o
 
 ### Contributing
 
+For any new features we'd appreciate it if you could open an issue first to discuss what you'd like to implement. We're pretty responsive there and it'll save you from working on something that we don't end up using. No need to do this for simpler fixes.
+
 To run opencode locally you need.
 
 - Bun
@@ -50,31 +52,18 @@ $ bun install
 $ bun run packages/opencode/src/index.ts
 ```
 
-### FAQ
+#### Development Notes
 
-#### How do I use this with OpenRouter?
+**API Client Generation**: After making changes to the TypeScript API endpoints in `packages/opencode/src/server/server.ts`, you need to regenerate the Go client and OpenAPI specification:
 
-OpenRouter is not in the Models.dev database yet, but you can configure it manually.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "openrouter": {
-      "npm": "@openrouter/ai-sdk-provider",
-      "name": "OpenRouter",
-      "options": {},
-      "models": {
-        "anthropic/claude-3.5-sonnet": {
-          "name": "Claude 3.5 Sonnet"
-        }
-      }
-    }
-  }
-}
+```bash
+$ cd packages/tui
+$ go generate ./pkg/client/
 ```
 
-And then to configure an api key you can do `opencode auth login` and select "Other -> 'openrouter'"
+This updates the generated Go client code that the TUI uses to communicate with the backend server.
+
+### FAQ
 
 #### How is this different than Claude Code?
 

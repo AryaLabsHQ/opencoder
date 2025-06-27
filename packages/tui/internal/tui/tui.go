@@ -6,24 +6,39 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/completions"
-	"github.com/sst/opencode/internal/components/chat"
-	"github.com/sst/opencode/internal/components/dialog"
-	"github.com/sst/opencode/internal/components/modal"
-	"github.com/sst/opencode/internal/components/status"
-	"github.com/sst/opencode/internal/components/toast"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/util"
-	"github.com/sst/opencode/pkg/client"
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/completions"
+	"github.com/AryaLabsHQ/opencoder/internal/components/chat"
+	"github.com/AryaLabsHQ/opencoder/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencoder/internal/components/modal"
+	"github.com/AryaLabsHQ/opencoder/internal/components/status"
+	"github.com/AryaLabsHQ/opencoder/internal/components/toast"
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 )
+
+// InterruptDebounceTimeoutMsg is sent when the interrupt key debounce timeout expires
+type InterruptDebounceTimeoutMsg struct{}
+
+// InterruptKeyState tracks the state of interrupt key presses for debouncing
+type InterruptKeyState int
+
+const (
+	InterruptKeyIdle InterruptKeyState = iota
+	InterruptKeyFirstPress
+)
+
+const interruptDebounceTimeout = 1 * time.Second
 
 type appModel struct {
 	width, height        int
@@ -40,6 +55,7 @@ type appModel struct {
 	leaderBinding        *key.Binding
 	isLeaderSequence     bool
 	toastManager         *toast.ToastManager
+	interruptKeyState    InterruptKeyState
 }
 
 func (a appModel) Init() tea.Cmd {
@@ -77,8 +93,9 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch keyString {
 			// Escape always closes current modal
 			case "esc", "ctrl+c":
+				cmd := a.modal.Close()
 				a.modal = nil
-				return a, nil
+				return a, cmd
 			}
 
 			// Pass all other key presses to the modal
@@ -116,7 +133,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			updated, cmd := a.completions.Update(
-				app.CompletionDialogTriggerdMsg{
+				app.CompletionDialogTriggeredMsg{
 					InitialValue: initialValue,
 				},
 			)
@@ -170,14 +187,37 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
-		// 6. Check again for commands that don't require leader
+		// 6. Handle interrupt key debounce for session interrupt
+		interruptCommand := a.app.Commands[commands.SessionInterruptCommand]
+		if interruptCommand.Matches(msg, a.isLeaderSequence) && a.app.IsBusy() {
+			switch a.interruptKeyState {
+			case InterruptKeyIdle:
+				// First interrupt key press - start debounce timer
+				a.interruptKeyState = InterruptKeyFirstPress
+				a.editor.SetInterruptKeyInDebounce(true)
+				return a, tea.Tick(interruptDebounceTimeout, func(t time.Time) tea.Msg {
+					return InterruptDebounceTimeoutMsg{}
+				})
+			case InterruptKeyFirstPress:
+				// Second interrupt key press within timeout - actually interrupt
+				a.interruptKeyState = InterruptKeyIdle
+				a.editor.SetInterruptKeyInDebounce(false)
+				return a, util.CmdHandler(commands.ExecuteCommandMsg(interruptCommand))
+			}
+		}
+
+		// 7. Check again for commands that don't require leader (excluding interrupt when busy)
 		matches := a.app.Commands.Matches(msg, a.isLeaderSequence)
 		if len(matches) > 0 {
+			// Skip interrupt key if we're in debounce mode and app is busy
+			if interruptCommand.Matches(msg, a.isLeaderSequence) && a.app.IsBusy() && a.interruptKeyState != InterruptKeyIdle {
+				return a, nil
+			}
 			return a, util.CmdHandler(commands.ExecuteCommandsMsg(matches))
 		}
 
 		// 7. Fallback to editor. This is for other characters
-		// likek backspace, tab, etc.
+		// like backspace, tab, etc.
 		updatedEditor, cmd := a.editor.Update(msg)
 		a.editor = updatedEditor.(chat.EditorComponent)
 		return a, cmd
@@ -188,14 +228,29 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		updated, cmd := a.messages.Update(msg)
 		a.messages = updated.(chat.MessagesComponent)
 		cmds = append(cmds, cmd)
+		return a, tea.Batch(cmds...)
 	case tea.BackgroundColorMsg:
 		styles.Terminal = &styles.TerminalInfo{
+			Background:       msg.Color,
 			BackgroundIsDark: msg.IsDark(),
 		}
-		slog.Debug("Background color", "isDark", msg.IsDark())
+		slog.Debug("Background color", "color", msg.String(), "isDark", msg.IsDark())
+		return a, func() tea.Msg {
+			theme.UpdateSystemTheme(
+				styles.Terminal.Background,
+				styles.Terminal.BackgroundIsDark,
+			)
+			return dialog.ThemeSelectedMsg{
+				ThemeName: theme.CurrentThemeName(),
+			}
+		}
 	case modal.CloseModalMsg:
+		var cmd tea.Cmd
+		if a.modal != nil {
+			cmd = a.modal.Close()
+		}
 		a.modal = nil
-		return a, nil
+		return a, cmd
 	case commands.ExecuteCommandMsg:
 		updated, cmd := a.executeCommand(commands.Command(msg))
 		return updated, cmd
@@ -217,6 +272,12 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"opencode updated to "+msg.Properties.Version+", restart to apply.",
 			toast.WithTitle("New version installed"),
 		)
+	case client.EventSessionDeleted:
+		if a.app.Session != nil && msg.Properties.Info.Id == a.app.Session.Id {
+			a.app.Session = &client.SessionInfo{}
+			a.app.Messages = []client.MessageInfo{}
+		}
+		return a, toast.NewSuccessToast("Session deleted successfully")
 	case client.EventSessionUpdated:
 		if msg.Properties.Info.Id == a.app.Session.Id {
 			a.app.Session = &msg.Properties.Info
@@ -224,12 +285,33 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case client.EventMessageUpdated:
 		if msg.Properties.Info.Metadata.SessionID == a.app.Session.Id {
 			exists := false
-			for i, m := range a.app.Messages {
-				if m.Id == msg.Properties.Info.Id {
-					a.app.Messages[i] = msg.Properties.Info
-					exists = true
+			optimisticReplaced := false
+
+			// First check if this is replacing an optimistic message
+			if msg.Properties.Info.Role == client.User {
+				// Look for optimistic messages to replace
+				for i, m := range a.app.Messages {
+					if strings.HasPrefix(m.Id, "optimistic-") && m.Role == client.User {
+						// Replace the optimistic message with the real one
+						a.app.Messages[i] = msg.Properties.Info
+						exists = true
+						optimisticReplaced = true
+						break
+					}
 				}
 			}
+
+			// If not replacing optimistic, check for existing message with same ID
+			if !optimisticReplaced {
+				for i, m := range a.app.Messages {
+					if m.Id == msg.Properties.Info.Id {
+						a.app.Messages[i] = msg.Properties.Info
+						exists = true
+						break
+					}
+				}
+			}
+
 			if !exists {
 				a.app.Messages = append(a.app.Messages, msg.Properties.Info)
 			}
@@ -262,10 +344,16 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.app.Session = msg
 		a.app.Messages = messages
 	case app.ModelSelectedMsg:
-		a.app.Provider = &msg.Provider
-		a.app.Model = &msg.Model
-		a.app.State.Provider = msg.Provider.Id
-		a.app.State.Model = msg.Model.Id
+		a.app.MainProvider = &msg.MainProvider
+		a.app.MainModel = &msg.MainModel
+		a.app.TurboProvider = &msg.TurboProvider
+		a.app.TurboModel = &msg.TurboModel
+		a.app.State.MainProvider = msg.MainProvider.Id
+		a.app.State.MainModel = msg.MainModel.Id
+		a.app.State.TurboProvider = msg.TurboProvider.Id
+		a.app.State.TurboModel = msg.TurboModel.Id
+
+		// Save state and config
 		a.app.SaveState()
 	case dialog.ThemeSelectedMsg:
 		a.app.State.Theme = msg.ThemeName
@@ -278,6 +366,10 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		tm, cmd := a.toastManager.Update(msg)
 		a.toastManager = tm
 		cmds = append(cmds, cmd)
+	case InterruptDebounceTimeoutMsg:
+		// Reset interrupt key state after timeout
+		a.interruptKeyState = InterruptKeyIdle
+		a.editor.SetInterruptKeyInDebounce(false)
 	}
 
 	// update status bar
@@ -341,7 +433,7 @@ func (a appModel) View() string {
 		layoutView,
 		a.status.View(),
 	}
-	appView := lipgloss.JoinVertical(lipgloss.Top, components...)
+	appView := strings.Join(components, "\n")
 
 	if a.modal != nil {
 		appView = a.modal.Render(appView)
@@ -349,6 +441,9 @@ func (a appModel) View() string {
 
 	appView = a.toastManager.RenderOverlay(appView)
 
+	if theme.CurrentThemeUsesAnsiColors() {
+		appView = util.ConvertRGBToAnsi16Colors(appView)
+	}
 	return appView
 }
 
@@ -358,7 +453,7 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 	}
 	switch command.Name {
 	case commands.AppHelpCommand:
-		helpDialog := dialog.NewHelpDialog(a.app.Commands.Sorted())
+		helpDialog := dialog.NewHelpDialog(a.app)
 		a.modal = helpDialog
 	case commands.EditorOpenCommand:
 		if a.app.IsBusy() {
@@ -571,6 +666,7 @@ func NewModel(app *app.App) tea.Model {
 		showCompletionDialog: false,
 		editorContainer:      editorContainer,
 		toastManager:         toast.NewToastManager(),
+		interruptKeyState:    InterruptKeyIdle,
 		layout: layout.NewFlexLayout(
 			[]tea.ViewModel{messagesContainer, editorContainer},
 			layout.WithDirection(layout.FlexDirectionVertical),

@@ -33,8 +33,8 @@ else
     esac
     
     name="opencode-${platform}-${arch}"
-    binary="opencode"
-    [ "$platform" = "win32" ] && binary="opencode.exe"
+    binary="opencoder"
+    [ "$platform" = "win32" ] && binary="opencoder.exe"
     
     # Search for the binary starting from real script location
     resolved=""

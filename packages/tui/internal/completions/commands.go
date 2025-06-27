@@ -4,12 +4,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/components/dialog"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type CommandCompletionProvider struct {
@@ -37,7 +38,7 @@ func (c *CommandCompletionProvider) GetEmptyMessage() string {
 
 func getCommandCompletionItem(cmd commands.Command, space int, t theme.Theme) dialog.CompletionItemI {
 	spacer := strings.Repeat(" ", space)
-	title := "  /" + cmd.Trigger + lipgloss.NewStyle().Foreground(t.TextMuted()).Render(spacer+cmd.Description)
+	title := "  /" + cmd.Trigger + styles.NewStyle().Foreground(t.TextMuted()).Render(spacer+cmd.Description)
 	value := string(cmd.Name)
 	return dialog.NewCompletionItem(dialog.CompletionItem{
 		Title: title,

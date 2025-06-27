@@ -19,55 +19,133 @@ import type { Tool } from "../tool/tool"
 import { WriteTool } from "../tool/write"
 import { TodoReadTool, TodoWriteTool } from "../tool/todo"
 import { AuthAnthropic } from "../auth/anthropic"
+import { AuthCopilot } from "../auth/copilot"
 import { ModelsDev } from "./models"
 import { NamedError } from "../util/error"
 import { Auth } from "../auth"
-import { TaskTool } from "../tool/task"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
 
   type CustomLoader = (
     provider: ModelsDev.Provider,
-  ) => Promise<Record<string, any> | false>
+    api?: string,
+  ) => Promise<{
+    autoload: boolean
+    getModel?: (sdk: any, modelID: string) => Promise<any>
+    options?: Record<string, any>
+  }>
 
   type Source = "env" | "config" | "custom" | "api"
 
   const CUSTOM_LOADERS: Record<string, CustomLoader> = {
-    async anthropic(provider) {
+    async anthropic() {
       const access = await AuthAnthropic.access()
-      if (!access) return false
-      for (const model of Object.values(provider.models)) {
-        model.cost = {
-          input: 0,
-          output: 0,
-        }
-      }
+      if (!access) return { autoload: false }
+      // for (const model of Object.values(provider.models)) {
+      //   model.cost = {
+      //     input: 0,
+      //     output: 0,
+      //   }
+      // }
       return {
-        apiKey: "",
-        async fetch(input: any, init: any) {
-          const access = await AuthAnthropic.access()
-          const headers = {
-            ...init.headers,
-            authorization: `Bearer ${access}`,
-            "anthropic-beta": "oauth-2025-04-20",
-          }
-          delete headers["x-api-key"]
-          return fetch(input, {
-            ...init,
-            headers,
-          })
+        autoload: true,
+        options: {
+          apiKey: "",
+          async fetch(input: any, init: any) {
+            const access = await AuthAnthropic.access()
+            const headers = {
+              ...init.headers,
+              authorization: `Bearer ${access}`,
+              "anthropic-beta": "oauth-2025-04-20",
+            }
+            delete headers["x-api-key"]
+            return fetch(input, {
+              ...init,
+              headers,
+            })
+          },
         },
       }
     },
+    "github-copilot": async (provider) => {
+      const copilot = await AuthCopilot()
+      if (!copilot) return { autoload: false }
+      let info = await Auth.get("github-copilot")
+      if (!info || info.type !== "oauth") return { autoload: false }
+
+      if (provider && provider.models) {
+        for (const model of Object.values(provider.models)) {
+          model.cost = {
+            input: 0,
+            output: 0,
+          }
+        }
+      }
+
+      return {
+        autoload: true,
+        options: {
+          apiKey: "",
+          async fetch(input: any, init: any) {
+            const info = await Auth.get("github-copilot")
+            if (!info || info.type !== "oauth") return
+            if (!info.access || info.expires < Date.now()) {
+              const tokens = await copilot.access(info.refresh)
+              if (!tokens)
+                throw new Error("GitHub Copilot authentication expired")
+              await Auth.set("github-copilot", {
+                type: "oauth",
+                ...tokens,
+              })
+              info.access = tokens.access
+            }
+            const headers = {
+              ...init.headers,
+              ...copilot.HEADERS,
+              Authorization: `Bearer ${info.access}`,
+              "Openai-Intent": "conversation-edits",
+            }
+            delete headers["x-api-key"]
+            return fetch(input, {
+              ...init,
+              headers,
+            })
+          },
+        },
+      }
+    },
+    openai: async () => {
+      return {
+        autoload: false,
+        async getModel(sdk: any, modelID: string) {
+          return sdk.responses(modelID)
+        },
+        options: {},
+      }
+    },
     "amazon-bedrock": async () => {
-      if (!process.env["AWS_PROFILE"]) return false
+      if (!process.env["AWS_PROFILE"] && !process.env["AWS_ACCESS_KEY_ID"])
+        return { autoload: false }
+
+      const region = process.env["AWS_REGION"] ?? "us-east-1"
+
       const { fromNodeProviderChain } = await import(
         await BunProc.install("@aws-sdk/credential-providers")
       )
       return {
-        region: process.env["AWS_REGION"] ?? "us-east-1",
-        credentialProvider: fromNodeProviderChain(),
+        autoload: true,
+        options: {
+          region,
+          credentialProvider: fromNodeProviderChain(),
+        },
+        async getModel(sdk: any, modelID: string) {
+          if (modelID.includes("claude")) {
+            const prefix = region.split("-")[0]
+            modelID = `${prefix}.${modelID}`
+          }
+          return sdk.languageModel(modelID)
+        },
       }
     },
   }
@@ -80,6 +158,7 @@ export namespace Provider {
       [providerID: string]: {
         source: Source
         info: ModelsDev.Provider
+        getModel?: (sdk: any, modelID: string) => Promise<any>
         options: Record<string, any>
       }
     } = {}
@@ -95,6 +174,7 @@ export namespace Provider {
       id: string,
       options: Record<string, any>,
       source: Source,
+      getModel?: (sdk: any, modelID: string) => Promise<any>,
     ) {
       const provider = providers[id]
       if (!provider) {
@@ -110,6 +190,7 @@ export namespace Provider {
       }
       provider.options = mergeDeep(provider.options, options)
       provider.source = source
+      provider.getModel = getModel ?? provider.getModel
     }
 
     const configProviders = Object.entries(config.provider ?? {})
@@ -132,13 +213,17 @@ export namespace Provider {
           attachment: model.attachment ?? existing?.attachment ?? false,
           reasoning: model.reasoning ?? existing?.reasoning ?? false,
           temperature: model.temperature ?? existing?.temperature ?? false,
-          cost: model.cost ??
-            existing?.cost ?? {
-              input: 0,
-              output: 0,
-              inputCached: 0,
-              outputCached: 0,
-            },
+          tool_call: model.tool_call ?? existing?.tool_call ?? true,
+          cost: {
+            cache_read: 0,
+            cache_write: 0,
+            ...existing?.cost,
+            ...model.cost,
+          },
+          options: {
+            ...existing?.options,
+            ...model.options,
+          },
           limit: model.limit ??
             existing?.limit ?? {
               context: 0,
@@ -173,7 +258,14 @@ export namespace Provider {
     for (const [providerID, fn] of Object.entries(CUSTOM_LOADERS)) {
       if (disabled.has(providerID)) continue
       const result = await fn(database[providerID])
-      if (result) mergeProvider(providerID, result, "custom")
+      if (result && (result.autoload || providers[providerID])) {
+        mergeProvider(
+          providerID,
+          result.options ?? {},
+          "custom",
+          result.getModel,
+        )
+      }
     }
 
     // load config
@@ -236,9 +328,9 @@ export namespace Provider {
     const sdk = await getSDK(provider.info)
 
     try {
-      const language =
-        // @ts-expect-error
-        "responses" in sdk ? sdk.responses(modelID) : sdk.languageModel(modelID)
+      const language = provider.getModel
+        ? await provider.getModel(sdk, modelID)
+        : sdk.languageModel(modelID)
       log.info("found", { providerID, modelID })
       s.models.set(key, {
         info,
@@ -301,6 +393,50 @@ export namespace Provider {
     }
   }
 
+  export async function isTurboModel(model: ModelsDev.Model): Promise<boolean> {
+    const cfg = await Config.get()
+    const threshold = cfg.turbo_cost_threshold ?? 4
+    return model.cost.output <= threshold
+  }
+
+  export async function getTurboModel(providerID: string): Promise<{ info: ModelsDev.Model; language: LanguageModel } | null> {
+    const cfg = await Config.get()
+    
+    // Check user override
+    if (cfg.turbo_model) {
+      try {
+        // Parse the turbo model to get its provider
+        const { providerID: turboProviderID, modelID } = parseModel(cfg.turbo_model)
+        return await getModel(turboProviderID, modelID)
+      } catch (e) {
+        log.warn("Failed to get configured turbo model", { turbo_model: cfg.turbo_model, error: e })
+      }
+    }
+    
+    const providers = await list()
+    const provider = providers[providerID]
+    if (!provider) return null
+
+    // Use configured threshold or default to 4
+    const threshold = cfg.turbo_cost_threshold ?? 4
+    
+    // Select cheapest model whose cost.output <= threshold for turbo tasks
+    let selected: { info: ModelsDev.Model; language: LanguageModel } | null = null
+    for (const model of Object.values(provider.info.models)) {
+      if (model.cost.output <= threshold) {
+        try {
+          const m = await getModel(providerID, model.id)
+          if (!selected || m.info.cost.output < selected.info.cost.output) {
+            selected = m
+          }
+        } catch {
+          // ignore errors and continue searching
+        }
+      }
+    }
+    return selected
+  }
+
   const TOOLS = [
     BashTool,
     EditTool,
@@ -316,7 +452,7 @@ export namespace Provider {
     // MultiEditTool,
     WriteTool,
     TodoWriteTool,
-    TaskTool,
+    // TaskTool,
     TodoReadTool,
   ]
 

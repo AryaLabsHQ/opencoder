@@ -5,11 +5,18 @@ import config from "virtual:starlight/user-config";
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import Share from "../../components/Share.tsx";
 
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = process.env.API_URL;
 
 const { id } = Astro.params;
 const res = await fetch(`${apiUrl}/share_data?id=${id}`);
 const data = await res.json();
+
+if (!data.info) {
+  return new Response(null, {
+    status: 404,
+    statusText: 'Not found'
+  });
+}
 
 const models: Set<string> = new Set();
 const version = data.info.version ? `v${data.info.version}` : "v0.0.1";

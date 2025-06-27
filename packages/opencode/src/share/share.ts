@@ -1,6 +1,5 @@
-import { App } from "../app/app"
 import { Bus } from "../bus"
-import { Installation } from "../installation"
+// import { Installation } from "../installation"
 import { Session } from "../session"
 import { Storage } from "../storage/storage"
 import { Log } from "../util/log"
@@ -10,12 +9,6 @@ export namespace Share {
 
   let queue: Promise<void> = Promise.resolve()
   const pending = new Map<string, any>()
-
-  const state = App.state("share", async () => {
-    Bus.subscribe(Storage.Event.Write, async (payload) => {
-      await sync(payload.properties.key, payload.properties.content)
-    })
-  })
 
   export async function sync(key: string, content: any) {
     const [root, ...splits] = key.split("/")
@@ -52,15 +45,17 @@ export namespace Share {
       })
   }
 
-  export async function init() {
-    await state()
+  export function init() {
+    Bus.subscribe(Storage.Event.Write, async (payload) => {
+      await sync(payload.properties.key, payload.properties.content)
+    })
   }
 
   export const URL =
-    process.env["OPENCODE_API"] ??
-    (Installation.isSnapshot() || Installation.isDev()
-      ? "https://api.dev.opencode.ai"
-      : "https://api.opencode.ai")
+    process.env["OPENCODE_API"] ?? "https://opencoder-api.aryalabs.ai"
+    // (Installation.isSnapshot() || Installation.isDev()
+    //   ? "https://api.dev.opencode.ai"
+    //   : "https://api.opencode.ai")
 
   export async function create(sessionID: string) {
     return fetch(`${URL}/share_create`, {
@@ -69,5 +64,12 @@ export namespace Share {
     })
       .then((x) => x.json())
       .then((x) => x as { url: string; secret: string })
+  }
+
+  export async function remove(id: string) {
+    return fetch(`${URL}/share_delete`, {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    }).then((x) => x.json())
   }
 }

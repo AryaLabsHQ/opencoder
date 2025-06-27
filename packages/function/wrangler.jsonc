@@ -1,0 +1,45 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "opencoder-api",
+	"compatibility_date": "2025-06-27",
+  "main": "src/api.ts",
+  "routes": [
+    {
+      "pattern": "opencoder-api.aryalabs.ai",
+      "custom_domain": true
+    },
+  ],
+
+  "observability": {
+    "enabled": true
+  },
+
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "opencoder-bucket"
+    }
+  ],
+  
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "SyncServer",
+        "name": "SYNC_SERVER",
+      }
+    ]
+  },
+  
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "SyncServer"
+      ]
+    }
+  ],
+}

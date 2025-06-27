@@ -63,7 +63,7 @@
     h1 {
       font-size: 2.75rem;
       font-weight: 500;
-      line-height: 1.15;
+      line-height: 1.2;
       letter-spacing: -0.05em;
       display: -webkit-box;
       -webkit-box-orient: vertical;
@@ -360,7 +360,7 @@
   [data-part-type="tool-fetch"] {
     [data-part-tool-result] {
       [data-part-tool-code] {
-        width: var(--md-tool-width);
+        max-width: var(--md-tool-width);
         border: 1px solid var(--sl-color-divider);
         background-color: var(--sl-color-bg-surface);
         border-radius: 0.25rem;
@@ -616,6 +616,13 @@
     }
   }
 
+  [data-section="error"] {
+    pre {
+      color: var(--sl-color-red) !important;
+      --shiki-dark: var(--sl-color-red) !important;
+    }
+  }
+
   &[data-expanded="true"] {
     pre {
       display: block;
@@ -659,12 +666,12 @@
   }
 
   &[data-expanded="true"] {
-    [data-elment-markdown] {
+    [data-element-markdown] {
       display: block;
     }
   }
   &[data-expanded="false"] {
-    [data-elment-markdown] {
+    [data-element-markdown] {
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 3;

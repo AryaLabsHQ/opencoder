@@ -24,6 +24,16 @@ export namespace Storage {
     }
   })
 
+  export async function remove(key: string) {
+    const target = path.join(state().dir, key + ".json")
+    await fs.unlink(target).catch(() => {})
+  }
+
+  export async function removeDir(key: string) {
+    const target = path.join(state().dir, key)
+    await fs.rm(target, { recursive: true, force: true }).catch(() => {})
+  }
+
   export async function readJSON<T>(key: string) {
     return Bun.file(path.join(state().dir, key + ".json")).json() as Promise<T>
   }

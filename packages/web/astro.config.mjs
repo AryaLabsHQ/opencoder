@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from "astro/config"
+import { defineConfig, envField } from "astro/config"
 import starlight from "@astrojs/starlight"
 import solidJs from "@astrojs/solid-js"
 import cloudflare from "@astrojs/cloudflare"
@@ -8,17 +8,15 @@ import config from "./config.mjs"
 import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 
-const github = "https://github.com/sst/opencode"
-const headerLinks = [
-  { name: "Docs", url: "/docs/" },
-  { name: "GitHub", url: github },
-]
+const url = "https://opencoder.aryalabs.ai"
+const github = "https://github.com/AryaLabsHQ/opencoder"
 
 // https://astro.build/config
 export default defineConfig({
+  site: url,
   output: "server",
   adapter: cloudflare({
-    imageService: "passthrough",
+    imageService: "cloudflare",
   }),
   devToolbar: {
     enabled: false,
@@ -34,8 +32,29 @@ export default defineConfig({
     starlight({
       title: "opencode",
       expressiveCode: { themes: ["github-light", "github-dark"] },
-      social: [
-        { icon: "github", label: "GitHub", href: config.github },
+      social: [{ icon: "github", label: "GitHub", href: config.github }],
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            href: "/favicon.svg",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image",
+            content: `${url}/social-share.png`,
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "twitter:image",
+            content: `${url}/social-share.png`,
+          },
+        },
       ],
       editLink: {
         baseUrl: `${github}/edit/master/www/`,
@@ -52,6 +71,7 @@ export default defineConfig({
       sidebar: [
         "docs",
         "docs/cli",
+        "docs/rules",
         "docs/config",
         "docs/models",
         "docs/themes",

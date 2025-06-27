@@ -2,21 +2,25 @@ package theme
 
 import (
 	"fmt"
-	"log/slog"
+	"image/color"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/alecthomas/chroma/v2/styles"
-	// "github.com/alecthomas/chroma/v2/styles"
+	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/charmbracelet/lipgloss/v2/compat"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // Manager handles theme registration, selection, and retrieval.
 // It maintains a registry of available themes and tracks the currently active theme.
 type Manager struct {
-	themes      map[string]Theme
-	currentName string
-	mu          sync.RWMutex
+	themes               map[string]Theme
+	currentName          string
+	currentUsesAnsiCache bool // Cache whether current theme uses ANSI colors
+	mu                   sync.RWMutex
 }
 
 // Global instance of the theme manager
@@ -24,9 +28,6 @@ var globalManager = &Manager{
 	themes:      make(map[string]Theme),
 	currentName: "",
 }
-
-// Default theme instance for custom theme defaulting
-var defaultThemeColors = NewOpenCodeTheme()
 
 // RegisterTheme adds a new theme to the registry.
 // If this is the first theme registered, it becomes the default.
@@ -39,6 +40,7 @@ func RegisterTheme(name string, theme Theme) {
 	// If this is the first theme, make it the default
 	if globalManager.currentName == "" {
 		globalManager.currentName = name
+		globalManager.currentUsesAnsiCache = themeUsesAnsiColors(theme)
 	}
 }
 
@@ -49,11 +51,13 @@ func SetTheme(name string) error {
 	defer globalManager.mu.Unlock()
 	delete(styles.Registry, "charm")
 
-	if _, exists := globalManager.themes[name]; !exists {
+	theme, exists := globalManager.themes[name]
+	if !exists {
 		return fmt.Errorf("theme '%s' not found", name)
 	}
 
 	globalManager.currentName = name
+	globalManager.currentUsesAnsiCache = themeUsesAnsiColors(theme)
 
 	return nil
 }
@@ -94,6 +98,11 @@ func AvailableThemes() []string {
 		} else if b == "opencode" {
 			return 1
 		}
+		if a == "system" {
+			return -1
+		} else if b == "system" {
+			return 1
+		}
 		return strings.Compare(a, b)
 	})
 	return names
@@ -108,129 +117,113 @@ func GetTheme(name string) Theme {
 	return globalManager.themes[name]
 }
 
-// LoadCustomTheme creates a new theme instance based on the custom theme colors
-// defined in the configuration. It uses the default OpenCode theme as a base
-// and overrides colors that are specified in the customTheme map.
-func LoadCustomTheme(customTheme map[string]any) (Theme, error) {
-	// Create a new theme based on the default OpenCode theme
-	theme := NewOpenCodeTheme()
+// UpdateSystemTheme updates the system theme with terminal background info
+func UpdateSystemTheme(terminalBg color.Color, isDark bool) {
+	globalManager.mu.Lock()
+	defer globalManager.mu.Unlock()
 
-	// Process each color in the custom theme map
-	for key, value := range customTheme {
-		adaptiveColor, err := ParseAdaptiveColor(value)
-		if err != nil {
-			slog.Warn("Invalid color definition in custom theme", "key", key, "error", err)
-			continue // Skip this color but continue processing others
-		}
+	dynamicTheme := NewSystemTheme(terminalBg, isDark)
+	globalManager.themes["system"] = dynamicTheme
+	if globalManager.currentName == "system" {
+		globalManager.currentUsesAnsiCache = themeUsesAnsiColors(dynamicTheme)
+	}
+}
 
-		// Set the color in the theme based on the key
-		switch strings.ToLower(key) {
-		case "primary":
-			theme.PrimaryColor = adaptiveColor
-		case "secondary":
-			theme.SecondaryColor = adaptiveColor
-		case "accent":
-			theme.AccentColor = adaptiveColor
-		case "error":
-			theme.ErrorColor = adaptiveColor
-		case "warning":
-			theme.WarningColor = adaptiveColor
-		case "success":
-			theme.SuccessColor = adaptiveColor
-		case "info":
-			theme.InfoColor = adaptiveColor
-		case "text":
-			theme.TextColor = adaptiveColor
-		case "textmuted":
-			theme.TextMutedColor = adaptiveColor
-		case "background":
-			theme.BackgroundColor = adaptiveColor
-		case "backgroundsubtle":
-			theme.BackgroundSubtleColor = adaptiveColor
-		case "backgroundelement":
-			theme.BackgroundElementColor = adaptiveColor
-		case "border":
-			theme.BorderColor = adaptiveColor
-		case "borderactive":
-			theme.BorderActiveColor = adaptiveColor
-		case "bordersubtle":
-			theme.BorderSubtleColor = adaptiveColor
-		case "diffadded":
-			theme.DiffAddedColor = adaptiveColor
-		case "diffremoved":
-			theme.DiffRemovedColor = adaptiveColor
-		case "diffcontext":
-			theme.DiffContextColor = adaptiveColor
-		case "diffhunkheader":
-			theme.DiffHunkHeaderColor = adaptiveColor
-		case "diffhighlightadded":
-			theme.DiffHighlightAddedColor = adaptiveColor
-		case "diffhighlightremoved":
-			theme.DiffHighlightRemovedColor = adaptiveColor
-		case "diffaddedbg":
-			theme.DiffAddedBgColor = adaptiveColor
-		case "diffremovedbg":
-			theme.DiffRemovedBgColor = adaptiveColor
-		case "diffcontextbg":
-			theme.DiffContextBgColor = adaptiveColor
-		case "difflinenumber":
-			theme.DiffLineNumberColor = adaptiveColor
-		case "diffaddedlinenumberbg":
-			theme.DiffAddedLineNumberBgColor = adaptiveColor
-		case "diffremovedlinenumberbg":
-			theme.DiffRemovedLineNumberBgColor = adaptiveColor
-		case "syntaxcomment":
-			theme.SyntaxCommentColor = adaptiveColor
-		case "syntaxkeyword":
-			theme.SyntaxKeywordColor = adaptiveColor
-		case "syntaxfunction":
-			theme.SyntaxFunctionColor = adaptiveColor
-		case "syntaxvariable":
-			theme.SyntaxVariableColor = adaptiveColor
-		case "syntaxstring":
-			theme.SyntaxStringColor = adaptiveColor
-		case "syntaxnumber":
-			theme.SyntaxNumberColor = adaptiveColor
-		case "syntaxtype":
-			theme.SyntaxTypeColor = adaptiveColor
-		case "syntaxoperator":
-			theme.SyntaxOperatorColor = adaptiveColor
-		case "syntaxpunctuation":
-			theme.SyntaxPunctuationColor = adaptiveColor
-		case "markdowntext":
-			theme.MarkdownTextColor = adaptiveColor
-		case "markdownheading":
-			theme.MarkdownHeadingColor = adaptiveColor
-		case "markdownlink":
-			theme.MarkdownLinkColor = adaptiveColor
-		case "markdownlinktext":
-			theme.MarkdownLinkTextColor = adaptiveColor
-		case "markdowncode":
-			theme.MarkdownCodeColor = adaptiveColor
-		case "markdownblockquote":
-			theme.MarkdownBlockQuoteColor = adaptiveColor
-		case "markdownemph":
-			theme.MarkdownEmphColor = adaptiveColor
-		case "markdownstrong":
-			theme.MarkdownStrongColor = adaptiveColor
-		case "markdownhorizontalrule":
-			theme.MarkdownHorizontalRuleColor = adaptiveColor
-		case "markdownlistitem":
-			theme.MarkdownListItemColor = adaptiveColor
-		case "markdownlistitemenum":
-			theme.MarkdownListEnumerationColor = adaptiveColor
-		case "markdownimage":
-			theme.MarkdownImageColor = adaptiveColor
-		case "markdownimagetext":
-			theme.MarkdownImageTextColor = adaptiveColor
-		case "markdowncodeblock":
-			theme.MarkdownCodeBlockColor = adaptiveColor
-		case "markdownlistenumeration":
-			theme.MarkdownListEnumerationColor = adaptiveColor
-		default:
-			slog.Warn("Unknown color key in custom theme", "key", key)
+// CurrentThemeUsesAnsiColors returns true if the current theme uses ANSI 0-16 colors
+func CurrentThemeUsesAnsiColors() bool {
+	// globalManager.mu.RLock()
+	// defer globalManager.mu.RUnlock()
+
+	return globalManager.currentUsesAnsiCache
+}
+
+// isAnsiColor checks if a color represents an ANSI 0-16 color
+func isAnsiColor(c color.Color) bool {
+	if _, ok := c.(lipgloss.NoColor); ok {
+		return false
+	}
+	if _, ok := c.(ansi.BasicColor); ok {
+		return true
+	}
+
+	// For other color types, check if they represent ANSI colors
+	// by examining their string representation
+	if stringer, ok := c.(fmt.Stringer); ok {
+		str := stringer.String()
+		// Check if it's a numeric ANSI color (0-15)
+		if num, err := strconv.Atoi(str); err == nil && num >= 0 && num <= 15 {
+			return true
 		}
 	}
 
-	return theme, nil
+	return false
+}
+
+// adaptiveColorUsesAnsi checks if an AdaptiveColor uses ANSI colors
+func adaptiveColorUsesAnsi(ac compat.AdaptiveColor) bool {
+	if isAnsiColor(ac.Dark) {
+		return true
+	}
+	if isAnsiColor(ac.Light) {
+		return true
+	}
+	return false
+}
+
+// themeUsesAnsiColors checks if a theme uses any ANSI 0-16 colors
+func themeUsesAnsiColors(theme Theme) bool {
+	if theme == nil {
+		return false
+	}
+
+	return adaptiveColorUsesAnsi(theme.Primary()) ||
+		adaptiveColorUsesAnsi(theme.Secondary()) ||
+		adaptiveColorUsesAnsi(theme.Accent()) ||
+		adaptiveColorUsesAnsi(theme.Error()) ||
+		adaptiveColorUsesAnsi(theme.Warning()) ||
+		adaptiveColorUsesAnsi(theme.Success()) ||
+		adaptiveColorUsesAnsi(theme.Info()) ||
+		adaptiveColorUsesAnsi(theme.Text()) ||
+		adaptiveColorUsesAnsi(theme.TextMuted()) ||
+		adaptiveColorUsesAnsi(theme.Background()) ||
+		adaptiveColorUsesAnsi(theme.BackgroundPanel()) ||
+		adaptiveColorUsesAnsi(theme.BackgroundElement()) ||
+		adaptiveColorUsesAnsi(theme.Border()) ||
+		adaptiveColorUsesAnsi(theme.BorderActive()) ||
+		adaptiveColorUsesAnsi(theme.BorderSubtle()) ||
+		adaptiveColorUsesAnsi(theme.DiffAdded()) ||
+		adaptiveColorUsesAnsi(theme.DiffRemoved()) ||
+		adaptiveColorUsesAnsi(theme.DiffContext()) ||
+		adaptiveColorUsesAnsi(theme.DiffHunkHeader()) ||
+		adaptiveColorUsesAnsi(theme.DiffHighlightAdded()) ||
+		adaptiveColorUsesAnsi(theme.DiffHighlightRemoved()) ||
+		adaptiveColorUsesAnsi(theme.DiffAddedBg()) ||
+		adaptiveColorUsesAnsi(theme.DiffRemovedBg()) ||
+		adaptiveColorUsesAnsi(theme.DiffContextBg()) ||
+		adaptiveColorUsesAnsi(theme.DiffLineNumber()) ||
+		adaptiveColorUsesAnsi(theme.DiffAddedLineNumberBg()) ||
+		adaptiveColorUsesAnsi(theme.DiffRemovedLineNumberBg()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownText()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownHeading()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownLink()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownLinkText()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownCode()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownBlockQuote()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownEmph()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownStrong()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownHorizontalRule()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownListItem()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownListEnumeration()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownImage()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownImageText()) ||
+		adaptiveColorUsesAnsi(theme.MarkdownCodeBlock()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxComment()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxKeyword()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxFunction()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxVariable()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxString()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxNumber()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxType()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxOperator()) ||
+		adaptiveColorUsesAnsi(theme.SyntaxPunctuation())
 }

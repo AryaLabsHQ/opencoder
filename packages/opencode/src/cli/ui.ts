@@ -1,11 +1,12 @@
 import { z } from "zod"
+import { EOL } from "os"
 import { NamedError } from "../util/error"
 
 export namespace UI {
   const LOGO = [
-    [`█▀▀█ █▀▀█ █▀▀ █▀▀▄ `, `█▀▀ █▀▀█ █▀▀▄ █▀▀`],
-    [`█░░█ █░░█ █▀▀ █░░█ `, `█░░ █░░█ █░░█ █▀▀`],
-    [`▀▀▀▀ █▀▀▀ ▀▀▀ ▀  ▀ `, `▀▀▀ ▀▀▀▀ ▀▀▀  ▀▀▀`],
+    [`█▀▀█ █▀▀█ █▀▀ █▀▀▄ `, `█▀▀ █▀▀█ █▀▀▄ █▀▀ █▀▀█`],
+    [`█░░█ █░░█ █▀▀ █░░█ `, `█░░ █░░█ █░░█ █▀▀ █▄▄▀`],
+    [`▀▀▀▀ █▀▀▀ ▀▀▀ ▀  ▀ `, `▀▀▀ ▀▀▀▀ ▀▀▀  ▀▀▀ ▀  ▀`],
   ]
 
   export const CancelledError = NamedError.create("UICancelledError", z.void())
@@ -29,7 +30,7 @@ export namespace UI {
 
   export function println(...message: string[]) {
     print(...message)
-    Bun.stderr.write("\n")
+    Bun.stderr.write(EOL)
   }
 
   export function print(...message: string[]) {
@@ -52,7 +53,7 @@ export namespace UI {
       result.push(row[0])
       result.push("\x1b[0m")
       result.push(row[1])
-      result.push("\n")
+      result.push(EOL)
     }
     return result.join("").trimEnd()
   }

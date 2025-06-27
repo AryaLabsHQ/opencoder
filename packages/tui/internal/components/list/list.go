@@ -3,8 +3,11 @@ package list
 import (
 	"strings"
 
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/muesli/reflow/truncate"
 )
 
 type ListItem interface {
@@ -123,6 +126,9 @@ func (c *listComponent[T]) SetSelectedIndex(idx int) {
 func (c *listComponent[T]) View() string {
 	items := c.items
 	maxWidth := c.maxWidth
+	if maxWidth == 0 {
+		maxWidth = 80 // Default width if not set
+	}
 	maxVisibleItems := min(c.maxVisibleItems, len(items))
 	startIdx := 0
 
@@ -160,4 +166,38 @@ func NewListComponent[T ListItem](items []T, maxVisibleItems int, fallbackMsg st
 		useAlphaNumericKeys: useAlphaNumericKeys,
 		selectedIdx:         0,
 	}
+}
+
+// StringItem is a simple implementation of ListItem for string values
+type StringItem string
+
+func (s StringItem) Render(selected bool, width int) string {
+	t := theme.CurrentTheme()
+	baseStyle := styles.NewStyle()
+
+	truncatedStr := truncate.StringWithTail(string(s), uint(width-1), "...")
+
+	var itemStyle styles.Style
+	if selected {
+		itemStyle = baseStyle.
+			Background(t.Primary()).
+			Foreground(t.BackgroundElement()).
+			Width(width).
+			PaddingLeft(1)
+	} else {
+		itemStyle = baseStyle.
+			Foreground(t.TextMuted()).
+			PaddingLeft(1)
+	}
+
+	return itemStyle.Render(truncatedStr)
+}
+
+// NewStringList creates a new list component with string items
+func NewStringList(items []string, maxVisibleItems int, fallbackMsg string, useAlphaNumericKeys bool) List[StringItem] {
+	stringItems := make([]StringItem, len(items))
+	for i, item := range items {
+		stringItems[i] = StringItem(item)
+	}
+	return NewListComponent(stringItems, maxVisibleItems, fallbackMsg, useAlphaNumericKeys)
 }

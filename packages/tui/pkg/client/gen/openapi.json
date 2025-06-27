@@ -230,6 +230,42 @@
         }
       }
     },
+    "/session_unshare": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Successfully unshared session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/session.info"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postSession_unshare",
+        "parameters": [],
+        "description": "Unshare the session",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionID"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/session_messages": {
       "post": {
         "responses": {
@@ -308,6 +344,42 @@
         "operationId": "postSession_abort",
         "parameters": [],
         "description": "Abort a session",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionID"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session_delete": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Successfully deleted session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postSession_delete",
+        "parameters": [],
+        "description": "Delete a session and all its data",
         "requestBody": {
           "content": {
             "application/json": {
@@ -571,16 +643,16 @@
       "Event": {
         "oneOf": [
           {
-            "$ref": "#/components/schemas/Event.storage.write"
-          },
-          {
-            "$ref": "#/components/schemas/Event.installation.updated"
-          },
-          {
             "$ref": "#/components/schemas/Event.lsp.client.diagnostics"
           },
           {
             "$ref": "#/components/schemas/Event.permission.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.edited"
+          },
+          {
+            "$ref": "#/components/schemas/Event.storage.write"
           },
           {
             "$ref": "#/components/schemas/Event.message.updated"
@@ -589,7 +661,16 @@
             "$ref": "#/components/schemas/Event.message.part.updated"
           },
           {
+            "$ref": "#/components/schemas/Event.installation.updated"
+          },
+          {
             "$ref": "#/components/schemas/Event.session.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.deleted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.idle"
           },
           {
             "$ref": "#/components/schemas/Event.session.error"
@@ -598,65 +679,19 @@
         "discriminator": {
           "propertyName": "type",
           "mapping": {
-            "storage.write": "#/components/schemas/Event.storage.write",
-            "installation.updated": "#/components/schemas/Event.installation.updated",
             "lsp.client.diagnostics": "#/components/schemas/Event.lsp.client.diagnostics",
             "permission.updated": "#/components/schemas/Event.permission.updated",
+            "file.edited": "#/components/schemas/Event.file.edited",
+            "storage.write": "#/components/schemas/Event.storage.write",
             "message.updated": "#/components/schemas/Event.message.updated",
             "message.part.updated": "#/components/schemas/Event.message.part.updated",
+            "installation.updated": "#/components/schemas/Event.installation.updated",
             "session.updated": "#/components/schemas/Event.session.updated",
+            "session.deleted": "#/components/schemas/Event.session.deleted",
+            "session.idle": "#/components/schemas/Event.session.idle",
             "session.error": "#/components/schemas/Event.session.error"
           }
         }
-      },
-      "Event.storage.write": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "storage.write"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "key": {
-                "type": "string"
-              },
-              "content": {}
-            },
-            "required": [
-              "key"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.installation.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "installation.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "version"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
       },
       "Event.lsp.client.diagnostics": {
         "type": "object",
@@ -738,6 +773,55 @@
           "time"
         ]
       },
+      "Event.file.edited": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file.edited"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "file"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.storage.write": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "storage.write"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "content": {}
+            },
+            "required": [
+              "key"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
       "Event.message.updated": {
         "type": "object",
         "properties": {
@@ -782,160 +866,7 @@
             }
           },
           "metadata": {
-            "type": "object",
-            "properties": {
-              "time": {
-                "type": "object",
-                "properties": {
-                  "created": {
-                    "type": "number"
-                  },
-                  "completed": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "created"
-                ]
-              },
-              "error": {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/ProviderAuthError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/UnknownError"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "name",
-                  "mapping": {
-                    "ProviderAuthError": "#/components/schemas/ProviderAuthError",
-                    "UnknownError": "#/components/schemas/UnknownError"
-                  }
-                }
-              },
-              "sessionID": {
-                "type": "string"
-              },
-              "tool": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "title": {
-                      "type": "string"
-                    },
-                    "time": {
-                      "type": "object",
-                      "properties": {
-                        "start": {
-                          "type": "number"
-                        },
-                        "end": {
-                          "type": "number"
-                        }
-                      },
-                      "required": [
-                        "start",
-                        "end"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "title",
-                    "time"
-                  ],
-                  "additionalProperties": {}
-                }
-              },
-              "assistant": {
-                "type": "object",
-                "properties": {
-                  "system": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "modelID": {
-                    "type": "string"
-                  },
-                  "providerID": {
-                    "type": "string"
-                  },
-                  "path": {
-                    "type": "object",
-                    "properties": {
-                      "cwd": {
-                        "type": "string"
-                      },
-                      "root": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "cwd",
-                      "root"
-                    ]
-                  },
-                  "cost": {
-                    "type": "number"
-                  },
-                  "summary": {
-                    "type": "boolean"
-                  },
-                  "tokens": {
-                    "type": "object",
-                    "properties": {
-                      "input": {
-                        "type": "number"
-                      },
-                      "output": {
-                        "type": "number"
-                      },
-                      "reasoning": {
-                        "type": "number"
-                      },
-                      "cache": {
-                        "type": "object",
-                        "properties": {
-                          "read": {
-                            "type": "number"
-                          },
-                          "write": {
-                            "type": "number"
-                          }
-                        },
-                        "required": [
-                          "read",
-                          "write"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "input",
-                      "output",
-                      "reasoning",
-                      "cache"
-                    ]
-                  }
-                },
-                "required": [
-                  "system",
-                  "modelID",
-                  "providerID",
-                  "path",
-                  "cost",
-                  "tokens"
-                ]
-              }
-            },
-            "required": [
-              "time",
-              "sessionID",
-              "tool"
-            ]
+            "$ref": "#/components/schemas/Message.Metadata"
           }
         },
         "required": [
@@ -1189,6 +1120,166 @@
           "type"
         ]
       },
+      "Message.Metadata": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              },
+              "completed": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "created"
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProviderAuthError"
+              },
+              {
+                "$ref": "#/components/schemas/UnknownError"
+              },
+              {
+                "$ref": "#/components/schemas/MessageOutputLengthError"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "name",
+              "mapping": {
+                "ProviderAuthError": "#/components/schemas/ProviderAuthError",
+                "UnknownError": "#/components/schemas/UnknownError",
+                "MessageOutputLengthError": "#/components/schemas/MessageOutputLengthError"
+              }
+            }
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "time": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "number"
+                    },
+                    "end": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end"
+                  ]
+                }
+              },
+              "required": [
+                "title",
+                "time"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "assistant": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "modelID": {
+                "type": "string"
+              },
+              "providerID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "object",
+                "properties": {
+                  "cwd": {
+                    "type": "string"
+                  },
+                  "root": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cwd",
+                  "root"
+                ]
+              },
+              "cost": {
+                "type": "number"
+              },
+              "summary": {
+                "type": "boolean"
+              },
+              "tokens": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "number"
+                  },
+                  "output": {
+                    "type": "number"
+                  },
+                  "reasoning": {
+                    "type": "number"
+                  },
+                  "cache": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "type": "number"
+                      },
+                      "write": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "read",
+                      "write"
+                    ]
+                  }
+                },
+                "required": [
+                  "input",
+                  "output",
+                  "reasoning",
+                  "cache"
+                ]
+              }
+            },
+            "required": [
+              "system",
+              "modelID",
+              "providerID",
+              "path",
+              "cost",
+              "tokens"
+            ]
+          }
+        },
+        "required": [
+          "time",
+          "sessionID",
+          "tool"
+        ]
+      },
       "ProviderAuthError": {
         "type": "object",
         "properties": {
@@ -1241,6 +1332,22 @@
           "data"
         ]
       },
+      "MessageOutputLengthError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "MessageOutputLengthError"
+          },
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "data"
+        ]
+      },
       "Event.message.part.updated": {
         "type": "object",
         "properties": {
@@ -1265,6 +1372,30 @@
               "part",
               "sessionID",
               "messageID"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.installation.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "installation.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "version"
             ]
           }
         },
@@ -1348,6 +1479,54 @@
           "time"
         ]
       },
+      "Event.session.deleted": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.deleted"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "info": {
+                "$ref": "#/components/schemas/session.info"
+              }
+            },
+            "required": [
+              "info"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.session.idle": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.idle"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sessionID"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
       "Event.session.error": {
         "type": "object",
         "properties": {
@@ -1365,13 +1544,17 @@
                   },
                   {
                     "$ref": "#/components/schemas/UnknownError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MessageOutputLengthError"
                   }
                 ],
                 "discriminator": {
                   "propertyName": "name",
                   "mapping": {
                     "ProviderAuthError": "#/components/schemas/ProviderAuthError",
-                    "UnknownError": "#/components/schemas/UnknownError"
+                    "UnknownError": "#/components/schemas/UnknownError",
+                    "MessageOutputLengthError": "#/components/schemas/MessageOutputLengthError"
                   }
                 }
               }
@@ -1387,6 +1570,9 @@
         "type": "object",
         "properties": {
           "user": {
+            "type": "string"
+          },
+          "hostname": {
             "type": "string"
           },
           "git": {
@@ -1430,6 +1616,7 @@
         },
         "required": [
           "user",
+          "hostname",
           "git",
           "path",
           "time"
@@ -1468,6 +1655,15 @@
           "model": {
             "type": "string",
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2"
+          },
+          "turbo_model": {
+            "type": "string",
+            "description": "Turbo model to use for tasks like window title generation"
+          },
+          "turbo_cost_threshold": {
+            "type": "number",
+            "description": "Maximum output cost for a model to be considered a turbo model (default: 4)",
+            "default": 4
           },
           "provider": {
             "type": "object",
@@ -1509,6 +1705,9 @@
                       "temperature": {
                         "type": "boolean"
                       },
+                      "tool_call": {
+                        "type": "boolean"
+                      },
                       "cost": {
                         "type": "object",
                         "properties": {
@@ -1547,6 +1746,18 @@
                       },
                       "id": {
                         "type": "string"
+                      },
+                      "options": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      "release_date": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
+                      },
+                      "last_updated": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
                       }
                     }
                   }
@@ -1582,6 +1793,65 @@
               }
             },
             "description": "MCP (Model Context Protocol) server configurations"
+          },
+          "experimental": {
+            "type": "object",
+            "properties": {
+              "hook": {
+                "type": "object",
+                "properties": {
+                  "file_edited": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "command": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "environment": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "command"
+                        ]
+                      }
+                    }
+                  },
+                  "session_completed": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "command": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "environment": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "command"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "additionalProperties": false
@@ -1750,6 +2020,9 @@
           "temperature": {
             "type": "boolean"
           },
+          "tool_call": {
+            "type": "boolean"
+          },
           "cost": {
             "type": "object",
             "properties": {
@@ -1788,6 +2061,18 @@
           },
           "id": {
             "type": "string"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "release_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
+          },
+          "last_updated": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
           }
         },
         "required": [
@@ -1795,9 +2080,11 @@
           "attachment",
           "reasoning",
           "temperature",
+          "tool_call",
           "cost",
           "limit",
-          "id"
+          "id",
+          "options"
         ]
       },
       "Config.McpLocal": {

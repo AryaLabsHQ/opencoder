@@ -291,6 +291,34 @@ export namespace Server {
         },
       )
       .post(
+        "/session_unshare",
+        describeRoute({
+          description: "Unshare the session",
+          responses: {
+            200: {
+              description: "Successfully unshared session",
+              content: {
+                "application/json": {
+                  schema: resolver(Session.Info),
+                },
+              },
+            },
+          },
+        }),
+        zValidator(
+          "json",
+          z.object({
+            sessionID: z.string(),
+          }),
+        ),
+        async (c) => {
+          const body = c.req.valid("json")
+          await Session.unshare(body.sessionID)
+          const session = await Session.get(body.sessionID)
+          return c.json(session)
+        },
+      )
+      .post(
         "/session_messages",
         describeRoute({
           description: "Get messages for a session",
@@ -360,6 +388,33 @@ export namespace Server {
         async (c) => {
           const body = c.req.valid("json")
           return c.json(Session.abort(body.sessionID))
+        },
+      )
+      .post(
+        "/session_delete",
+        describeRoute({
+          description: "Delete a session and all its data",
+          responses: {
+            200: {
+              description: "Successfully deleted session",
+              content: {
+                "application/json": {
+                  schema: resolver(z.boolean()),
+                },
+              },
+            },
+          },
+        }),
+        zValidator(
+          "json",
+          z.object({
+            sessionID: z.string(),
+          }),
+        ),
+        async (c) => {
+          const body = c.req.valid("json")
+          await Session.remove(body.sessionID)
+          return c.json(true)
         },
       )
       .post(
@@ -554,10 +609,10 @@ export namespace Server {
     return result
   }
 
-  export function listen() {
+  export function listen(opts: { port: number; hostname: string }) {
     const server = Bun.serve({
-      port: 0,
-      hostname: "0.0.0.0",
+      port: opts.port,
+      hostname: opts.hostname,
       idleTimeout: 0,
       fetch: app().fetch,
     })

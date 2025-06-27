@@ -1,10 +1,6 @@
 package theme
 
 import (
-	"fmt"
-	"regexp"
-
-	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
 )
 
@@ -14,7 +10,7 @@ import (
 type Theme interface {
 	// Background colors
 	Background() compat.AdaptiveColor        // Radix 1
-	BackgroundSubtle() compat.AdaptiveColor  // Radix 2
+	BackgroundPanel() compat.AdaptiveColor   // Radix 2
 	BackgroundElement() compat.AdaptiveColor // Radix 3
 
 	// Border colors
@@ -84,7 +80,7 @@ type Theme interface {
 type BaseTheme struct {
 	// Background colors
 	BackgroundColor        compat.AdaptiveColor
-	BackgroundSubtleColor  compat.AdaptiveColor
+	BackgroundPanelColor   compat.AdaptiveColor
 	BackgroundElementColor compat.AdaptiveColor
 
 	// Border colors
@@ -163,7 +159,7 @@ func (t *BaseTheme) Text() compat.AdaptiveColor      { return t.TextColor }
 func (t *BaseTheme) TextMuted() compat.AdaptiveColor { return t.TextMutedColor }
 
 func (t *BaseTheme) Background() compat.AdaptiveColor        { return t.BackgroundColor }
-func (t *BaseTheme) BackgroundSubtle() compat.AdaptiveColor  { return t.BackgroundSubtleColor }
+func (t *BaseTheme) BackgroundPanel() compat.AdaptiveColor   { return t.BackgroundPanelColor }
 func (t *BaseTheme) BackgroundElement() compat.AdaptiveColor { return t.BackgroundElementColor }
 
 func (t *BaseTheme) Border() compat.AdaptiveColor       { return t.BorderColor }
@@ -215,74 +211,3 @@ func (t *BaseTheme) SyntaxNumber() compat.AdaptiveColor      { return t.SyntaxNu
 func (t *BaseTheme) SyntaxType() compat.AdaptiveColor        { return t.SyntaxTypeColor }
 func (t *BaseTheme) SyntaxOperator() compat.AdaptiveColor    { return t.SyntaxOperatorColor }
 func (t *BaseTheme) SyntaxPunctuation() compat.AdaptiveColor { return t.SyntaxPunctuationColor }
-
-// ParseAdaptiveColor parses a color value from the config file into a compat.AdaptiveColor.
-// It accepts either a string (hex color) or a map with "dark" and "light" keys.
-func ParseAdaptiveColor(value any) (compat.AdaptiveColor, error) {
-	// Regular expression to validate hex color format
-	hexColorRegex := regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-
-	// Case 1: String value (same color for both dark and light modes)
-	if hexColor, ok := value.(string); ok {
-		if !hexColorRegex.MatchString(hexColor) {
-			return compat.AdaptiveColor{}, fmt.Errorf("invalid hex color format: %s", hexColor)
-		}
-		return compat.AdaptiveColor{
-			Dark:  lipgloss.Color(hexColor),
-			Light: lipgloss.Color(hexColor),
-		}, nil
-	}
-
-	// Case 2: Int value between 0 and 255
-	if numericVal, ok := value.(float64); ok {
-		intVal := int(numericVal)
-		if intVal < 0 || intVal > 255 {
-			return compat.AdaptiveColor{}, fmt.Errorf("invalid int color value (must be between 0 and 255): %d", intVal)
-		}
-		return compat.AdaptiveColor{
-			Dark:  lipgloss.Color(fmt.Sprintf("%d", intVal)),
-			Light: lipgloss.Color(fmt.Sprintf("%d", intVal)),
-		}, nil
-	}
-
-	// Case 3: Map with dark and light keys
-	if colorMap, ok := value.(map[string]any); ok {
-		darkVal, darkOk := colorMap["dark"]
-		lightVal, lightOk := colorMap["light"]
-
-		if !darkOk || !lightOk {
-			return compat.AdaptiveColor{}, fmt.Errorf("color map must contain both 'dark' and 'light' keys")
-		}
-
-		darkHex, darkIsString := darkVal.(string)
-		lightHex, lightIsString := lightVal.(string)
-
-		if !darkIsString || !lightIsString {
-			darkVal, darkIsNumber := darkVal.(float64)
-			lightVal, lightIsNumber := lightVal.(float64)
-
-			if !darkIsNumber || !lightIsNumber {
-				return compat.AdaptiveColor{}, fmt.Errorf("color map values must be strings or ints")
-			}
-
-			darkInt := int(darkVal)
-			lightInt := int(lightVal)
-
-			return compat.AdaptiveColor{
-				Dark:  lipgloss.Color(fmt.Sprintf("%d", darkInt)),
-				Light: lipgloss.Color(fmt.Sprintf("%d", lightInt)),
-			}, nil
-		}
-
-		if !hexColorRegex.MatchString(darkHex) || !hexColorRegex.MatchString(lightHex) {
-			return compat.AdaptiveColor{}, fmt.Errorf("invalid hex color format")
-		}
-
-		return compat.AdaptiveColor{
-			Dark:  lipgloss.Color(darkHex),
-			Light: lipgloss.Color(lightHex),
-		}, nil
-	}
-
-	return compat.AdaptiveColor{}, fmt.Errorf("color must be either a hex string or an object with dark/light keys")
-}
