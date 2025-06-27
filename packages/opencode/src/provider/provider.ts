@@ -215,12 +215,10 @@ export namespace Provider {
           temperature: model.temperature ?? existing?.temperature ?? false,
           tool_call: model.tool_call ?? existing?.tool_call ?? true,
           cost: {
-            ...existing?.cost,
-            ...model.cost,
-            input: 0,
-            output: 0,
             cache_read: 0,
             cache_write: 0,
+            ...existing?.cost,
+            ...model.cost,
           },
           options: {
             ...existing?.options,
