@@ -768,7 +768,7 @@ func NewModelDialog(app *app.App) ModelDialog {
 		turboProvider:      turboProvider,
 		hScrollPossible:    len(availableProviders) > 1,
 		activePane:         MainModelPane,
-		sortMode:           SortByName,
+		sortMode:           SortByLastUpdated,
 		modal:              modal.New(modal.WithTitle("Select Models")),
 	}
 
