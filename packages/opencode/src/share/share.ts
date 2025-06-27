@@ -1,5 +1,5 @@
 import { Bus } from "../bus"
-import { Installation } from "../installation"
+// import { Installation } from "../installation"
 import { Session } from "../session"
 import { Storage } from "../storage/storage"
 import { Log } from "../util/log"
