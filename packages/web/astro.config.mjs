@@ -9,7 +9,7 @@ import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 
 const url = "https://opencode.ai"
-const github = "https://github.com/AryaLabsHQ/opencode"
+const github = "https://github.com/AryaLabsHQ/opencoder"
 
 // https://astro.build/config
 export default defineConfig({

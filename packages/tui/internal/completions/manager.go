@@ -3,8 +3,8 @@ package completions
 import (
 	"strings"
 
-	"github.com/AryaLabsHQ/opencode/internal/app"
-	"github.com/AryaLabsHQ/opencode/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/components/dialog"
 )
 
 type CompletionManager struct {

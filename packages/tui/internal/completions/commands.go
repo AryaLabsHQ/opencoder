@@ -4,11 +4,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AryaLabsHQ/opencode/internal/app"
-	"github.com/AryaLabsHQ/opencode/internal/commands"
-	"github.com/AryaLabsHQ/opencode/internal/components/dialog"
-	"github.com/AryaLabsHQ/opencode/internal/styles"
-	"github.com/AryaLabsHQ/opencode/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )

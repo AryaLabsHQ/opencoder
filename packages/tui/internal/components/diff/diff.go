@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	stylesi "github.com/AryaLabsHQ/opencode/internal/styles"
-	"github.com/AryaLabsHQ/opencode/internal/theme"
+	stylesi "github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"

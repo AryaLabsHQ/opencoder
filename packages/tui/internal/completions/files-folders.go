@@ -3,9 +3,9 @@ package completions
 import (
 	"context"
 
-	"github.com/AryaLabsHQ/opencode/internal/app"
-	"github.com/AryaLabsHQ/opencode/internal/components/dialog"
-	"github.com/AryaLabsHQ/opencode/pkg/client"
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 )
 
 type filesAndFoldersContextGroup struct {

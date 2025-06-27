@@ -9,13 +9,13 @@ import (
 
 	"log/slog"
 
-	"github.com/AryaLabsHQ/opencode/internal/commands"
-	"github.com/AryaLabsHQ/opencode/internal/components/toast"
-	"github.com/AryaLabsHQ/opencode/internal/config"
-	"github.com/AryaLabsHQ/opencode/internal/styles"
-	"github.com/AryaLabsHQ/opencode/internal/theme"
-	"github.com/AryaLabsHQ/opencode/internal/util"
-	"github.com/AryaLabsHQ/opencode/pkg/client"
+	"github.com/AryaLabsHQ/opencoder/internal/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/components/toast"
+	"github.com/AryaLabsHQ/opencoder/internal/config"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 

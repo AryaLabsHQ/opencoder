@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/AryaLabsHQ/opencode/pkg/client"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	"github.com/BurntSushi/toml"
 )
 

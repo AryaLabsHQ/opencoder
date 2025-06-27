@@ -104,7 +104,7 @@ export namespace Installation {
     const cmd = (() => {
       switch (method) {
         case "curl":
-          return $`curl -fsSL https://raw.githubusercontent.com/AryaLabsHQ/opencode/refs/heads/dev/install | bash`.env({
+          return $`curl -fsSL https://raw.githubusercontent.com/AryaLabsHQ/opencoder/refs/heads/dev/install | bash`.env({
             ...process.env,
             VERSION: target,
           })
@@ -139,7 +139,7 @@ export namespace Installation {
     typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "dev"
 
   export async function latest() {
-    return fetch("https://api.github.com/repos/AryaLabsHQ/opencode/releases/latest")
+    return fetch("https://api.github.com/repos/AryaLabsHQ/opencoder/releases/latest")
       .then((res) => res.json())
       .then((data) => data.tag_name.slice(1) as string)
   }
