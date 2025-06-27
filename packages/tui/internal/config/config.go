@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/AryaLabsHQ/opencode/pkg/client"
 	"github.com/BurntSushi/toml"
-	"github.com/sst/opencode/pkg/client"
 )
 
 type State struct {

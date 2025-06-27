@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencode/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/pkg/client"
 )
 
 type ExecuteCommandMsg Command

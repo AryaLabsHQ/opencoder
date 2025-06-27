@@ -1,10 +1,10 @@
 package layout
 
 import (
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type Container interface {

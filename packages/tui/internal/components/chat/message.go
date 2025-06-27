@@ -9,15 +9,15 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/AryaLabsHQ/opencode/internal/app"
+	"github.com/AryaLabsHQ/opencode/internal/components/diff"
+	"github.com/AryaLabsHQ/opencode/internal/layout"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
+	"github.com/AryaLabsHQ/opencode/pkg/client"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/components/diff"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/pkg/client"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -409,7 +409,7 @@ func renderToolInvocation(
 			title = fmt.Sprintf("WRITE %s", relative(filename))
 			if content, ok := toolArgsMap["content"].(string); ok {
 				body = renderFile(filename, content)
-				
+
 				// Add diagnostics at the bottom if they exist
 				if diagnostics := renderDiagnostics(metadata, filename); diagnostics != "" {
 					body += "\n" + renderContentBlock(diagnostics, WithFullWidth(), WithBorderColor(t.Error()))
@@ -753,7 +753,7 @@ func renderDiagnostics(metadata client.MessageMetadata_Tool_AdditionalProperties
 			continue
 		}
 
-		line := diag.Range.Start.Line + 1      // 1-based
+		line := diag.Range.Start.Line + 1        // 1-based
 		column := diag.Range.Start.Character + 1 // 1-based
 		errorDiagnostics = append(errorDiagnostics, fmt.Sprintf("Error [%d:%d] %s", line, column, diag.Message))
 	}

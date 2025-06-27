@@ -4,13 +4,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencode/internal/app"
+	"github.com/AryaLabsHQ/opencode/internal/commands"
+	"github.com/AryaLabsHQ/opencode/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/components/dialog"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type CommandCompletionProvider struct {

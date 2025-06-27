@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AryaLabsHQ/opencode/internal/layout"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 // ShowToastMsg is a message to display a toast notification

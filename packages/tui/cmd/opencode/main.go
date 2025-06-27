@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencode/internal/app"
+	"github.com/AryaLabsHQ/opencode/internal/tui"
+	"github.com/AryaLabsHQ/opencode/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/tui"
-	"github.com/sst/opencode/pkg/client"
 )
 
 var Version = "dev"

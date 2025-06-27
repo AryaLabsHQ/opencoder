@@ -5,18 +5,18 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencode/internal/app"
+	"github.com/AryaLabsHQ/opencode/internal/commands"
+	"github.com/AryaLabsHQ/opencode/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencode/internal/components/textarea"
+	"github.com/AryaLabsHQ/opencode/internal/image"
+	"github.com/AryaLabsHQ/opencode/internal/layout"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
+	"github.com/AryaLabsHQ/opencode/internal/util"
 	"github.com/charmbracelet/bubbles/v2/spinner"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/components/dialog"
-	"github.com/sst/opencode/internal/components/textarea"
-	"github.com/sst/opencode/internal/image"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
 )
 
 type EditorComponent interface {
