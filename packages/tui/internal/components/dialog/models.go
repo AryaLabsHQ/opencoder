@@ -526,7 +526,7 @@ func (m *modelDialog) View() string {
 	return content
 }
 
-func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, selectedIdx, scrollOffset int, isActive bool, baseStyle lipgloss.Style) string {
+func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, selectedIdx, scrollOffset int, isActive bool, _ lipgloss.Style) string {
 	t := theme.CurrentTheme()
 
 	// Simple header like in the original dialog
@@ -582,19 +582,21 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 		spacer := strings.Repeat(" ", availableSpace)
 		displayText := modelName + spacer + capabilityStr
 
-		// Apply styling based on selection and pane state
-		itemStyle := baseStyle.Width(paneWidth)
+		// Default style for all items
+		itemStyle := lipgloss.NewStyle().
+			Width(paneWidth).
+			Background(t.BackgroundElement()).
+			Foreground(t.TextMuted())
+
+		// Override for selected items
 		if i == selectedIdx {
 			if isActive {
-				// Active selection - use primary color like the original dialog
 				itemStyle = itemStyle.
 					Background(t.Primary()).
 					Foreground(t.BackgroundElement()).
 					Bold(true)
 			} else {
-				// Inactive selection - use accent color to show selection
 				itemStyle = itemStyle.
-					Background(t.BackgroundElement()).
 					Foreground(t.Accent()).
 					Bold(true)
 			}
@@ -605,7 +607,10 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 
 	// Pad to ensure consistent height
 	for len(modelItems) < numVisibleModels {
-		modelItems = append(modelItems, baseStyle.Width(paneWidth).Render(" "))
+		modelItems = append(modelItems, lipgloss.NewStyle().
+			Width(paneWidth).
+			Background(t.BackgroundElement()).
+			Render(" "))
 	}
 
 	// Join all models
@@ -634,7 +639,10 @@ func (m *modelDialog) renderPane(title string, provider client.ProviderInfo, sel
 			Align(lipgloss.Center).
 			Render(scrollIndicatorContent)
 	} else {
-		scrollIndicator = baseStyle.Width(paneWidth).Render(" ")
+		scrollIndicator = lipgloss.NewStyle().
+			Width(paneWidth).
+			Background(t.BackgroundElement()).
+			Render(" ")
 	}
 
 	// Combine all parts
