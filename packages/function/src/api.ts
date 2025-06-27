@@ -1,11 +1,6 @@
 import { DurableObject } from "cloudflare:workers"
 import { randomUUID } from "node:crypto"
 
-type Env = {
-  SYNC_SERVER: DurableObjectNamespace<SyncServer>
-  Bucket: R2Bucket
-}
-
 export class SyncServer extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -29,9 +24,9 @@ export class SyncServer extends DurableObject<Env> {
     })
   }
 
-  async webSocketMessage(ws, message) {}
+  async webSocketMessage(ws: WebSocket, message: string) {}
 
-  async webSocketClose(ws, code, reason, wasClean) {
+  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
     ws.close(code, "Durable Object is closing WebSocket")
   }
 
@@ -45,7 +40,7 @@ export class SyncServer extends DurableObject<Env> {
       return new Response("Error: Invalid key", { status: 400 })
 
     // store message
-    await this.env.Bucket.put(`share/${key}.json`, JSON.stringify(content), {
+    await this.env.BUCKET.put(`share/${key}.json`, JSON.stringify(content), {
       httpMetadata: {
         contentType: "application/json",
       },
@@ -69,9 +64,10 @@ export class SyncServer extends DurableObject<Env> {
     return secret
   }
 
-  public async getData() {
+  public async getData(): Promise<{ key: string; content: any }[]> {
     const data = await this.ctx.storage.list()
-    return Array.from(data.entries())
+    const entries = Array.from(data.entries())
+    return entries
       .filter(([key, _]) => key.startsWith("session/"))
       .map(([key, content]) => ({ key, content }))
   }
@@ -204,5 +200,7 @@ export default {
         },
       )
     }
+
+    return new Response("Not found", { status: 404 })
   },
 }
