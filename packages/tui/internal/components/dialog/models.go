@@ -13,6 +13,7 @@ import (
 	"github.com/sst/opencode/internal/app"
 	"github.com/sst/opencode/internal/components/modal"
 	"github.com/sst/opencode/internal/layout"
+	"github.com/sst/opencode/internal/styles"
 	"github.com/sst/opencode/internal/theme"
 	"github.com/sst/opencode/internal/util"
 	"github.com/sst/opencode/pkg/client"
@@ -699,7 +700,8 @@ func (m *modelDialog) getScrollIndicators(maxWidth int) string {
 			Render(" ")
 	}
 
-	return lipgloss.NewStyle().
+	return styles.NewStyle().
+		Foreground(t.TextMuted()).
 		Width(maxWidth).
 		Align(lipgloss.Center).
 		Foreground(t.TextMuted()).

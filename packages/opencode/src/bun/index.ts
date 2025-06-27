@@ -13,7 +13,7 @@ export namespace BunProc {
   ) {
     log.info("running", {
       cmd: [which(), ...cmd],
-      options,
+      ...options,
     })
     const result = Bun.spawn([which(), ...cmd], {
       ...options,
@@ -26,6 +26,15 @@ export namespace BunProc {
       },
     })
     const code = await result.exited
+    // @ts-ignore
+    const stdout = await result.stdout.text()
+    // @ts-ignore
+    const stderr = await result.stderr.text()
+    log.info("done", {
+      code,
+      stdout,
+      stderr,
+    })
     if (code !== 0) {
       throw new Error(`Command failed with exit code ${result.exitCode}`)
     }
@@ -53,12 +62,9 @@ export namespace BunProc {
     if (parsed.dependencies[pkg] === version) return mod
     parsed.dependencies[pkg] = version
     await Bun.write(pkgjson, JSON.stringify(parsed, null, 2))
-    await BunProc.run(
-      ["install", "--registry", "https://registry.npmjs.org/"],
-      {
-        cwd: Global.Path.cache,
-      },
-    ).catch((e) => {
+    await BunProc.run(["install", "--registry=https://registry.npmjs.org"], {
+      cwd: Global.Path.cache,
+    }).catch((e) => {
       new InstallFailedError(
         { pkg, version },
         {

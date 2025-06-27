@@ -13,6 +13,7 @@ import (
 	"github.com/sst/opencode/internal/commands"
 	"github.com/sst/opencode/internal/components/toast"
 	"github.com/sst/opencode/internal/config"
+	"github.com/sst/opencode/internal/styles"
 	"github.com/sst/opencode/internal/theme"
 	"github.com/sst/opencode/internal/util"
 	"github.com/sst/opencode/pkg/client"
@@ -108,6 +109,12 @@ func New(
 	}
 
 	if appState.Theme != "" {
+		if appState.Theme == "system" && styles.Terminal != nil {
+			theme.UpdateSystemTheme(
+				styles.Terminal.Background,
+				styles.Terminal.BackgroundIsDark,
+			)
+		}
 		theme.SetTheme(appState.Theme)
 	}
 
