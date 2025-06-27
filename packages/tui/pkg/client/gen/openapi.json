@@ -1344,6 +1344,15 @@
             "type": "string",
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2"
           },
+          "turbo_model": {
+            "type": "string",
+            "description": "Turbo model to use for tasks like window title generation"
+          },
+          "turbo_cost_threshold": {
+            "type": "number",
+            "description": "Maximum output cost for a model to be considered a turbo model (default: 4)",
+            "default": 4
+          },
           "provider": {
             "type": "object",
             "additionalProperties": {
@@ -1423,6 +1432,14 @@
                       "options": {
                         "type": "object",
                         "additionalProperties": {}
+                      },
+                      "release_date": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
+                      },
+                      "last_updated": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
                       }
                     }
                   }
@@ -1658,6 +1675,14 @@
           "options": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "release_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
+          },
+          "last_updated": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$"
           }
         },
         "required": [
