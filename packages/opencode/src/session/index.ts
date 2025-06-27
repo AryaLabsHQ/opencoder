@@ -269,6 +269,45 @@ export namespace Session {
     })
   }
 
+  export async function generateStatusVerb(userMessage: string, providerID: string, modelID: string): Promise<string> {
+    const log = Log.create({ service: "verb-generator" })
+    const fallback = "Processing"
+    try {
+      try {
+        await Provider.getModel(providerID, modelID)
+      } catch {
+        return fallback
+      }
+
+      const model = await Provider.getModel(providerID, modelID)
+
+      const result = await generateText({
+        model: model.language,
+        messages: [
+          {
+            role: "system",
+            content: SystemPrompt.verb()
+          },
+          {
+            role: "user",
+            content: userMessage
+          }],
+        maxTokens: 10,
+      })
+
+      const verb = result.text?.trim() || "Processing"
+
+      if (verb.length > 20 || verb.includes(' ') || !/^[A-Z][a-z]+ing$/.test(verb)) {
+        return fallback
+      }
+
+      return verb
+    } catch (error) {
+      log.error("Failed to generate status verb", { error })
+      return fallback
+    }
+  }
+
   export async function chat(input: {
     sessionID: string
     providerID: string
@@ -343,7 +382,7 @@ export namespace Session {
               draft.title = result.text
             })
         })
-        .catch(() => {})
+        .catch(() => { })
     }
     const msg: Message.Info = {
       role: "user",
@@ -603,7 +642,7 @@ export namespace Session {
           case "tool-call": {
             const [match] = next.parts.flatMap((p) =>
               p.type === "tool-invocation" &&
-              p.toolInvocation.toolCallId === value.toolCallId
+                p.toolInvocation.toolCallId === value.toolCallId
                 ? [p]
                 : [],
             )
