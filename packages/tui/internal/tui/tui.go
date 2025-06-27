@@ -62,7 +62,7 @@ type appModel struct {
 
 func formatWindowTitle(message string) string {
 	if message == "" {
-		return "opencode"
+		return "opencoder"
 	}
 
 	// Take first line only
@@ -75,7 +75,7 @@ func formatWindowTitle(message string) string {
 		title = title[:maxLen-3] + "..."
 	}
 
-	return "opencode: " + title
+	return "opencoder: " + title
 }
 
 func (a appModel) Init() tea.Cmd {
@@ -93,7 +93,7 @@ func (a appModel) Init() tea.Cmd {
 	cmds = append(cmds, a.toastManager.Init())
 
 	// Set initial window title
-	cmds = append(cmds, tea.SetWindowTitle("opencode"))
+	cmds = append(cmds, tea.SetWindowTitle("opencoder"))
 
 	// Check if we should show the init dialog
 	cmds = append(cmds, func() tea.Msg {
@@ -298,8 +298,8 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Fall back to truncated message
 				title = formatWindowTitle(msg.Text)
 			} else {
-				// Prepend "opencode: " to AI-generated title
-				title = "opencode: " + title
+				// Prepend "opencoder: " to AI-generated title
+				title = "opencoder: " + title
 			}
 			return app.WindowTitleMsg{Title: title}
 		})
@@ -307,7 +307,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.showCompletionDialog = false
 	case client.EventInstallationUpdated:
 		return a, toast.NewSuccessToast(
-			"opencode updated to "+msg.Properties.Version+", restart to apply.",
+			"opencoder updated to "+msg.Properties.Version+", restart to apply.",
 			toast.WithTitle("New version installed"),
 		)
 	case client.EventSessionDeleted:
@@ -382,7 +382,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.app.Session = msg
 		a.app.Messages = messages
 		a.lastSubmittedMessage = ""
-		cmds = append(cmds, tea.SetWindowTitle("opencode"))
+		cmds = append(cmds, tea.SetWindowTitle("opencoder"))
 	case app.WindowTitleMsg:
 		return a, tea.SetWindowTitle(msg.Title)
 	case app.ModelSelectedMsg:
@@ -446,7 +446,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	isProcessing := a.app.IsBusy()
 	if a.wasProcessing && !isProcessing && a.lastSubmittedMessage != "" {
 		a.lastSubmittedMessage = ""
-		cmds = append(cmds, tea.SetWindowTitle("opencode"))
+		cmds = append(cmds, tea.SetWindowTitle("opencoder"))
 	}
 	a.wasProcessing = isProcessing
 
@@ -562,7 +562,7 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 		a.app.Messages = []client.MessageInfo{}
 		a.lastSubmittedMessage = ""
 		cmds = append(cmds, util.CmdHandler(app.SessionClearedMsg{}))
-		cmds = append(cmds, tea.SetWindowTitle("opencode"))
+		cmds = append(cmds, tea.SetWindowTitle("opencoder"))
 	case commands.SessionListCommand:
 		sessionDialog := dialog.NewSessionDialog(a.app)
 		a.modal = sessionDialog
@@ -591,7 +591,7 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 		}
 		a.app.Cancel(context.Background(), a.app.Session.Id)
 		a.lastSubmittedMessage = ""
-		tea.SetWindowTitle("opencode")
+		tea.SetWindowTitle("opencoder")
 		a.app.ResetPromptVerbs()
 		return a, nil
 	case commands.SessionCompactCommand:
