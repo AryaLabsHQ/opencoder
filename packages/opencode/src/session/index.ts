@@ -269,35 +269,17 @@ export namespace Session {
     })
   }
 
-  export async function generateStatusVerb(userMessage: string, providerID: string): Promise<string> {
+  export async function generateStatusVerb(userMessage: string, providerID: string, modelID: string): Promise<string> {
     const log = Log.create({ service: "verb-generator" })
     const fallback = "Processing"
     try {
-      let verbModelID: string | undefined
-      let verbProviderID: string | undefined
-      switch (providerID) {
-        case "anthropic":
-          verbModelID = "claude-3-5-haiku-20241022"
-          verbProviderID = "anthropic"
-          break
-        case "openai":
-          verbModelID = "gpt-4o-mini"
-          verbProviderID = "openai"
-          break
-        default:
-      }
-
-      if (!verbModelID || !verbProviderID) {
-        return fallback
-      }
-
       try {
-        await Provider.getModel(verbProviderID, verbModelID)
+        await Provider.getModel(providerID, modelID)
       } catch {
         return fallback
       }
 
-      const model = await Provider.getModel(verbProviderID, verbModelID)
+      const model = await Provider.getModel(providerID, modelID)
 
       const result = await generateText({
         model: model.language,

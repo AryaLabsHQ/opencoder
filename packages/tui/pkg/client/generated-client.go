@@ -578,6 +578,7 @@ type PostSessionDeleteJSONBody struct {
 
 // PostSessionGenerateVerbJSONBody defines parameters for PostSessionGenerateVerb.
 type PostSessionGenerateVerbJSONBody struct {
+	ModelID    string `json:"modelID"`
 	ProviderID string `json:"providerID"`
 	Text       string `json:"text"`
 }

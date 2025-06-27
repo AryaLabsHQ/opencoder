@@ -530,11 +530,15 @@
                   },
                   "providerID": {
                     "type": "string"
+                  },
+                  "modelID": {
+                    "type": "string"
                   }
                 },
                 "required": [
                   "text",
-                  "providerID"
+                  "providerID",
+                  "modelID"
                 ]
               }
             }

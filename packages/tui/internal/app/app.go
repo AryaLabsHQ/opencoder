@@ -547,6 +547,7 @@ func (a *App) GenerateStatusVerb(ctx context.Context, text string) (string, erro
 	requestBody := client.PostSessionGenerateVerbJSONRequestBody{
 		Text:       text,
 		ProviderID: a.TurboProvider.Id,
+		ModelID:    a.TurboModel.Id,
 	}
 
 	response, err := a.Client.PostSessionGenerateVerbWithResponse(ctx, requestBody)

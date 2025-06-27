@@ -498,11 +498,12 @@ export namespace Server {
           z.object({
             text: z.string(),
             providerID: z.string(),
+            modelID: z.string(),
           }),
         ),
         async (c) => {
           const body = c.req.valid("json")
-          const verb = await Session.generateStatusVerb(body.text, body.providerID)
+          const verb = await Session.generateStatusVerb(body.text, body.providerID, body.modelID)
           return c.json({ verb })
         },
       )
