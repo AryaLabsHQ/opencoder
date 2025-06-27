@@ -6,14 +6,16 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	"github.com/BurntSushi/toml"
-	"github.com/sst/opencode/pkg/client"
 )
 
 type State struct {
-	Theme    string `toml:"theme"`
-	Provider string `toml:"provider"`
-	Model    string `toml:"model"`
+	Theme         string `toml:"theme"`
+	MainProvider  string `toml:"main_provider"`
+	MainModel     string `toml:"main_model"`
+	TurboProvider string `toml:"turbo_provider"`
+	TurboModel    string `toml:"turbo_model"`
 }
 
 func NewState() *State {

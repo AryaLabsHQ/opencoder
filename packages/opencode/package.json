@@ -1,12 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "0.0.0",
-  "name": "opencode",
+  "version": "0.0.5",
+  "name": "opencoder",
   "type": "module",
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit",
     "dev": "bun run ./src/index.ts"
+  },
+  "bin": {
+    "opencoder": "./bin/opencoder"
   },
   "exports": {
     "./*": "./src/*.ts"

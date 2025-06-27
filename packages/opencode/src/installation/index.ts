@@ -3,12 +3,15 @@ import { $ } from "bun"
 import { z } from "zod"
 import { NamedError } from "../util/error"
 import { Bus } from "../bus"
+import { Log } from "../util/log"
 
 declare global {
   const OPENCODE_VERSION: string
 }
 
 export namespace Installation {
+  const log = Log.create({ service: "installation" })
+
   export type Method = Awaited<ReturnType<typeof method>>
 
   export const Event = {
@@ -46,7 +49,7 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl"
+    if (process.execPath.includes(path.join(".opencoder", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
     const checks = [
@@ -66,6 +69,10 @@ export namespace Installation {
         name: "bun" as const,
         command: () => $`bun pm ls -g`.throws(false).text(),
       },
+      {
+        name: "brew" as const,
+        command: () => $`brew list --formula opencoder-ai`.throws(false).text(),
+      },
     ]
 
     checks.sort((a, b) => {
@@ -78,7 +85,7 @@ export namespace Installation {
 
     for (const check of checks) {
       const output = await check.command()
-      if (output.includes("opencode-ai")) {
+      if (output.includes("opencoder-ai")) {
         return check.name
       }
     }
@@ -97,18 +104,31 @@ export namespace Installation {
     const cmd = (() => {
       switch (method) {
         case "curl":
-          return $`curl -fsSL https://opencode.ai/install | bash`
+          return $`curl -fsSL https://raw.githubusercontent.com/AryaLabsHQ/opencoder/refs/heads/dev/install | bash`.env({
+            ...process.env,
+            VERSION: target,
+          })
         case "npm":
-          return $`npm install -g opencode-ai@${target}`
+          return $`npm install -g opencoder-ai@${target}`
         case "pnpm":
-          return $`pnpm install -g opencode-ai@${target}`
+          return $`pnpm install -g opencoder-ai@${target}`
         case "bun":
-          return $`bun install -g opencode-ai@${target}`
+          return $`bun install -g opencoder-ai@${target}`
+        case "brew":
+          return $`brew install AryaLabsHQ/tap/opencoder`.env({
+            HOMEBREW_NO_AUTO_UPDATE: "1",
+          })
         default:
           throw new Error(`Unknown method: ${method}`)
       }
     })()
     const result = await cmd.quiet().throws(false)
+    log.info("upgraded", {
+      method,
+      target,
+      stdout: result.stdout.toString(),
+      stderr: result.stderr.toString(),
+    })
     if (result.exitCode !== 0)
       throw new UpgradeFailedError({
         stderr: result.stderr.toString("utf8"),
@@ -119,7 +139,7 @@ export namespace Installation {
     typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "dev"
 
   export async function latest() {
-    return fetch("https://api.github.com/repos/sst/opencode/releases/latest")
+    return fetch("https://api.github.com/repos/AryaLabsHQ/opencoder/releases/latest")
       .then((res) => res.json())
       .then((data) => data.tag_name.slice(1) as string)
   }

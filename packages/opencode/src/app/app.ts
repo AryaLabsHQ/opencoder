@@ -1,3 +1,4 @@
+import "zod-openapi/extend"
 import { Log } from "../util/log"
 import { Context } from "../util/context"
 import { Filesystem } from "../util/filesystem"
@@ -12,6 +13,7 @@ export namespace App {
   export const Info = z
     .object({
       user: z.string(),
+      hostname: z.string(),
       git: z.boolean(),
       path: z.object({
         config: z.string(),
@@ -29,11 +31,21 @@ export namespace App {
     })
   export type Info = z.infer<typeof Info>
 
-  const ctx = Context.create<Awaited<ReturnType<typeof create>>>("app")
+  const ctx = Context.create<{
+    info: Info
+    services: Map<any, { state: any; shutdown?: (input: any) => Promise<void> }>
+  }>("app")
 
   const APP_JSON = "app.json"
 
-  async function create(input: { cwd: string }) {
+  export type Input = {
+    cwd: string
+  }
+
+  export async function provide<T>(
+    input: Input,
+    cb: (app: App.Info) => Promise<T>,
+  ) {
     log.info("creating", {
       cwd: input.cwd,
     })
@@ -45,7 +57,7 @@ export namespace App {
     const data = path.join(
       Global.Path.data,
       "project",
-      git ? git.split(path.sep).join("-") : "global",
+      git ? directory(git) : "global",
     )
     const stateFile = Bun.file(path.join(data, APP_JSON))
     const state = (await stateFile.json().catch(() => ({}))) as {
@@ -61,8 +73,11 @@ export namespace App {
       }
     >()
 
+    const root = git ?? input.cwd
+
     const info: Info = {
       user: os.userInfo().username,
+      hostname: os.hostname(),
       time: {
         initialized: state.initialized,
       },
@@ -71,16 +86,24 @@ export namespace App {
         config: Global.Path.config,
         state: Global.Path.state,
         data,
-        root: git ?? input.cwd,
+        root,
         cwd: input.cwd,
       },
     }
-    const result = {
+    const app = {
       services,
       info,
     }
 
-    return result
+    return ctx.provide(app, async () => {
+      const result = await cb(app.info)
+      for (const [key, entry] of app.services.entries()) {
+        if (!entry.shutdown) continue
+        log.info("shutdown", { name: key })
+        await entry.shutdown?.(await entry.state)
+      }
+      return result
+    })
   }
 
   export function state<State>(
@@ -106,22 +129,6 @@ export namespace App {
     return ctx.use().info
   }
 
-  export async function provide<T>(
-    input: { cwd: string },
-    cb: (app: Info) => Promise<T>,
-  ) {
-    const app = await create(input)
-    return ctx.provide(app, async () => {
-      const result = await cb(app.info)
-      for (const [key, entry] of app.services.entries()) {
-        if (!entry.shutdown) continue
-        log.info("shutdown", { name: key })
-        await entry.shutdown?.(await entry.state)
-      }
-      return result
-    })
-  }
-
   export async function initialize() {
     const { info } = ctx.use()
     info.time.initialized = Date.now()
@@ -131,5 +138,13 @@ export namespace App {
         initialized: Date.now(),
       }),
     )
+  }
+
+  function directory(input: string): string {
+    return input
+      .split(path.sep)
+      .filter(Boolean)
+      .join("-")
+      .replace(/[^A-Za-z0-9_]/g, "-")
   }
 }

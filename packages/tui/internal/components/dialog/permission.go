@@ -2,14 +2,15 @@ package dialog
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
-	"strings"
 )
 
 type PermissionAction string
@@ -145,7 +146,7 @@ func (p *permissionDialogComponent) selectCurrentOption() tea.Cmd {
 
 func (p *permissionDialogComponent) renderButtons() string {
 	t := theme.CurrentTheme()
-	baseStyle := styles.BaseStyle()
+	baseStyle := styles.NewStyle().Foreground(t.Text())
 
 	allowStyle := baseStyle
 	allowSessionStyle := baseStyle
@@ -355,8 +356,7 @@ func (p *permissionDialogComponent) renderDefaultContent() string {
 
 func (p *permissionDialogComponent) styleViewport() string {
 	t := theme.CurrentTheme()
-	contentStyle := lipgloss.NewStyle().
-		Background(t.Background())
+	contentStyle := styles.NewStyle().Background(t.Background())
 
 	return contentStyle.Render(p.contentViewPort.View())
 }

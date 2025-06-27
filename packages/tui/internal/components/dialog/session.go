@@ -2,16 +2,21 @@ package dialog
 
 import (
 	"context"
+	"strings"
 
+	"slices"
+
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/components/list"
+	"github.com/AryaLabsHQ/opencoder/internal/components/modal"
+	"github.com/AryaLabsHQ/opencoder/internal/components/toast"
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/components/list"
-	"github.com/sst/opencode/internal/components/modal"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
-	"github.com/sst/opencode/pkg/client"
+	"github.com/muesli/reflow/truncate"
 )
 
 // SessionDialog interface for the session switching dialog
@@ -19,33 +24,65 @@ type SessionDialog interface {
 	layout.Modal
 }
 
-type sessionItem client.SessionInfo
+// sessionItem is a custom list item for sessions that can show delete confirmation
+type sessionItem struct {
+	title              string
+	isDeleteConfirming bool
+}
 
 func (s sessionItem) Render(selected bool, width int) string {
 	t := theme.CurrentTheme()
-	baseStyle := styles.BaseStyle().
-		Width(width - 4).
-		Background(t.BackgroundElement())
+	baseStyle := styles.NewStyle()
 
-	if selected {
-		baseStyle = baseStyle.
-			Background(t.Primary()).
-			Foreground(t.BackgroundElement()).
-			Bold(true)
+	var text string
+	if s.isDeleteConfirming {
+		text = "Press again to confirm delete"
 	} else {
-		baseStyle = baseStyle.
-			Foreground(t.Text())
+		text = s.title
 	}
 
-	return baseStyle.Padding(0, 1).Render(s.Title)
+	truncatedStr := truncate.StringWithTail(text, uint(width-1), "...")
+
+	var itemStyle styles.Style
+	if selected {
+		if s.isDeleteConfirming {
+			// Red background for delete confirmation
+			itemStyle = baseStyle.
+				Background(t.Error()).
+				Foreground(t.BackgroundElement()).
+				Width(width).
+				PaddingLeft(1)
+		} else {
+			// Normal selection
+			itemStyle = baseStyle.
+				Background(t.Primary()).
+				Foreground(t.BackgroundElement()).
+				Width(width).
+				PaddingLeft(1)
+		}
+	} else {
+		if s.isDeleteConfirming {
+			// Red text for delete confirmation when not selected
+			itemStyle = baseStyle.
+				Foreground(t.Error()).
+				PaddingLeft(1)
+		} else {
+			itemStyle = baseStyle.
+				PaddingLeft(1)
+		}
+	}
+
+	return itemStyle.Render(truncatedStr)
 }
 
 type sessionDialog struct {
-	width             int
-	height            int
-	modal             *modal.Modal
-	selectedSessionID string
-	list              list.List[sessionItem]
+	width              int
+	height             int
+	modal              *modal.Modal
+	sessions           []client.SessionInfo
+	list               list.List[sessionItem]
+	app                *app.App
+	deleteConfirmation int // -1 means no confirmation, >= 0 means confirming deletion of session at this index
 }
 
 func (s *sessionDialog) Init() tea.Cmd {
@@ -61,12 +98,44 @@ func (s *sessionDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "enter":
-			if item, idx := s.list.GetSelectedItem(); idx >= 0 {
-				s.selectedSessionID = item.Id
+			if s.deleteConfirmation >= 0 {
+				s.deleteConfirmation = -1
+				s.updateListItems()
+				return s, nil
+			}
+			if _, idx := s.list.GetSelectedItem(); idx >= 0 && idx < len(s.sessions) {
+				selectedSession := s.sessions[idx]
 				return s, tea.Sequence(
 					util.CmdHandler(modal.CloseModalMsg{}),
-					util.CmdHandler(app.SessionSelectedMsg(&item)),
+					util.CmdHandler(app.SessionSelectedMsg(&selectedSession)),
 				)
+			}
+		case "x", "delete", "backspace":
+			if _, idx := s.list.GetSelectedItem(); idx >= 0 && idx < len(s.sessions) {
+				if s.deleteConfirmation == idx {
+					// Second press - actually delete the session
+					sessionToDelete := s.sessions[idx]
+					return s, tea.Sequence(
+						func() tea.Msg {
+							s.sessions = slices.Delete(s.sessions, idx, idx+1)
+							s.deleteConfirmation = -1
+							s.updateListItems()
+							return nil
+						},
+						s.deleteSession(sessionToDelete.Id),
+					)
+				} else {
+					// First press - enter delete confirmation mode
+					s.deleteConfirmation = idx
+					s.updateListItems()
+					return s, nil
+				}
+			}
+		case "esc":
+			if s.deleteConfirmation >= 0 {
+				s.deleteConfirmation = -1
+				s.updateListItems()
+				return s, nil
 			}
 		}
 	}
@@ -78,7 +147,42 @@ func (s *sessionDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (s *sessionDialog) Render(background string) string {
-	return s.modal.Render(s.list.View(), background)
+	listView := s.list.View()
+
+	t := theme.CurrentTheme()
+	helpStyle := styles.NewStyle().PaddingLeft(1).PaddingTop(1)
+	helpText := styles.NewStyle().Foreground(t.Text()).Render("x/del")
+	helpText = helpText + styles.NewStyle().Background(t.BackgroundElement()).Foreground(t.TextMuted()).Render(" delete session")
+	helpText = helpStyle.Render(helpText)
+
+	content := strings.Join([]string{listView, helpText}, "\n")
+
+	return s.modal.Render(content, background)
+}
+
+func (s *sessionDialog) updateListItems() {
+	_, currentIdx := s.list.GetSelectedItem()
+
+	var items []sessionItem
+	for i, sess := range s.sessions {
+		item := sessionItem{
+			title:              sess.Title,
+			isDeleteConfirming: s.deleteConfirmation == i,
+		}
+		items = append(items, item)
+	}
+	s.list.SetItems(items)
+	s.list.SetSelectedIndex(currentIdx)
+}
+
+func (s *sessionDialog) deleteSession(sessionID string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := s.app.DeleteSession(ctx, sessionID); err != nil {
+			return toast.NewErrorToast("Failed to delete session: " + err.Error())()
+		}
+		return nil
+	}
 }
 
 func (s *sessionDialog) Close() tea.Cmd {
@@ -89,23 +193,36 @@ func (s *sessionDialog) Close() tea.Cmd {
 func NewSessionDialog(app *app.App) SessionDialog {
 	sessions, _ := app.ListSessions(context.Background())
 
-	var sessionItems []sessionItem
+	var filteredSessions []client.SessionInfo
+	var items []sessionItem
 	for _, sess := range sessions {
 		if sess.ParentID != nil {
 			continue
 		}
-		sessionItems = append(sessionItems, sessionItem(sess))
+		filteredSessions = append(filteredSessions, sess)
+		items = append(items, sessionItem{
+			title:              sess.Title,
+			isDeleteConfirming: false,
+		})
 	}
 
-	list := list.NewListComponent(
-		sessionItems,
+	// Create a generic list component
+	listComponent := list.NewListComponent(
+		items,
 		10, // maxVisibleSessions
 		"No sessions available",
 		true, // useAlphaNumericKeys
 	)
+	listComponent.SetMaxWidth(layout.Current.Container.Width - 12)
 
 	return &sessionDialog{
-		list:  list,
-		modal: modal.New(modal.WithTitle("Switch Session"), modal.WithMaxWidth(80)),
+		sessions:           filteredSessions,
+		list:               listComponent,
+		app:                app,
+		deleteConfirmation: -1,
+		modal: modal.New(
+			modal.WithTitle("Switch Session"),
+			modal.WithMaxWidth(layout.Current.Container.Width-8),
+		),
 	}
 }

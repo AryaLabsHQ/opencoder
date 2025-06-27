@@ -23,7 +23,6 @@ import {
 } from "./icons/custom"
 import {
   IconFolder,
-  IconCpuChip,
   IconHashtag,
   IconSparkles,
   IconGlobeAlt,
@@ -102,10 +101,7 @@ function stripWorkingDirectory(filePath: string, workingDir?: string) {
 }
 
 function getShikiLang(filename: string) {
-  const ext = filename
-    .split('.')
-    .pop()
-    ?.toLowerCase() ?? ''
+  const ext = filename.split(".").pop()?.toLowerCase() ?? ""
 
   // map.languages(ext) returns an array of matching Linguist language names (e.g. ['TypeScript'])
   const langs = map.languages(ext)
@@ -113,12 +109,10 @@ function getShikiLang(filename: string) {
 
   // Overrride any specific language mappings
   const overrides: Record<string, string> = {
-    "conf": "shellscript"
+    conf: "shellscript",
   }
 
-  return type
-    ? overrides[type] ?? type
-    : 'plaintext'
+  return type ? (overrides[type] ?? type) : "plaintext"
 }
 
 function formatDuration(ms: number): string {
@@ -444,7 +438,7 @@ function MarkdownPart(props: MarkdownPartProps) {
       {...rest}
     >
       <MarkdownView
-        data-elment-markdown
+        data-element-markdown
         markdown={local.text}
         ref={(el) => (divEl = el)}
       />
@@ -463,6 +457,7 @@ function MarkdownPart(props: MarkdownPartProps) {
 
 interface TerminalPartProps extends JSX.HTMLAttributes<HTMLDivElement> {
   command: string
+  error?: string
   result?: string
   desc?: string
   expand?: boolean
@@ -470,6 +465,7 @@ interface TerminalPartProps extends JSX.HTMLAttributes<HTMLDivElement> {
 function TerminalPart(props: TerminalPartProps) {
   const [local, rest] = splitProps(props, [
     "command",
+    "error",
     "result",
     "desc",
     "expand",
@@ -508,12 +504,25 @@ function TerminalPart(props: TerminalPartProps) {
         </div>
         <div data-section="content">
           <CodeBlock lang="bash" code={local.command} />
-          <CodeBlock
-            lang="console"
-            onRendered={checkOverflow}
-            ref={(el) => (preEl = el)}
-            code={local.result || ""}
-          />
+          <Switch>
+            <Match when={local.error}>
+              <CodeBlock
+                data-section="error"
+                lang="text"
+                onRendered={checkOverflow}
+                ref={(el) => (preEl = el)}
+                code={local.error || ""}
+              />
+            </Match>
+            <Match when={local.result}>
+              <CodeBlock
+                lang="console"
+                onRendered={checkOverflow}
+                ref={(el) => (preEl = el)}
+                code={local.result || ""}
+              />
+            </Match>
+          </Switch>
         </div>
       </div>
       {((!local.expand && overflowed()) || expanded()) && (
@@ -726,7 +735,7 @@ export default function Share(props: {
     for (let i = 0; i < messages().length; i++) {
       const msg = messages()[i]
 
-      // TODO: Cleaup
+      // TODO: Cleanup
       // const system = result.messages.length === 0 && msg.role === "system"
       const assistant = msg.metadata?.assistant
 
@@ -993,13 +1002,6 @@ export default function Share(props: {
                           }
                         >
                           {(assistant) => {
-                            const system = createMemo(() => {
-                              const prompts = assistant().system || []
-                              return prompts.filter(
-                                (p: string) =>
-                                  !p.startsWith("You are Claude"),
-                              )
-                            })
                             return (
                               <div
                                 id={anchor()}
@@ -1025,67 +1027,13 @@ export default function Share(props: {
                                     <span data-part-model>
                                       {assistant().modelID}
                                     </span>
-                                    <Show when={system().length > 0}>
-                                      <div data-part-tool-result>
-                                        <ResultsButton
-                                          showCopy="Show system prompt"
-                                          hideCopy="Hide system prompt"
-                                          results={showResults()}
-                                          onClick={() =>
-                                            setShowResults((e) => !e)
-                                          }
-                                        />
-                                        <Show when={showResults()}>
-                                          <TextPart
-                                            expand
-                                            data-size="sm"
-                                            data-color="dimmed"
-                                            text={system().join("\n\n").trim()}
-                                          />
-                                        </Show>
-                                      </div>
-                                    </Show>
                                   </div>
                                 </div>
                               </div>
                             )
                           }}
                         </Match>
-                        {/* System text */}
-                        <Match
-                          when={
-                            msg.role === "system" &&
-                            part.type === "text" &&
-                            part
-                          }
-                        >
-                          {(part) => (
-                            <div
-                              id={anchor()}
-                              data-section="part"
-                              data-part-type="system-text"
-                            >
-                              <div data-section="decoration">
-                                <AnchorIcon id={anchor()}>
-                                  <IconCpuChip width={18} height={18} />
-                                </AnchorIcon>
-                                <div></div>
-                              </div>
-                              <div data-section="content">
-                                <div data-part-tool-body>
-                                  <div data-part-title>
-                                    <span data-element-label>System</span>
-                                  </div>
-                                  <TextPart
-                                    data-size="sm"
-                                    text={part().text}
-                                    data-color="dimmed"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </Match>
+
                         {/* Grep tool */}
                         <Match
                           when={
@@ -1280,9 +1228,9 @@ export default function Share(props: {
                             const path = createMemo(() =>
                               toolData()?.args.path !== data().rootDir
                                 ? stripWorkingDirectory(
-                                  toolData()?.args.path,
-                                  data().rootDir,
-                                )
+                                    toolData()?.args.path,
+                                    data().rootDir,
+                                  )
                                 : toolData()?.args.path,
                             )
 
@@ -1601,8 +1549,10 @@ export default function Share(props: {
                           }
                         >
                           {(_part) => {
-                            const command = () => toolData()?.args.command
-                            const desc = () => toolData()?.args.description
+                            const command = () => toolData()?.metadata?.title
+                            const desc = () => toolData()?.metadata?.description
+                            const result = () => toolData()?.metadata?.stdout
+                            const error = () => toolData()?.metadata?.stderr
 
                             return (
                               <div
@@ -1617,14 +1567,17 @@ export default function Share(props: {
                                   <div></div>
                                 </div>
                                 <div data-section="content">
-                                  <div data-part-tool-body>
-                                    <TerminalPart
-                                      desc={desc()}
-                                      data-size="sm"
-                                      command={command()}
-                                      result={toolData()?.result}
-                                    />
-                                  </div>
+                                  {command() && (
+                                    <div data-part-tool-body>
+                                      <TerminalPart
+                                        desc={desc()}
+                                        data-size="sm"
+                                        command={command()!}
+                                        result={result()}
+                                        error={error()}
+                                      />
+                                    </div>
+                                  )}
                                   <ToolFooter
                                     time={toolData()?.duration || 0}
                                   />
@@ -1638,8 +1591,7 @@ export default function Share(props: {
                           when={
                             msg.role === "assistant" &&
                             part.type === "tool-invocation" &&
-                            part.toolInvocation.toolName ===
-                            "todowrite" &&
+                            part.toolInvocation.toolName === "todowrite" &&
                             part
                           }
                         >
@@ -1704,8 +1656,7 @@ export default function Share(props: {
                           when={
                             msg.role === "assistant" &&
                             part.type === "tool-invocation" &&
-                            part.toolInvocation.toolName ===
-                            "webfetch" &&
+                            part.toolInvocation.toolName === "webfetch" &&
                             part
                           }
                         >
@@ -1879,9 +1830,7 @@ export default function Share(props: {
                                   >
                                     <IconSparkles width={18} height={18} />
                                   </Match>
-                                  <Match when={msg.role === "system"}>
-                                    <IconCpuChip width={18} height={18} />
-                                  </Match>
+
                                   <Match when={msg.role === "user"}>
                                     <IconUserCircle width={18} height={18} />
                                   </Match>

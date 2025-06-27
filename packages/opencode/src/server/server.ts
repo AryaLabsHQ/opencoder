@@ -391,6 +391,33 @@ export namespace Server {
         },
       )
       .post(
+        "/session_delete",
+        describeRoute({
+          description: "Delete a session and all its data",
+          responses: {
+            200: {
+              description: "Successfully deleted session",
+              content: {
+                "application/json": {
+                  schema: resolver(z.boolean()),
+                },
+              },
+            },
+          },
+        }),
+        zValidator(
+          "json",
+          z.object({
+            sessionID: z.string(),
+          }),
+        ),
+        async (c) => {
+          const body = c.req.valid("json")
+          await Session.remove(body.sessionID)
+          return c.json(true)
+        },
+      )
+      .post(
         "/session_summarize",
         describeRoute({
           description: "Summarize the session",
@@ -471,12 +498,44 @@ export namespace Server {
           z.object({
             text: z.string(),
             providerID: z.string(),
+            modelID: z.string(),
           }),
         ),
         async (c) => {
           const body = c.req.valid("json")
-          const title = await Session.generateTitle(body.text, body.providerID)
+          const title = await Session.generateTitle(body.text, body.providerID, body.modelID)
           return c.json({ title })
+        },
+      )
+      .post(
+        "/session_generate_verb",
+        describeRoute({
+          description: "Generate a contextual status verb for typing preview",
+          responses: {
+            200: {
+              description: "Generated status verb",
+              content: {
+                "application/json": {
+                  schema: resolver(z.object({
+                    verb: z.string(),
+                  })),
+                },
+              },
+            },
+          },
+        }),
+        zValidator(
+          "json",
+          z.object({
+            text: z.string(),
+            providerID: z.string(),
+            modelID: z.string(),
+          }),
+        ),
+        async (c) => {
+          const body = c.req.valid("json")
+          const verb = await Session.generateStatusVerb(body.text, body.providerID, body.modelID)
+          return c.json({ verb })
         },
       )
       .post(
@@ -582,10 +641,10 @@ export namespace Server {
     return result
   }
 
-  export function listen() {
+  export function listen(opts: { port: number; hostname: string }) {
     const server = Bun.serve({
-      port: 0,
-      hostname: "0.0.0.0",
+      port: opts.port,
+      hostname: opts.hostname,
       idleTimeout: 0,
       fetch: app().fetch,
     })

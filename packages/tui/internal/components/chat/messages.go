@@ -5,17 +5,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/components/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/components/dialog"
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	"github.com/charmbracelet/bubbles/v2/spinner"
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/components/commands"
-	"github.com/sst/opencode/internal/components/dialog"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/pkg/client"
 )
 
 type MessagesComponent interface {
@@ -57,6 +57,12 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case app.SendMsg:
 		m.viewport.GotoBottom()
 		m.tail = true
+		return m, nil
+	case app.OptimisticMessageAddedMsg:
+		m.renderView()
+		if m.tail {
+			m.viewport.GotoBottom()
+		}
 		return m, nil
 	case dialog.ThemeSelectedMsg:
 		m.cache.Clear()
@@ -171,7 +177,7 @@ func (m *messagesComponent) renderView() {
 				isLastToolInvocation := slices.Contains(lastToolIndices, i)
 				toolInvocationPart := part.(client.MessagePartToolInvocation)
 				toolCall, _ := toolInvocationPart.ToolInvocation.AsMessageToolInvocationToolCall()
-				metadata := client.MessageInfo_Metadata_Tool_AdditionalProperties{}
+				metadata := client.MessageMetadata_Tool_AdditionalProperties{}
 				if _, ok := message.Metadata.Tool[toolCall.ToolCallId]; ok {
 					metadata = message.Metadata.Tool[toolCall.ToolCallId]
 				}
@@ -239,7 +245,7 @@ func (m *messagesComponent) renderView() {
 			m.width,
 			lipgloss.Center,
 			block,
-			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(t.Background())),
+			styles.WhitespaceStyle(t.Background()),
 		))
 	}
 
@@ -254,8 +260,8 @@ func (m *messagesComponent) header() string {
 
 	t := theme.CurrentTheme()
 	width := layout.Current.Container.Width
-	base := styles.BaseStyle().Background(t.Background()).Render
-	muted := styles.Muted().Background(t.Background()).Render
+	base := styles.NewStyle().Foreground(t.Text()).Background(t.Background()).Render
+	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
 	headerLines := []string{}
 	headerLines = append(headerLines, toMarkdown("# "+m.app.Session.Title, width-6, t.Background()))
 	if m.app.Session.Share != nil && m.app.Session.Share.Url != "" {
@@ -265,11 +271,11 @@ func (m *messagesComponent) header() string {
 	}
 	header := strings.Join(headerLines, "\n")
 
-	header = styles.BaseStyle().
+	header = styles.NewStyle().
+		Background(t.Background()).
 		Width(width).
 		PaddingLeft(2).
 		PaddingRight(2).
-		Background(t.Background()).
 		BorderLeft(true).
 		BorderRight(true).
 		BorderBackground(t.Background()).
@@ -300,7 +306,7 @@ func (m *messagesComponent) View() string {
 			m.width,
 			lipgloss.Center,
 			m.header(),
-			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(t.Background())),
+			styles.WhitespaceStyle(t.Background()),
 		),
 		m.viewport.View(),
 	)
@@ -308,18 +314,18 @@ func (m *messagesComponent) View() string {
 
 func (m *messagesComponent) home() string {
 	t := theme.CurrentTheme()
-	baseStyle := styles.BaseStyle().Background(t.Background())
+	baseStyle := styles.NewStyle().Background(t.Background())
 	base := baseStyle.Render
-	muted := styles.Muted().Background(t.Background()).Render
+	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
 
 	open := `
-█▀▀█ █▀▀█ █▀▀ █▀▀▄ 
-█░░█ █░░█ █▀▀ █░░█ 
-▀▀▀▀ █▀▀▀ ▀▀▀ ▀  ▀ `
+█▀▀█ █▀▀█ █▀▀ █▀▀▄  
+█░░█ █░░█ █▀▀ █░░█  
+▀▀▀▀ █▀▀▀ ▀▀▀ ▀  ▀  `
 	code := `
-█▀▀ █▀▀█ █▀▀▄ █▀▀
-█░░ █░░█ █░░█ █▀▀
-▀▀▀ ▀▀▀▀ ▀▀▀  ▀▀▀`
+█▀▀ █▀▀█ █▀▀▄ █▀▀ █▀▀█
+█░░ █░░█ █░░█ █▀▀ █▄▄▀
+▀▀▀ ▀▀▀▀ ▀▀▀  ▀▀▀ ▀  ▀`
 
 	logo := lipgloss.JoinHorizontal(
 		lipgloss.Top,
@@ -329,9 +335,9 @@ func (m *messagesComponent) home() string {
 	// cwd := app.Info.Path.Cwd
 	// config := app.Info.Path.Config
 
-	versionStyle := lipgloss.NewStyle().
-		Background(t.Background()).
+	versionStyle := styles.NewStyle().
 		Foreground(t.TextMuted()).
+		Background(t.Background()).
 		Width(lipgloss.Width(logo)).
 		Align(lipgloss.Right)
 	version := versionStyle.Render(m.app.Version)
@@ -341,14 +347,14 @@ func (m *messagesComponent) home() string {
 		m.width,
 		lipgloss.Center,
 		logoAndVersion,
-		lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(t.Background())),
+		styles.WhitespaceStyle(t.Background()),
 	)
 	m.commands.SetBackgroundColor(t.Background())
 	commands := lipgloss.PlaceHorizontal(
 		m.width,
 		lipgloss.Center,
 		m.commands.View(),
-		lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(t.Background())),
+		styles.WhitespaceStyle(t.Background()),
 	)
 
 	lines := []string{}
@@ -366,7 +372,7 @@ func (m *messagesComponent) home() string {
 		lipgloss.Center,
 		lipgloss.Center,
 		baseStyle.Render(strings.Join(lines, "\n")),
-		lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(t.Background())),
+		styles.WhitespaceStyle(t.Background()),
 	)
 }
 

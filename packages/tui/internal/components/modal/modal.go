@@ -3,10 +3,10 @@ package modal
 import (
 	"strings"
 
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 // CloseModalMsg is a message to signal that the active modal should be closed.
@@ -90,12 +90,8 @@ func (m *Modal) Render(contentView string, background string) string {
 
 	innerWidth := outerWidth - 4
 
-	// Base style for the modal
-	baseStyle := styles.BaseStyle().
-		Background(t.BackgroundElement()).
-		Foreground(t.TextMuted())
+	baseStyle := styles.NewStyle().Foreground(t.TextMuted()).Background(t.BackgroundElement())
 
-	// Add title if provided
 	var finalContent string
 	if m.title != "" {
 		titleStyle := baseStyle.
@@ -103,18 +99,18 @@ func (m *Modal) Render(contentView string, background string) string {
 			Bold(true).
 			Padding(0, 1)
 
-		escStyle := baseStyle.Foreground(t.TextMuted()).Bold(false)
+		escStyle := baseStyle.Foreground(t.TextMuted())
 		escText := escStyle.Render("esc")
 
 		// Calculate position for esc text
 		titleWidth := lipgloss.Width(m.title)
 		escWidth := lipgloss.Width(escText)
-		spacesNeeded := max(0, innerWidth-titleWidth-escWidth-3)
+		spacesNeeded := max(0, innerWidth-titleWidth-escWidth-2)
 		spacer := strings.Repeat(" ", spacesNeeded)
 		titleLine := m.title + spacer + escText
 		titleLine = titleStyle.Render(titleLine)
 
-		finalContent = strings.Join([]string{titleLine, contentView}, "\n") + "\n"
+		finalContent = strings.Join([]string{titleLine, "", contentView}, "\n")
 	} else {
 		finalContent = contentView
 	}

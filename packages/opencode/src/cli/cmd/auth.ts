@@ -1,4 +1,5 @@
 import { AuthAnthropic } from "../../auth/anthropic"
+import { AuthCopilot } from "../../auth/copilot"
 import { Auth } from "../../auth"
 import { cmd } from "./cmd"
 import * as prompts from "@clack/prompts"
@@ -6,17 +7,20 @@ import open from "open"
 import { UI } from "../ui"
 import { ModelsDev } from "../../provider/models"
 import { map, pipe, sortBy, values } from "remeda"
+import path from "path"
+import os from "os"
+import { Global } from "../../global"
 
 export const AuthCommand = cmd({
   command: "auth",
-  describe: "Manage credentials",
+  describe: "manage credentials",
   builder: (yargs) =>
     yargs
       .command(AuthLoginCommand)
       .command(AuthLogoutCommand)
       .command(AuthListCommand)
       .demandCommand(),
-  async handler() { },
+  async handler() {},
 })
 
 export const AuthListCommand = cmd({
@@ -25,30 +29,61 @@ export const AuthListCommand = cmd({
   describe: "list providers",
   async handler() {
     UI.empty()
-    prompts.intro("Credentials")
+    const authPath = path.join(Global.Path.data, "auth.json")
+    const homedir = os.homedir()
+    const displayPath = authPath.startsWith(homedir)
+      ? authPath.replace(homedir, "~")
+      : authPath
+    prompts.intro(`Credentials ${UI.Style.TEXT_DIM}${displayPath}`)
     const results = await Auth.all().then((x) => Object.entries(x))
     const database = await ModelsDev.get()
 
     for (const [providerID, result] of results) {
       const name = database[providerID]?.name || providerID
-      prompts.log.info(`${name} ${UI.Style.TEXT_DIM}(${result.type})`)
+      prompts.log.info(`${name} ${UI.Style.TEXT_DIM}${result.type}`)
     }
 
     prompts.outro(`${results.length} credentials`)
+
+    // Environment variables section
+    const activeEnvVars: Array<{ provider: string; envVar: string }> = []
+
+    for (const [providerID, provider] of Object.entries(database)) {
+      for (const envVar of provider.env) {
+        if (process.env[envVar]) {
+          activeEnvVars.push({
+            provider: provider.name || providerID,
+            envVar,
+          })
+        }
+      }
+    }
+
+    if (activeEnvVars.length > 0) {
+      UI.empty()
+      prompts.intro("Environment")
+
+      for (const { provider, envVar } of activeEnvVars) {
+        prompts.log.info(`${provider} ${UI.Style.TEXT_DIM}${envVar}`)
+      }
+
+      prompts.outro(`${activeEnvVars.length} environment variables`)
+    }
   },
 })
 
 export const AuthLoginCommand = cmd({
   command: "login",
-  describe: "login to a provider",
+  describe: "log in to a provider",
   async handler() {
     UI.empty()
     prompts.intro("Add credential")
     const providers = await ModelsDev.get()
     const priority: Record<string, number> = {
       anthropic: 0,
-      openai: 1,
-      google: 2,
+      "github-copilot": 1,
+      openai: 2,
+      google: 3,
     }
     let provider = await prompts.select({
       message: "Select provider",
@@ -146,6 +181,44 @@ export const AuthLoginCommand = cmd({
       }
     }
 
+    const copilot = await AuthCopilot()
+    if (provider === "github-copilot" && copilot) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      const deviceInfo = await copilot.authorize()
+
+      prompts.note(
+        `Please visit: ${deviceInfo.verification}\nEnter code: ${deviceInfo.user}`,
+      )
+
+      const spinner = prompts.spinner()
+      spinner.start("Waiting for authorization...")
+
+      while (true) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, deviceInfo.interval * 1000),
+        )
+        const response = await copilot.poll(deviceInfo.device)
+        if (response.status === "pending") continue
+        if (response.status === "success") {
+          await Auth.set("github-copilot", {
+            type: "oauth",
+            refresh: response.refresh,
+            access: response.access,
+            expires: response.expires,
+          })
+          spinner.stop("Login successful")
+          break
+        }
+        if (response.status === "failed") {
+          spinner.stop("Failed to authorize", 1)
+          break
+        }
+      }
+
+      prompts.outro("Done")
+      return
+    }
+
     const key = await prompts.password({
       message: "Enter your API key",
       validate: (x) => (x.length > 0 ? undefined : "Required"),
@@ -162,7 +235,7 @@ export const AuthLoginCommand = cmd({
 
 export const AuthLogoutCommand = cmd({
   command: "logout",
-  describe: "logout from a configured provider",
+  describe: "log out from a configured provider",
   async handler() {
     UI.empty()
     const credentials = await Auth.all().then((x) => Object.entries(x))

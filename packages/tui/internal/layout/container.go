@@ -1,9 +1,10 @@
 package layout
 
 import (
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type Container interface {
@@ -57,7 +58,7 @@ func (c *container) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (c *container) View() string {
 	t := theme.CurrentTheme()
-	style := lipgloss.NewStyle()
+	style := styles.NewStyle().Background(t.Background())
 	width := c.width
 	height := c.height
 
@@ -65,8 +66,6 @@ func (c *container) View() string {
 	if c.maxWidth > 0 && width > c.maxWidth {
 		width = c.maxWidth
 	}
-
-	style = style.Background(t.Background())
 
 	// Apply border if any side is enabled
 	if c.borderTop || c.borderRight || c.borderBottom || c.borderLeft {

@@ -14,6 +14,7 @@ import {
   type CoreMessage,
   type UIMessage,
   type ProviderMetadata,
+  wrapLanguageModel,
 } from "ai"
 import { z, ZodSchema } from "zod"
 import { Decimal } from "decimal.js"
@@ -69,6 +70,18 @@ export namespace Session {
       "session.updated",
       z.object({
         info: Info,
+      }),
+    ),
+    Deleted: Bus.event(
+      "session.deleted",
+      z.object({
+        info: Info,
+      }),
+    ),
+    Idle: Bus.event(
+      "session.idle",
+      z.object({
+        sessionID: z.string(),
       }),
     ),
     Error: Bus.event(
@@ -205,12 +218,45 @@ export namespace Session {
     }
   }
 
+  export async function children(parentID: string) {
+    const result = [] as Session.Info[]
+    for await (const item of Storage.list("session/info")) {
+      const sessionID = path.basename(item, ".json")
+      const session = await get(sessionID)
+      if (session.parentID !== parentID) continue
+      result.push(session)
+    }
+    return result
+  }
+
   export function abort(sessionID: string) {
     const controller = state().pending.get(sessionID)
     if (!controller) return false
     controller.abort()
     state().pending.delete(sessionID)
     return true
+  }
+
+  export async function remove(sessionID: string, emitEvent = true) {
+    try {
+      abort(sessionID)
+      const session = await get(sessionID)
+      for (const child of await children(sessionID)) {
+        await remove(child.id, false)
+      }
+      await unshare(sessionID).catch(() => {})
+      await Storage.remove(`session/info/${sessionID}`).catch(() => {})
+      await Storage.removeDir(`session/message/${sessionID}/`).catch(() => {})
+      state().sessions.delete(sessionID)
+      state().messages.delete(sessionID)
+      if (emitEvent) {
+        Bus.publish(Event.Deleted, {
+          info: session,
+        })
+      }
+    } catch (e) {
+      log.error(e)
+    }
   }
 
   async function updateMessage(msg: Message.Info) {
@@ -223,35 +269,18 @@ export namespace Session {
     })
   }
 
-  export async function generateTitle(userMessage: string, providerID: string): Promise<string> {
+  export async function generateTitle(userMessage: string, providerID: string, modelID: string): Promise<string> {
     const log = Log.create({ service: "title-generator" })
     const fallback = userMessage.split('\n')[0].slice(0, 40) + (userMessage.length > 40 ? '...' : '')
     try {
-      let titleModelID: string | undefined
-      let titleProviderID: string | undefined
-      switch (providerID) {
-        case "anthropic":
-          titleModelID = "claude-3-5-haiku-20241022"
-          titleProviderID = "anthropic"
-          break
-        case "openai":
-          titleModelID = "gpt-4o-mini"
-          titleProviderID = "openai"
-          break
-        default:
-      }
-
-      if (!titleModelID || !titleProviderID) {
-        return fallback
-      }
 
       try {
-        await Provider.getModel(titleProviderID, titleModelID)
+        await Provider.getModel(providerID, modelID)
       } catch {
         return fallback
       }
 
-      const model = await Provider.getModel(titleProviderID, titleModelID)
+      const model = await Provider.getModel(providerID, modelID)
 
       const result = await generateText({
         model: model.language,
@@ -281,6 +310,45 @@ export namespace Session {
       return fallback
     }
   }
+
+  export async function generateStatusVerb(userMessage: string, providerID: string, modelID: string): Promise<string> {
+    const log = Log.create({ service: "verb-generator" })
+    const fallback = "Processing"
+    try {
+      try {
+        await Provider.getModel(providerID, modelID)
+      } catch {
+        return fallback
+      }
+
+      const model = await Provider.getModel(providerID, modelID)
+
+      const result = await generateText({
+        model: model.language,
+        messages: [
+          {
+            role: "system",
+            content: SystemPrompt.verb()
+          },
+          {
+            role: "user",
+            content: userMessage
+          }],
+        maxTokens: 10,
+      })
+
+      const verb = result.text?.trim() || "Processing"
+
+      if (verb.length > 20 || verb.includes(' ') || !/^[A-Z][a-z]+ing$/.test(verb)) {
+        return fallback
+      }
+
+      return verb
+    } catch (error) {
+      log.error("Failed to generate status verb", { error })
+      return fallback
+    }
+  }
   export async function chat(input: {
     sessionID: string
     providerID: string
@@ -305,7 +373,10 @@ export namespace Session {
       if (
         model.info.limit.context &&
         tokens >
-          (model.info.limit.context - (model.info.limit.output ?? 0)) * 0.9
+          Math.max(
+            (model.info.limit.context - (model.info.limit.output ?? 0)) * 0.9,
+            0,
+          )
       ) {
         await summarize({
           sessionID: input.sessionID,
@@ -343,9 +414,7 @@ export namespace Session {
               parts: toParts(input.parts),
             },
           ]),
-        ].map((msg, i) =>
-          ProviderTransform.message(msg, i, input.providerID, input.modelID),
-        ),
+        ],
         model: model.language,
       })
         .then((result) => {
@@ -354,7 +423,7 @@ export namespace Session {
               draft.title = result.text
             })
         })
-        .catch(() => {})
+        .catch(() => { })
     }
     const msg: Message.Info = {
       role: "user",
@@ -492,24 +561,6 @@ export namespace Session {
     }
 
     let text: Message.TextPart | undefined
-    await Bun.write(
-      "/tmp/message.json",
-      JSON.stringify(
-        [
-          ...system.map(
-            (x): CoreMessage => ({
-              role: "system",
-              content: x,
-            }),
-          ),
-          ...convertToCoreMessages(
-            msgs.map(toUIMessage).filter((x) => x.parts.length > 0),
-          ),
-        ],
-        null,
-        2,
-      ),
-    )
     const result = streamText({
       onStepFinish: async (step) => {
         log.info("step finish", { finishReason: step.finishReason })
@@ -572,6 +623,7 @@ export namespace Session {
       //   return step
       // },
       toolCallStreaming: true,
+      maxTokens: model.info.limit.output || undefined,
       abortSignal: abort.signal,
       maxSteps: 1000,
       providerOptions: model.info.options,
@@ -585,12 +637,26 @@ export namespace Session {
         ...convertToCoreMessages(
           msgs.map(toUIMessage).filter((x) => x.parts.length > 0),
         ),
-      ].map((msg, i) =>
-        ProviderTransform.message(msg, i, input.providerID, input.modelID),
-      ),
+      ],
       temperature: model.info.temperature ? 0 : undefined,
       tools: model.info.tool_call === false ? undefined : tools,
-      model: model.language,
+      model: wrapLanguageModel({
+        model: model.language,
+        middleware: [
+          {
+            async transformParams(args) {
+              if (args.type === "stream") {
+                args.params.prompt = ProviderTransform.message(
+                  args.params.prompt,
+                  input.providerID,
+                  input.modelID,
+                )
+              }
+              return args.params
+            },
+          },
+        ],
+      }),
     })
     try {
       for await (const value of result.fullStream) {
@@ -617,7 +683,7 @@ export namespace Session {
           case "tool-call": {
             const [match] = next.parts.flatMap((p) =>
               p.type === "tool-invocation" &&
-              p.toolInvocation.toolCallId === value.toolCallId
+                p.toolInvocation.toolCallId === value.toolCallId
                 ? [p]
                 : [],
             )
@@ -681,6 +747,21 @@ export namespace Session {
             }
             break
 
+          case "finish":
+            log.info("message finish", {
+              reason: value.finishReason,
+            })
+            const assistant = next.metadata!.assistant!
+            const usage = getUsage(
+              model.info,
+              value.usage,
+              value.providerMetadata,
+            )
+            assistant.cost = usage.cost
+            await updateMessage(next)
+            if (value.finishReason === "length")
+              throw new Message.OutputLengthError({})
+            break
           default:
             l.info("unhandled", {
               type: value.type,
@@ -694,6 +775,9 @@ export namespace Session {
         error: e,
       })
       switch (true) {
+        case Message.OutputLengthError.isInstance(e):
+          next.metadata.error = e
+          break
         case LoadAPIKeyError.isInstance(e):
           next.metadata.error = new Provider.AuthError(
             {
@@ -781,7 +865,9 @@ export namespace Session {
       },
     }
     await updateMessage(next)
-    const result = await generateText({
+
+    let text: Message.TextPart | undefined
+    const result = streamText({
       abortSignal: abort.signal,
       model: model.language,
       messages: [
@@ -802,16 +888,46 @@ export namespace Session {
           ],
         },
       ],
+      onStepFinish: async (step) => {
+        const assistant = next.metadata!.assistant!
+        const usage = getUsage(model.info, step.usage, step.providerMetadata)
+        assistant.cost += usage.cost
+        assistant.tokens = usage.tokens
+        await updateMessage(next)
+        if (text) {
+          Bus.publish(Message.Event.PartUpdated, {
+            part: text,
+            messageID: next.id,
+            sessionID: next.metadata.sessionID,
+          })
+        }
+        text = undefined
+      },
+      async onFinish(input) {
+        const assistant = next.metadata!.assistant!
+        const usage = getUsage(model.info, input.usage, input.providerMetadata)
+        assistant.cost = usage.cost
+        assistant.tokens = usage.tokens
+        next.metadata!.time.completed = Date.now()
+        await updateMessage(next)
+      },
     })
-    next.parts.push({
-      type: "text",
-      text: result.text,
-    })
-    const assistant = next.metadata!.assistant!
-    const usage = getUsage(model.info, result.usage, result.providerMetadata)
-    assistant.cost = usage.cost
-    assistant.tokens = usage.tokens
-    await updateMessage(next)
+
+    for await (const value of result.fullStream) {
+      switch (value.type) {
+        case "text-delta":
+          if (!text) {
+            text = {
+              type: "text",
+              text: value.textDelta,
+            }
+            next.parts.push(text)
+          } else text.text += value.textDelta
+
+          await updateMessage(next)
+          break
+      }
+    }
   }
 
   function lock(sessionID: string) {
@@ -824,6 +940,9 @@ export namespace Session {
       [Symbol.dispose]() {
         log.info("unlocking", { sessionID })
         state().pending.delete(sessionID)
+        Bus.publish(Event.Idle, {
+          sessionID,
+        })
       },
     }
   }

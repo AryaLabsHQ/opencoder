@@ -10,6 +10,7 @@ import PROMPT_ANTHROPIC_SPOOF from "./prompt/anthropic_spoof.txt"
 import PROMPT_SUMMARIZE from "./prompt/summarize.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_TITLE_WINDOW from "./prompt/title-window.txt"
+import PROMPT_VERB from "./prompt/verb.txt"
 
 export namespace SystemPrompt {
   export function provider(providerID: string) {
@@ -138,5 +139,9 @@ export namespace SystemPrompt {
 
   export function windowTitle() {
     return PROMPT_TITLE_WINDOW
+  }
+
+  export function verb() {
+    return PROMPT_VERB
   }
 }

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type CommandsComponent interface {
@@ -25,6 +25,7 @@ type commandsComponent struct {
 	app           *app.App
 	width, height int
 	showKeybinds  bool
+	showAll       bool
 	background    *compat.AdaptiveColor
 	limit         *int
 }
@@ -59,15 +60,9 @@ func (c *commandsComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (c *commandsComponent) View() string {
 	t := theme.CurrentTheme()
 
-	triggerStyle := lipgloss.NewStyle().
-		Foreground(t.Primary()).
-		Bold(true)
-
-	descriptionStyle := lipgloss.NewStyle().
-		Foreground(t.Text())
-
-	keybindStyle := lipgloss.NewStyle().
-		Foreground(t.TextMuted())
+	triggerStyle := styles.NewStyle().Foreground(t.Primary()).Bold(true)
+	descriptionStyle := styles.NewStyle().Foreground(t.Text())
+	keybindStyle := styles.NewStyle().Foreground(t.TextMuted())
 
 	if c.background != nil {
 		triggerStyle = triggerStyle.Background(*c.background)
@@ -75,18 +70,34 @@ func (c *commandsComponent) View() string {
 		keybindStyle = keybindStyle.Background(*c.background)
 	}
 
-	var commandsWithTriggers []commands.Command
+	var commandsToShow []commands.Command
+	var triggeredCommands []commands.Command
+	var untriggeredCommands []commands.Command
+
 	for _, cmd := range c.app.Commands.Sorted() {
-		if cmd.Trigger != "" {
-			commandsWithTriggers = append(commandsWithTriggers, cmd)
+		if c.showAll || cmd.Trigger != "" {
+			if cmd.Trigger != "" {
+				triggeredCommands = append(triggeredCommands, cmd)
+			} else if c.showAll {
+				untriggeredCommands = append(untriggeredCommands, cmd)
+			}
 		}
 	}
-	if c.limit != nil && len(commandsWithTriggers) > *c.limit {
-		commandsWithTriggers = commandsWithTriggers[:*c.limit]
+
+	// Combine triggered commands first, then untriggered
+	commandsToShow = append(commandsToShow, triggeredCommands...)
+	commandsToShow = append(commandsToShow, untriggeredCommands...)
+
+	if c.limit != nil && len(commandsToShow) > *c.limit {
+		commandsToShow = commandsToShow[:*c.limit]
 	}
 
-	if len(commandsWithTriggers) == 0 {
-		return styles.Muted().Render("No commands with triggers available")
+	if len(commandsToShow) == 0 {
+		muted := styles.NewStyle().Foreground(theme.CurrentTheme().TextMuted())
+		if c.showAll {
+			return muted.Render("No commands available")
+		}
+		return muted.Render("No commands with triggers available")
 	}
 
 	// Calculate column widths
@@ -101,10 +112,15 @@ func (c *commandsComponent) View() string {
 		keybinds    string
 	}
 
-	rows := make([]commandRow, 0, len(commandsWithTriggers))
+	rows := make([]commandRow, 0, len(commandsToShow))
 
-	for _, cmd := range commandsWithTriggers {
-		trigger := "/" + cmd.Trigger
+	for _, cmd := range commandsToShow {
+		trigger := ""
+		if cmd.Trigger != "" {
+			trigger = "/" + cmd.Trigger
+		} else {
+			trigger = string(cmd.Name)
+		}
 		description := cmd.Description
 
 		// Format keybindings
@@ -144,6 +160,7 @@ func (c *commandsComponent) View() string {
 	// Build the output
 	var output strings.Builder
 
+	maxWidth := 0
 	for _, row := range rows {
 		// Pad each column to align properly
 		trigger := fmt.Sprintf("%-*s", maxTriggerWidth, row.trigger)
@@ -160,10 +177,14 @@ func (c *commandsComponent) View() string {
 		}
 
 		output.WriteString(line + "\n")
+		maxWidth = max(maxWidth, lipgloss.Width(line))
 	}
 
 	// Remove trailing newline
 	result := strings.TrimSuffix(output.String(), "\n")
+	if c.background != nil {
+		result = styles.NewStyle().Background(*c.background).Width(maxWidth).Render(result)
+	}
 
 	return result
 }
@@ -188,11 +209,18 @@ func WithLimit(limit int) Option {
 	}
 }
 
+func WithShowAll(showAll bool) Option {
+	return func(c *commandsComponent) {
+		c.showAll = showAll
+	}
+}
+
 func New(app *app.App, opts ...Option) CommandsComponent {
 	c := &commandsComponent{
 		app:          app,
 		background:   nil,
 		showKeybinds: true,
+		showAll:      false,
 	}
 	for _, opt := range opts {
 		opt(c)

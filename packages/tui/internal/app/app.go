@@ -5,39 +5,48 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strings"
+	"time"
 
 	"log/slog"
 
+	"github.com/AryaLabsHQ/opencoder/internal/commands"
+	"github.com/AryaLabsHQ/opencoder/internal/components/toast"
+	"github.com/AryaLabsHQ/opencoder/internal/config"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/config"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
-	"github.com/sst/opencode/pkg/client"
 )
 
 var RootPath string
 
 type App struct {
-	Info      client.AppInfo
-	Version   string
-	StatePath string
-	Config    *client.ConfigInfo
-	Client    *client.ClientWithResponses
-	State     *config.State
-	Provider  *client.ProviderInfo
-	Model     *client.ModelInfo
-	Session   *client.SessionInfo
-	Messages  []client.MessageInfo
-	Commands  commands.CommandRegistry
+	Info          client.AppInfo
+	Version       string
+	StatePath     string
+	Config        *client.ConfigInfo
+	Client        *client.ClientWithResponses
+	State         *config.State
+	MainProvider  *client.ProviderInfo
+	MainModel     *client.ModelInfo
+	TurboProvider *client.ProviderInfo
+	TurboModel    *client.ModelInfo
+	Session       *client.SessionInfo
+	Messages      []client.MessageInfo
+	Commands      commands.CommandRegistry
+	PromptVerbs   []string
+	VerbIndex     int
 }
 
 type SessionSelectedMsg = *client.SessionInfo
 type ModelSelectedMsg struct {
-	Provider client.ProviderInfo
-	Model    client.ModelInfo
+	MainProvider  client.ProviderInfo
+	MainModel     client.ModelInfo
+	TurboProvider client.ProviderInfo
+	TurboModel    client.ModelInfo
 }
+
 type SessionClearedMsg struct{}
 type CompactSessionMsg struct{}
 type SendMsg struct {
@@ -47,8 +56,11 @@ type SendMsg struct {
 type WindowTitleMsg struct {
 	Title string
 }
-type CompletionDialogTriggerdMsg struct {
+type CompletionDialogTriggeredMsg struct {
 	InitialValue string
+}
+type OptimisticMessageAddedMsg struct {
+	Message client.MessageInfo
 }
 
 func New(
@@ -62,6 +74,9 @@ func New(
 	configResponse, err := httpClient.PostConfigGetWithResponse(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if configResponse.StatusCode() != 200 || configResponse.JSON200 == nil {
+		return nil, fmt.Errorf("failed to get config: %d", configResponse.StatusCode())
 	}
 	configInfo := configResponse.JSON200
 	if configInfo.Keybinds == nil {
@@ -83,27 +98,45 @@ func New(
 		appState.Theme = *configInfo.Theme
 	}
 	if configInfo.Model != nil {
-		splits := strings.Split(*configInfo.Model, "/")
-		appState.Provider = splits[0]
-		appState.Model = strings.Join(splits[1:], "/")
+		appState.MainProvider, appState.MainModel = util.ParseModel(*configInfo.Model)
+	}
+	if configInfo.TurboModel != nil {
+		appState.TurboProvider, appState.TurboModel = util.ParseModel(*configInfo.TurboModel)
+	}
+
+	// Load themes from all directories
+	if err := theme.LoadThemesFromDirectories(
+		appInfo.Path.Config,
+		appInfo.Path.Root,
+		appInfo.Path.Cwd,
+	); err != nil {
+		slog.Warn("Failed to load themes from directories", "error", err)
 	}
 
 	if appState.Theme != "" {
+		if appState.Theme == "system" && styles.Terminal != nil {
+			theme.UpdateSystemTheme(
+				styles.Terminal.Background,
+				styles.Terminal.BackgroundIsDark,
+			)
+		}
 		theme.SetTheme(appState.Theme)
 	}
 
 	slog.Debug("Loaded config", "config", configInfo)
 
 	app := &App{
-		Info:      appInfo,
-		Version:   version,
-		StatePath: appStatePath,
-		Config:    configInfo,
-		State:     appState,
-		Client:    httpClient,
-		Session:   &client.SessionInfo{},
-		Messages:  []client.MessageInfo{},
-		Commands:  commands.LoadFromConfig(configInfo),
+		Info:        appInfo,
+		Version:     version,
+		StatePath:   appStatePath,
+		Config:      configInfo,
+		State:       appState,
+		Client:      httpClient,
+		Session:     &client.SessionInfo{},
+		Messages:    []client.MessageInfo{},
+		Commands:    commands.LoadFromConfig(configInfo),
+		PromptVerbs: []string{},
+		VerbIndex:   0,
 	}
 
 	return app, nil
@@ -115,6 +148,10 @@ func (a *App) InitializeProvider() tea.Cmd {
 		if err != nil {
 			slog.Error("Failed to list providers", "error", err)
 			// TODO: notify user
+			return nil
+		}
+		if providersResponse != nil && providersResponse.StatusCode() != 200 {
+			slog.Error("failed to retrieve providers", "status", providersResponse.StatusCode(), "message", string(providersResponse.Body))
 			return nil
 		}
 		providers := []client.ProviderInfo{}
@@ -149,11 +186,11 @@ func (a *App) InitializeProvider() tea.Cmd {
 		var currentProvider *client.ProviderInfo
 		var currentModel *client.ModelInfo
 		for _, provider := range providers {
-			if provider.Id == a.State.Provider {
+			if provider.Id == a.State.MainProvider {
 				currentProvider = &provider
 
 				for _, model := range provider.Models {
-					if model.Id == a.State.Model {
+					if model.Id == a.State.MainModel {
 						currentModel = &model
 					}
 				}
@@ -164,10 +201,15 @@ func (a *App) InitializeProvider() tea.Cmd {
 			currentModel = defaultModel
 		}
 
+		// Initialize turbo model based on config or defaults
+		turboProvider, turboModel := findTurboModel(a.State, a.Config, providers, currentProvider, currentModel)
+
 		// TODO: handle no provider or model setup, yet
 		return ModelSelectedMsg{
-			Provider: *currentProvider,
-			Model:    *currentModel,
+			MainProvider:  *currentProvider,
+			MainModel:     *currentModel,
+			TurboProvider: *turboProvider,
+			TurboModel:    *turboModel,
 		}
 	}
 }
@@ -184,6 +226,44 @@ func getDefaultModel(response *client.PostProviderListResponse, provider client.
 	return nil
 }
 
+func findTurboModel(state *config.State, config *client.ConfigInfo, providers []client.ProviderInfo, currentProvider *client.ProviderInfo, currentModel *client.ModelInfo) (*client.ProviderInfo, *client.ModelInfo) {
+	// If turbo model is configured in state, use it
+	if state.TurboProvider != "" && state.TurboModel != "" {
+		for _, provider := range providers {
+			if provider.Id == state.TurboProvider {
+				for _, model := range provider.Models {
+					if model.Id == state.TurboModel {
+						return &provider, &model
+					}
+				}
+			}
+		}
+	}
+
+	// Get threshold from config or use default
+	threshold := float32(4.0)
+	if config != nil && config.TurboCostThreshold != nil {
+		threshold = *config.TurboCostThreshold
+	}
+
+	// Find the cheapest model in the current provider that qualifies as turbo
+	var turboModel *client.ModelInfo
+	for _, model := range currentProvider.Models {
+		if model.Cost.Output <= threshold {
+			if turboModel == nil || model.Cost.Output < turboModel.Cost.Output {
+				tmp := model
+				turboModel = &tmp
+			}
+		}
+	}
+
+	// Return turbo model if found, otherwise fall back to main model
+	if turboModel != nil {
+		return currentProvider, turboModel
+	}
+	return currentProvider, currentModel
+}
+
 type Attachment struct {
 	FilePath string
 	FileName string
@@ -198,6 +278,38 @@ func (a *App) IsBusy() bool {
 
 	lastMessage := a.Messages[len(a.Messages)-1]
 	return lastMessage.Metadata.Time.Completed == nil
+}
+
+func (a *App) GetStatusVerb() string {
+	if len(a.PromptVerbs) == 0 {
+		return "Working"
+	}
+	if a.VerbIndex >= len(a.PromptVerbs) {
+		a.VerbIndex = 0
+	}
+	reverseIndex := len(a.PromptVerbs) - 1 - a.VerbIndex
+	return a.PromptVerbs[reverseIndex]
+}
+
+func (a *App) AddPromptVerb(verb string) {
+	if len(a.PromptVerbs) == 0 || a.PromptVerbs[len(a.PromptVerbs)-1] != verb {
+		a.PromptVerbs = append(a.PromptVerbs, verb)
+		if len(a.PromptVerbs) > 10 {
+			a.PromptVerbs = a.PromptVerbs[len(a.PromptVerbs)-10:]
+		}
+	}
+}
+
+func (a *App) CycleToNextVerb() {
+	if len(a.PromptVerbs) == 0 {
+		return
+	}
+	a.VerbIndex = (a.VerbIndex + 1) % len(a.PromptVerbs)
+}
+
+func (a *App) ResetPromptVerbs() {
+	a.PromptVerbs = []string{}
+	a.VerbIndex = 0
 }
 
 func (a *App) SaveState() {
@@ -222,8 +334,8 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 	go func() {
 		response, err := a.Client.PostSessionInitialize(ctx, client.PostSessionInitializeJSONRequestBody{
 			SessionID:  a.Session.Id,
-			ProviderID: a.Provider.Id,
-			ModelID:    a.Model.Id,
+			ProviderID: a.MainProvider.Id,
+			ModelID:    a.MainModel.Id,
 		})
 		if err != nil {
 			slog.Error("Failed to initialize project", "error", err)
@@ -239,17 +351,27 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 }
 
 func (a *App) CompactSession(ctx context.Context) tea.Cmd {
-	response, err := a.Client.PostSessionSummarizeWithResponse(ctx, client.PostSessionSummarizeJSONRequestBody{
-		SessionID:  a.Session.Id,
-		ProviderID: a.Provider.Id,
-		ModelID:    a.Model.Id,
-	})
-	if err != nil {
-		slog.Error("Failed to compact session", "error", err)
-	}
-	if response != nil && response.StatusCode() != 200 {
-		slog.Error("Failed to compact session", "error", response.StatusCode)
-	}
+	go func() {
+		// Use turbo model for summarization if available
+		providerID := a.MainProvider.Id
+		modelID := a.MainModel.Id
+		if a.TurboProvider != nil && a.TurboModel != nil {
+			providerID = a.TurboProvider.Id
+			modelID = a.TurboModel.Id
+		}
+
+		response, err := a.Client.PostSessionSummarizeWithResponse(ctx, client.PostSessionSummarizeJSONRequestBody{
+			SessionID:  a.Session.Id,
+			ProviderID: providerID,
+			ModelID:    modelID,
+		})
+		if err != nil {
+			slog.Error("Failed to compact session", "error", err)
+		}
+		if response != nil && response.StatusCode() != 200 {
+			slog.Error("Failed to compact session", "error", response.StatusCode)
+		}
+	}()
 	return nil
 }
 
@@ -282,17 +404,10 @@ func (a *App) SendChatMessage(ctx context.Context, text string, attachments []At
 	if a.Session.Id == "" {
 		session, err := a.CreateSession(ctx)
 		if err != nil {
-			// status.Error(err.Error())
-			return nil
+			return toast.NewErrorToast(err.Error())
 		}
 		a.Session = session
 		cmds = append(cmds, util.CmdHandler(SessionSelectedMsg(session)))
-	}
-
-	// TODO: Handle attachments when API supports them
-	if len(attachments) > 0 {
-		// For now, ignore attachments
-		// return "", fmt.Errorf("attachments not supported yet")
 	}
 
 	part := client.MessagePart{}
@@ -302,22 +417,44 @@ func (a *App) SendChatMessage(ctx context.Context, text string, attachments []At
 	})
 	parts := []client.MessagePart{part}
 
-	go func() {
+	optimisticMessage := client.MessageInfo{
+		Id:    fmt.Sprintf("optimistic-%d", time.Now().UnixNano()),
+		Role:  client.User,
+		Parts: parts,
+		Metadata: client.MessageMetadata{
+			SessionID: a.Session.Id,
+			Time: struct {
+				Completed *float32 `json:"completed,omitempty"`
+				Created   float32  `json:"created"`
+			}{
+				Created: float32(time.Now().Unix()),
+			},
+			Tool: make(map[string]client.MessageMetadata_Tool_AdditionalProperties),
+		},
+	}
+
+	a.Messages = append(a.Messages, optimisticMessage)
+	cmds = append(cmds, util.CmdHandler(OptimisticMessageAddedMsg{Message: optimisticMessage}))
+
+	cmds = append(cmds, func() tea.Msg {
 		response, err := a.Client.PostSessionChat(ctx, client.PostSessionChatJSONRequestBody{
 			SessionID:  a.Session.Id,
 			Parts:      parts,
-			ProviderID: a.Provider.Id,
-			ModelID:    a.Model.Id,
+			ProviderID: a.MainProvider.Id,
+			ModelID:    a.MainModel.Id,
 		})
 		if err != nil {
-			slog.Error("Failed to send message", "error", err)
-			// status.Error(err.Error())
+			errormsg := fmt.Sprintf("failed to send message: %v", err)
+			slog.Error(errormsg)
+			return toast.NewErrorToast(errormsg)()
 		}
 		if response != nil && response.StatusCode != 200 {
-			slog.Error("Failed to send message", "error", fmt.Sprintf("failed to send message: %d", response.StatusCode))
-			// status.Error(fmt.Sprintf("failed to send message: %d", response.StatusCode))
+			errormsg := fmt.Sprintf("failed to send message: %d", response.StatusCode)
+			slog.Error(errormsg)
+			return toast.NewErrorToast(errormsg)()
 		}
-	}()
+		return nil
+	})
 
 	// The actual response will come through SSE
 	// For now, just return success
@@ -361,6 +498,19 @@ func (a *App) ListSessions(ctx context.Context) ([]client.SessionInfo, error) {
 	return sessions, nil
 }
 
+func (a *App) DeleteSession(ctx context.Context, sessionID string) error {
+	resp, err := a.Client.PostSessionDeleteWithResponse(ctx, client.PostSessionDeleteJSONRequestBody{
+		SessionID: sessionID,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("failed to delete session: %d", resp.StatusCode())
+	}
+	return nil
+}
+
 func (a *App) ListMessages(ctx context.Context, sessionId string) ([]client.MessageInfo, error) {
 	resp, err := a.Client.PostSessionMessagesWithResponse(ctx, client.PostSessionMessagesJSONRequestBody{SessionID: sessionId})
 	if err != nil {
@@ -393,13 +543,14 @@ func (a *App) ListProviders(ctx context.Context) ([]client.ProviderInfo, error) 
 }
 
 func (a *App) GenerateWindowTitle(ctx context.Context, text string) (string, error) {
-	if a.Provider == nil {
-		return "", fmt.Errorf("no provider configured")
+	if a.TurboProvider == nil || a.TurboModel == nil {
+		return "", fmt.Errorf("no turbo model configured")
 	}
 
 	requestBody := client.PostSessionGenerateTitleJSONRequestBody{
 		Text:       text,
-		ProviderID: a.Provider.Id,
+		ProviderID: a.TurboProvider.Id,
+		ModelID:    a.TurboModel.Id,
 	}
 
 	response, err := a.Client.PostSessionGenerateTitleWithResponse(ctx, requestBody)
@@ -412,6 +563,29 @@ func (a *App) GenerateWindowTitle(ctx context.Context, text string) (string, err
 	}
 
 	return response.JSON200.Title, nil
+}
+
+func (a *App) GenerateStatusVerb(ctx context.Context, text string) (string, error) {
+	if a.TurboProvider == nil {
+		return "Working", fmt.Errorf("no provider configured")
+	}
+
+	requestBody := client.PostSessionGenerateVerbJSONRequestBody{
+		Text:       text,
+		ProviderID: a.TurboProvider.Id,
+		ModelID:    a.TurboModel.Id,
+	}
+
+	response, err := a.Client.PostSessionGenerateVerbWithResponse(ctx, requestBody)
+	if err != nil {
+		return "Working", err
+	}
+
+	if response.StatusCode() != 200 || response.JSON200 == nil {
+		return "Working", fmt.Errorf("failed to generate verb: status %d", response.StatusCode())
+	}
+
+	return response.JSON200.Verb, nil
 }
 
 // func (a *App) loadCustomKeybinds() {

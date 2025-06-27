@@ -38,6 +38,8 @@ For more info on how to configure opencode [**head over to our docs**](https://o
 
 ### Contributing
 
+For any new features we'd appreciate it if you could open an issue first to discuss what you'd like to implement. We're pretty responsive there and it'll save you from working on something that we don't end up using. No need to do this for simpler fixes.
+
 To run opencode locally you need.
 
 - Bun
@@ -49,6 +51,17 @@ And run.
 $ bun install
 $ bun run packages/opencode/src/index.ts
 ```
+
+#### Development Notes
+
+**API Client Generation**: After making changes to the TypeScript API endpoints in `packages/opencode/src/server/server.ts`, you need to regenerate the Go client and OpenAPI specification:
+
+```bash
+$ cd packages/tui
+$ go generate ./pkg/client/
+```
+
+This updates the generated Go client code that the TUI uses to communicate with the backend server.
 
 ### FAQ
 

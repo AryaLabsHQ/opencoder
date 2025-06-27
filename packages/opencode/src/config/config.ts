@@ -22,6 +22,7 @@ export namespace Config {
       }
     }
     log.info("loaded", result)
+
     return result
   })
 
@@ -154,6 +155,15 @@ export namespace Config {
           "Model to use in the format of provider/model, eg anthropic/claude-2",
         )
         .optional(),
+      turbo_model: z
+        .string()
+        .describe("Turbo model to use for tasks like window title generation")
+        .optional(),
+      turbo_cost_threshold: z
+        .number()
+        .describe("Maximum output cost for a model to be considered a turbo model (default: 4)")
+        .default(4)
+        .optional(),
       provider: z
         .record(
           ModelsDev.Provider.partial().extend({
@@ -167,6 +177,32 @@ export namespace Config {
         .record(z.string(), Mcp)
         .optional()
         .describe("MCP (Model Context Protocol) server configurations"),
+      experimental: z
+        .object({
+          hook: z
+            .object({
+              file_edited: z
+                .record(
+                  z.string(),
+                  z
+                    .object({
+                      command: z.string().array(),
+                      environment: z.record(z.string(), z.string()).optional(),
+                    })
+                    .array(),
+                )
+                .optional(),
+              session_completed: z
+                .object({
+                  command: z.string().array(),
+                  environment: z.record(z.string(), z.string()).optional(),
+                })
+                .array()
+                .optional(),
+            })
+            .optional(),
+        })
+        .optional(),
     })
     .strict()
     .openapi({
@@ -194,7 +230,7 @@ export namespace Config {
         )
         await fs.unlink(path.join(Global.Path.config, "config"))
       })
-      .catch(() => {})
+      .catch(() => { })
 
     return result
   })
