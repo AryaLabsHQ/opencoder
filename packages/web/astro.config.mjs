@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from "astro/config"
+import { defineConfig, envField } from "astro/config"
 import starlight from "@astrojs/starlight"
 import solidJs from "@astrojs/solid-js"
 import cloudflare from "@astrojs/cloudflare"
@@ -8,7 +8,7 @@ import config from "./config.mjs"
 import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 
-const url = "https://opencode.ai"
+const url = "https://opencoder.aryalabs.ai"
 const github = "https://github.com/AryaLabsHQ/opencoder"
 
 // https://astro.build/config
@@ -16,7 +16,7 @@ export default defineConfig({
   site: url,
   output: "server",
   adapter: cloudflare({
-    imageService: "passthrough",
+    imageService: "cloudflare",
   }),
   devToolbar: {
     enabled: false,
