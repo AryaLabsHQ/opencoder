@@ -1,13 +1,13 @@
 package dialog
 
 import (
+	"github.com/AryaLabsHQ/opencode/internal/app"
+	commandsComponent "github.com/AryaLabsHQ/opencode/internal/components/commands"
+	"github.com/AryaLabsHQ/opencode/internal/components/modal"
+	"github.com/AryaLabsHQ/opencode/internal/layout"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/internal/app"
-	commandsComponent "github.com/sst/opencode/internal/components/commands"
-	"github.com/sst/opencode/internal/components/modal"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type helpDialog struct {

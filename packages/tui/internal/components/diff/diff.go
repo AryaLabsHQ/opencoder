@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	stylesi "github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
@@ -17,8 +19,6 @@ import (
 	"github.com/charmbracelet/lipgloss/v2/compat"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	stylesi "github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 // -------------------------------------------------------------------------

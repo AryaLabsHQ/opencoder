@@ -139,7 +139,7 @@ export namespace Installation {
     typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "dev"
 
   export async function latest() {
-    return fetch("https://api.github.com/repos/sst/opencode/releases/latest")
+    return fetch("https://api.github.com/repos/AryaLabsHQ/opencode/releases/latest")
       .then((res) => res.json())
       .then((data) => data.tag_name.slice(1) as string)
   }

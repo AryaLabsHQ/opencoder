@@ -3,11 +3,11 @@ package list
 import (
 	"strings"
 
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/muesli/reflow/truncate"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 type ListItem interface {

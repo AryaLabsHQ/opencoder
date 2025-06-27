@@ -6,13 +6,13 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/AryaLabsHQ/opencode/internal/util"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
 	chAnsi "github.com/charmbracelet/x/ansi"
 	"github.com/muesli/ansi"
 	"github.com/muesli/reflow/truncate"
 	"github.com/muesli/termenv"
-	"github.com/sst/opencode/internal/util"
 )
 
 // Split a string into lines, additionally returning the size of the widest line.

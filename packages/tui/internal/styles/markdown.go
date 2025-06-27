@@ -1,12 +1,12 @@
 package styles
 
 import (
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
 	"github.com/lucasb-eyer/go-colorful"
-	"github.com/sst/opencode/internal/theme"
 )
 
 const defaultMargin = 1

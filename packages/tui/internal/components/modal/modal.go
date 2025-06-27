@@ -3,10 +3,10 @@ package modal
 import (
 	"strings"
 
+	"github.com/AryaLabsHQ/opencode/internal/layout"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
 )
 
 // CloseModalMsg is a message to signal that the active modal should be closed.

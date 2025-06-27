@@ -9,14 +9,14 @@ import (
 
 	"log/slog"
 
+	"github.com/AryaLabsHQ/opencode/internal/commands"
+	"github.com/AryaLabsHQ/opencode/internal/components/toast"
+	"github.com/AryaLabsHQ/opencode/internal/config"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
+	"github.com/AryaLabsHQ/opencode/internal/util"
+	"github.com/AryaLabsHQ/opencode/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/components/toast"
-	"github.com/sst/opencode/internal/config"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
-	"github.com/sst/opencode/pkg/client"
 )
 
 var RootPath string

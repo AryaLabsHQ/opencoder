@@ -6,17 +6,17 @@ import (
 
 	"slices"
 
+	"github.com/AryaLabsHQ/opencode/internal/app"
+	"github.com/AryaLabsHQ/opencode/internal/components/list"
+	"github.com/AryaLabsHQ/opencode/internal/components/modal"
+	"github.com/AryaLabsHQ/opencode/internal/components/toast"
+	"github.com/AryaLabsHQ/opencode/internal/layout"
+	"github.com/AryaLabsHQ/opencode/internal/styles"
+	"github.com/AryaLabsHQ/opencode/internal/theme"
+	"github.com/AryaLabsHQ/opencode/internal/util"
+	"github.com/AryaLabsHQ/opencode/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/muesli/reflow/truncate"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/components/list"
-	"github.com/sst/opencode/internal/components/modal"
-	"github.com/sst/opencode/internal/components/toast"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
-	"github.com/sst/opencode/pkg/client"
 )
 
 // SessionDialog interface for the session switching dialog
