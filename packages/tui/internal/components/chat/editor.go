@@ -334,9 +334,9 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 	if value != "" {
 		if len(m.history) == 0 || m.history[len(m.history)-1] != value {
 			m.history = append(m.history, value)
-			m.historyIndex = len(m.history)
-			m.currentMessage = value
 		}
+		m.historyIndex = len(m.history)
+		m.currentMessage = value
 	}
 
 	cmds = append(cmds, util.CmdHandler(app.SendMsg{
