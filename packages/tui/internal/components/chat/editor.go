@@ -313,6 +313,7 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if len(value) > 0 && value[len(value)-1] == '\\' {
+		// If the last character is a backslash, add a newline
 		m.textarea.SetValue(value[:len(value)-1] + "\n")
 		return m, nil
 	}
@@ -329,10 +330,21 @@ func (m *editorComponent) Submit() (tea.Model, tea.Cmd) {
 	attachments := m.attachments
 	m.attachments = []app.Attachment{}
 
+	// Save to history if not empty and not a duplicate of the last entry
+	if value != "" {
+		if len(m.history) == 0 || m.history[len(m.history)-1] != value {
+			m.history = append(m.history, value)
+			m.historyIndex = len(m.history)
+			m.currentMessage = value
+		}
+	}
+
 	cmds = append(cmds, util.CmdHandler(app.SendMsg{
 		Text:        value,
 		Attachments: attachments,
 	}))
+
+	m.attachments = nil
 
 	// Generate verb for submitted text only if we haven't already
 	if needVerb {
