@@ -40,10 +40,10 @@ for (const [os, arch] of targets) {
   console.log(`building ${os}-${arch}`)
   const name = `${pkg.name}-${os}-${arch}`
   await $`mkdir -p dist/${name}/bin`
-  await $`GOOS=${os} GOARCH=${GOARCH[arch]} go build -ldflags="-s -w -X main.Version=${version}" -o ../opencode/dist/${name}/bin/tui ../tui/cmd/opencode/main.go`.cwd(
+  await $`GOOS=${os} GOARCH=${GOARCH[arch]} go build -ldflags="-s -w -X main.Version=${version}" -o ../opencoder/dist/${name}/bin/tui ../tui/cmd/opencoder/main.go`.cwd(
     "../tui",
   )
-  await $`bun build --define OPENCODE_VERSION="'${version}'" --compile --minify --target=bun-${os}-${arch} --outfile=dist/${name}/bin/opencode ./src/index.ts ./dist/${name}/bin/tui`
+  await $`bun build --define OPENCODE_VERSION="'${version}'" --compile --minify --target=bun-${os}-${arch} --outfile=dist/${name}/bin/opencoder ./src/index.ts ./dist/${name}/bin/tui`
   await $`rm -rf ./dist/${name}/bin/tui`
   await Bun.file(`dist/${name}/package.json`).write(
     JSON.stringify(
@@ -192,7 +192,7 @@ if (!snapshot) {
   //   `      sha256 "${macX64Sha}"`,
   //   "",
   //   "      def install",
-  //   '        bin.install "opencode"',
+  //   '        bin.install "opencoder"',
   //   "      end",
   //   "    end",
   //   "    if Hardware::CPU.arm?",
@@ -200,7 +200,7 @@ if (!snapshot) {
   //   `      sha256 "${macArm64Sha}"`,
   //   "",
   //   "      def install",
-  //   '        bin.install "opencode"',
+  //   '        bin.install "opencoder"',
   //   "      end",
   //   "    end",
   //   "  end",
@@ -210,14 +210,14 @@ if (!snapshot) {
   //   `      url "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64.zip"`,
   //   `      sha256 "${x64Sha}"`,
   //   "      def install",
-  //   '        bin.install "opencode"',
+  //   '        bin.install "opencoder"',
   //   "      end",
   //   "    end",
   //   "    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?",
   //   `      url "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-arm64.zip"`,
   //   `      sha256 "${arm64Sha}"`,
   //   "      def install",
-  //   '        bin.install "opencode"',
+  //   '        bin.install "opencoder"',
   //   "      end",
   //   "    end",
   //   "  end",

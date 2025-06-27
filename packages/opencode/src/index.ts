@@ -30,7 +30,7 @@ process.on("uncaughtException", (e) => {
 })
 
 const cli = yargs(hideBin(process.argv))
-  .scriptName("opencode")
+  .scriptName("opencoder")
   .help("help", "show help")
   .version("version", "show version number", Installation.VERSION)
   .alias("version", "v")
@@ -40,7 +40,7 @@ const cli = yargs(hideBin(process.argv))
   })
   .middleware(async () => {
     await Log.init({ print: process.argv.includes("--print-logs") })
-    Log.Default.info("opencode", {
+    Log.Default.info("opencoder", {
       version: Installation.VERSION,
       args: process.argv.slice(2),
     })

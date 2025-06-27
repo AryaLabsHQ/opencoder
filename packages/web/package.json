@@ -31,7 +31,7 @@
     "toolbeam-docs-theme": "0.3.0"
   },
   "devDependencies": {
-    "opencode": "workspace:*",
+    "opencoder": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   }

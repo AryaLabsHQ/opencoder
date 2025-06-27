@@ -1,6 +1,7 @@
 .DS_Store
 node_modules
 .opencode
+.opencoder
 .sst
 .env
 .idea
