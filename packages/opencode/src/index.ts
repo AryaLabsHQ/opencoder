@@ -118,9 +118,9 @@ const cli = yargs(hideBin(process.argv))
             onExit: () => {
               server.stop()
             },
-          })
+          });
 
-          ;(async () => {
+          (async () => {
             if (Installation.VERSION === "dev") return
             if (Installation.isSnapshot()) return
             const config = await Config.global()
