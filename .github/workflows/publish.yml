@@ -48,8 +48,8 @@ jobs:
 
       - name: Set git config
         run: |
-          git config --global user.email "opencode@sst.dev"
-          git config --global user.name "opencode"
+          git config --global user.email "opencoder@aryalabs.ai"
+          git config --global user.name "opencoder"
 
       - name: Publish
         run: |
@@ -59,7 +59,7 @@ jobs:
           else
             ./script/publish.ts --snapshot
           fi
-        working-directory: ./packages/opencode
+        working-directory: ./packages/opencoder
         env:
           GITHUB_TOKEN: ${{ secrets.SST_GITHUB_TOKEN }}
           # AUR_KEY: ${{ secrets.AUR_KEY }}
