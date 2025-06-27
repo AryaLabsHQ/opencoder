@@ -226,11 +226,18 @@ func renderText(message client.MessageInfo, text string, author string) string {
 	if message.Role == client.Assistant {
 		markdownWidth = width - padding - 4 - 3
 	}
-	if message.Role == client.User {
-		text = strings.ReplaceAll(text, "<", "\\<")
-		text = strings.ReplaceAll(text, ">", "\\>")
+	minWidth := max(markdownWidth, (width-4)/2)
+	messageStyle := styles.NewStyle().
+		Width(minWidth).
+		Background(t.BackgroundPanel()).
+		Foreground(t.Text())
+	if textWidth < minWidth {
+		messageStyle = messageStyle.AlignHorizontal(lipgloss.Right)
 	}
-	content := toMarkdown(text, markdownWidth, t.BackgroundPanel())
+	content := messageStyle.Render(text)
+	if message.Role == client.Assistant {
+		content = toMarkdown(text, markdownWidth, t.BackgroundPanel())
+	}
 	content = strings.Join([]string{content, info}, "\n")
 
 	switch message.Role {

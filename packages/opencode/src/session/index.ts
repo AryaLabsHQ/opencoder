@@ -78,6 +78,12 @@ export namespace Session {
         info: Info,
       }),
     ),
+    Idle: Bus.event(
+      "session.idle",
+      z.object({
+        sessionID: z.string(),
+      }),
+    ),
     Error: Bus.event(
       "session.error",
       z.object({
@@ -537,6 +543,7 @@ export namespace Session {
       //   return step
       // },
       toolCallStreaming: true,
+      maxTokens: model.info.limit.output || undefined,
       abortSignal: abort.signal,
       maxSteps: 1000,
       providerOptions: model.info.options,
@@ -853,16 +860,8 @@ export namespace Session {
       [Symbol.dispose]() {
         log.info("unlocking", { sessionID })
         state().pending.delete(sessionID)
-        Config.get().then((cfg) => {
-          if (cfg.experimental?.hook?.session_completed) {
-            for (const item of cfg.experimental.hook.session_completed) {
-              Bun.spawn({
-                cmd: item.command,
-                cwd: App.info().path.cwd,
-                env: item.environment,
-              })
-            }
-          }
+        Bus.publish(Event.Idle, {
+          sessionID,
         })
       },
     }
