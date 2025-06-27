@@ -1,11 +1,11 @@
 package dialog
 
 import (
-	list "github.com/AryaLabsHQ/opencode/internal/components/list"
-	"github.com/AryaLabsHQ/opencode/internal/components/modal"
-	"github.com/AryaLabsHQ/opencode/internal/layout"
-	"github.com/AryaLabsHQ/opencode/internal/theme"
-	"github.com/AryaLabsHQ/opencode/internal/util"
+	list "github.com/AryaLabsHQ/opencoder/internal/components/list"
+	"github.com/AryaLabsHQ/opencoder/internal/components/modal"
+	"github.com/AryaLabsHQ/opencoder/internal/layout"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 

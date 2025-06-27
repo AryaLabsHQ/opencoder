@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/AryaLabsHQ/opencode/internal/util"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/lipgloss/v2/compat"
 	chAnsi "github.com/charmbracelet/x/ansi"

@@ -5,9 +5,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 
-	"github.com/AryaLabsHQ/opencode/internal/styles"
-	"github.com/AryaLabsHQ/opencode/internal/theme"
-	"github.com/AryaLabsHQ/opencode/internal/util"
+	"github.com/AryaLabsHQ/opencoder/internal/styles"
+	"github.com/AryaLabsHQ/opencoder/internal/theme"
+	"github.com/AryaLabsHQ/opencoder/internal/util"
 )
 
 // InitDialogCmp is a component that asks the user if they want to initialize the project.

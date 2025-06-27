@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AryaLabsHQ/opencode/internal/app"
-	"github.com/AryaLabsHQ/opencode/internal/tui"
-	"github.com/AryaLabsHQ/opencode/pkg/client"
+	"github.com/AryaLabsHQ/opencoder/internal/app"
+	"github.com/AryaLabsHQ/opencoder/internal/tui"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/AryaLabsHQ/opencode/pkg/client"
+	"github.com/AryaLabsHQ/opencoder/pkg/client"
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 

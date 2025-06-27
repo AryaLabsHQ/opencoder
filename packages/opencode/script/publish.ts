@@ -92,13 +92,13 @@ if (!snapshot) {
   }
 
   const previous = await fetch(
-    "https://api.github.com/repos/AryaLabsHQ/opencode/releases/latest",
+    "https://api.github.com/repos/AryaLabsHQ/opencoder/releases/latest",
   )
     .then((res) => res.json())
     .then((data) => data.tag_name)
 
   const commits = await fetch(
-    `https://api.github.com/repos/AryaLabsHQ/opencode/compare/${previous}...HEAD`,
+    `https://api.github.com/repos/AryaLabsHQ/opencoder/compare/${previous}...HEAD`,
   )
     .then((res) => res.json())
     .then((data) => data.commits || [])
