@@ -494,6 +494,58 @@
         }
       }
     },
+    "/session_generate_title": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Generated title",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postSession_generate_title",
+        "parameters": [],
+        "description": "Generate a concise title for a message",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "providerID": {
+                    "type": "string"
+                  },
+                  "modelID": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text",
+                  "providerID",
+                  "modelID"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/session_generate_verb": {
       "post": {
         "responses": {

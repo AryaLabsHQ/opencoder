@@ -576,6 +576,13 @@ type PostSessionDeleteJSONBody struct {
 	SessionID string `json:"sessionID"`
 }
 
+// PostSessionGenerateTitleJSONBody defines parameters for PostSessionGenerateTitle.
+type PostSessionGenerateTitleJSONBody struct {
+	ModelID    string `json:"modelID"`
+	ProviderID string `json:"providerID"`
+	Text       string `json:"text"`
+}
+
 // PostSessionGenerateVerbJSONBody defines parameters for PostSessionGenerateVerb.
 type PostSessionGenerateVerbJSONBody struct {
 	ModelID    string `json:"modelID"`
@@ -623,6 +630,9 @@ type PostSessionChatJSONRequestBody PostSessionChatJSONBody
 
 // PostSessionDeleteJSONRequestBody defines body for PostSessionDelete for application/json ContentType.
 type PostSessionDeleteJSONRequestBody PostSessionDeleteJSONBody
+
+// PostSessionGenerateTitleJSONRequestBody defines body for PostSessionGenerateTitle for application/json ContentType.
+type PostSessionGenerateTitleJSONRequestBody PostSessionGenerateTitleJSONBody
 
 // PostSessionGenerateVerbJSONRequestBody defines body for PostSessionGenerateVerb for application/json ContentType.
 type PostSessionGenerateVerbJSONRequestBody PostSessionGenerateVerbJSONBody
@@ -1852,6 +1862,11 @@ type ClientInterface interface {
 
 	PostSessionDelete(ctx context.Context, body PostSessionDeleteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PostSessionGenerateTitleWithBody request with any body
+	PostSessionGenerateTitleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostSessionGenerateTitle(ctx context.Context, body PostSessionGenerateTitleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PostSessionGenerateVerbWithBody request with any body
 	PostSessionGenerateVerbWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2068,6 +2083,30 @@ func (c *Client) PostSessionDeleteWithBody(ctx context.Context, contentType stri
 
 func (c *Client) PostSessionDelete(ctx context.Context, body PostSessionDeleteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostSessionDeleteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostSessionGenerateTitleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostSessionGenerateTitleRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostSessionGenerateTitle(ctx context.Context, body PostSessionGenerateTitleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostSessionGenerateTitleRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2610,6 +2649,46 @@ func NewPostSessionDeleteRequestWithBody(server string, contentType string, body
 	return req, nil
 }
 
+// NewPostSessionGenerateTitleRequest calls the generic PostSessionGenerateTitle builder with application/json body
+func NewPostSessionGenerateTitleRequest(server string, body PostSessionGenerateTitleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostSessionGenerateTitleRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewPostSessionGenerateTitleRequestWithBody generates requests for PostSessionGenerateTitle with any type of body
+func NewPostSessionGenerateTitleRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/session_generate_title")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewPostSessionGenerateVerbRequest calls the generic PostSessionGenerateVerb builder with application/json body
 func NewPostSessionGenerateVerbRequest(server string, body PostSessionGenerateVerbJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -2964,6 +3043,11 @@ type ClientWithResponsesInterface interface {
 
 	PostSessionDeleteWithResponse(ctx context.Context, body PostSessionDeleteJSONRequestBody, reqEditors ...RequestEditorFn) (*PostSessionDeleteResponse, error)
 
+	// PostSessionGenerateTitleWithBodyWithResponse request with any body
+	PostSessionGenerateTitleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostSessionGenerateTitleResponse, error)
+
+	PostSessionGenerateTitleWithResponse(ctx context.Context, body PostSessionGenerateTitleJSONRequestBody, reqEditors ...RequestEditorFn) (*PostSessionGenerateTitleResponse, error)
+
 	// PostSessionGenerateVerbWithBodyWithResponse request with any body
 	PostSessionGenerateVerbWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostSessionGenerateVerbResponse, error)
 
@@ -3271,6 +3355,30 @@ func (r PostSessionDeleteResponse) StatusCode() int {
 	return 0
 }
 
+type PostSessionGenerateTitleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Title string `json:"title"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r PostSessionGenerateTitleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostSessionGenerateTitleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type PostSessionGenerateVerbResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3565,6 +3673,23 @@ func (c *ClientWithResponses) PostSessionDeleteWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParsePostSessionDeleteResponse(rsp)
+}
+
+// PostSessionGenerateTitleWithBodyWithResponse request with arbitrary body returning *PostSessionGenerateTitleResponse
+func (c *ClientWithResponses) PostSessionGenerateTitleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostSessionGenerateTitleResponse, error) {
+	rsp, err := c.PostSessionGenerateTitleWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostSessionGenerateTitleResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostSessionGenerateTitleWithResponse(ctx context.Context, body PostSessionGenerateTitleJSONRequestBody, reqEditors ...RequestEditorFn) (*PostSessionGenerateTitleResponse, error) {
+	rsp, err := c.PostSessionGenerateTitle(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostSessionGenerateTitleResponse(rsp)
 }
 
 // PostSessionGenerateVerbWithBodyWithResponse request with arbitrary body returning *PostSessionGenerateVerbResponse
@@ -3995,6 +4120,34 @@ func ParsePostSessionDeleteResponse(rsp *http.Response) (*PostSessionDeleteRespo
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest bool
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePostSessionGenerateTitleResponse parses an HTTP response from a PostSessionGenerateTitleWithResponse call
+func ParsePostSessionGenerateTitleResponse(rsp *http.Response) (*PostSessionGenerateTitleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostSessionGenerateTitleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Title string `json:"title"`
+		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

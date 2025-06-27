@@ -53,6 +53,9 @@ type SendMsg struct {
 	Text        string
 	Attachments []Attachment
 }
+type WindowTitleMsg struct {
+	Title string
+}
 type CompletionDialogTriggeredMsg struct {
 	InitialValue string
 }
@@ -537,6 +540,29 @@ func (a *App) ListProviders(ctx context.Context) ([]client.ProviderInfo, error) 
 
 	providers := *resp.JSON200
 	return providers.Providers, nil
+}
+
+func (a *App) GenerateWindowTitle(ctx context.Context, text string) (string, error) {
+	if a.TurboProvider == nil || a.TurboModel == nil {
+		return "", fmt.Errorf("no turbo model configured")
+	}
+
+	requestBody := client.PostSessionGenerateTitleJSONRequestBody{
+		Text:       text,
+		ProviderID: a.TurboProvider.Id,
+		ModelID:    a.TurboModel.Id,
+	}
+
+	response, err := a.Client.PostSessionGenerateTitleWithResponse(ctx, requestBody)
+	if err != nil {
+		return "", err
+	}
+
+	if response.StatusCode() != 200 || response.JSON200 == nil {
+		return "", fmt.Errorf("failed to generate title: status %d", response.StatusCode())
+	}
+
+	return response.JSON200.Title, nil
 }
 
 func (a *App) GenerateStatusVerb(ctx context.Context, text string) (string, error) {
