@@ -1,10 +1,9 @@
 {
-  "name": "@opencode-ai/ui",
-  "version": "1.2.15",
+  "name": "@opencoder-ai/ui",
+  "version": "1.2.10",
   "type": "module",
   "license": "MIT",
   "exports": {
-    "./package.json": "./package.json",
     "./*": "./src/components/*.tsx",
     "./i18n/*": "./src/i18n/*.ts",
     "./pierre": "./src/pierre/index.ts",
@@ -42,8 +41,8 @@
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
-    "@opencode-ai/sdk": "workspace:*",
-    "@opencode-ai/util": "workspace:*",
+    "@opencoder-ai/sdk": "workspace:*",
+    "@opencoder-ai/util": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@shikijs/transformers": "3.9.2",
     "@solid-primitives/bounds": "0.1.3",

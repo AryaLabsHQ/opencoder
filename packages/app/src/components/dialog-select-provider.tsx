@@ -1,15 +1,21 @@
 import { Component, Show } from "solid-js"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { useDialog } from "@opencoder-ai/ui/context/dialog"
 import { popularProviders, useProviders } from "@/hooks/use-providers"
-import { Dialog } from "@opencode-ai/ui/dialog"
-import { List } from "@opencode-ai/ui/list"
-import { Tag } from "@opencode-ai/ui/tag"
-import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
+import { Dialog } from "@opencoder-ai/ui/dialog"
+import { List } from "@opencoder-ai/ui/list"
+import { Tag } from "@opencoder-ai/ui/tag"
+import { ProviderIcon } from "@opencoder-ai/ui/provider-icon"
+import { iconNames, type IconName } from "@opencoder-ai/ui/icons/provider"
 import { DialogConnectProvider } from "./dialog-connect-provider"
 import { useLanguage } from "@/context/language"
 import { DialogCustomProvider } from "./dialog-custom-provider"
 
 const CUSTOM_ID = "_custom"
+
+function icon(id: string): IconName {
+  if (iconNames.includes(id as IconName)) return id as IconName
+  return "synthetic"
+}
 
 export const DialogSelectProvider: Component = () => {
   const dialog = useDialog()
@@ -63,7 +69,7 @@ export const DialogSelectProvider: Component = () => {
       >
         {(i) => (
           <div class="px-1.25 w-full flex items-center gap-x-3">
-            <ProviderIcon data-slot="list-item-extra-icon" id={i.id} />
+            <ProviderIcon data-slot="list-item-extra-icon" id={icon(i.id)} />
             <span>{i.name}</span>
             <Show when={i.id === "opencode"}>
               <div class="text-14-regular text-text-weak">{language.t("dialog.provider.opencode.tagline")}</div>
