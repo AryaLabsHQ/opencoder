@@ -719,84 +719,88 @@ export namespace MessageV2 {
   }
 
   export function fromError(e: unknown, ctx: { providerID: string }) {
-    switch (true) {
-      case e instanceof DOMException && e.name === "AbortError":
-        return new MessageV2.AbortedError(
-          { message: e.message },
-          {
-            cause: e,
-          },
-        ).toObject()
-      case MessageV2.OutputLengthError.isInstance(e):
-        return e
-      case LoadAPIKeyError.isInstance(e):
-        return new MessageV2.AuthError(
-          {
-            providerID: ctx.providerID,
-            message: e.message,
-          },
-          { cause: e },
-        ).toObject()
-      case (e as SystemError)?.code === "ECONNRESET":
-        return new MessageV2.APIError(
-          {
-            message: "Connection reset by server",
-            isRetryable: true,
-            metadata: {
-              code: (e as SystemError).code ?? "",
-              syscall: (e as SystemError).syscall ?? "",
-              message: (e as SystemError).message ?? "",
-            },
-          },
-          { cause: e },
-        ).toObject()
-      case APICallError.isInstance(e):
-        const message = iife(() => {
-          let msg = e.message
-          if (msg === "") {
-            if (e.responseBody) return e.responseBody
-            if (e.statusCode) {
-              const err = STATUS_CODES[e.statusCode]
-              if (err) return err
-            }
-            return "Unknown error"
-          }
-          const transformed = ProviderTransform.error(ctx.providerID, e)
-          if (transformed !== msg) {
-            return transformed
-          }
-          if (!e.responseBody || (e.statusCode && msg !== STATUS_CODES[e.statusCode])) {
-            return msg
-          }
-
-          try {
-            const body = JSON.parse(e.responseBody)
-            // try to extract common error message fields
-            const errMsg = body.message || body.error || body.error?.message
-            if (errMsg && typeof errMsg === "string") {
-              return `${msg}: ${errMsg}`
-            }
-          } catch {}
-
-          return `${msg}: ${e.responseBody}`
-        }).trim()
-
-        const metadata = e.url ? { url: e.url } : undefined
-        return new MessageV2.APIError(
-          {
-            message,
-            statusCode: e.statusCode,
-            isRetryable: ctx.providerID.startsWith("openai") ? isOpenAiErrorRetryable(e) : e.isRetryable,
-            responseHeaders: e.responseHeaders,
-            responseBody: e.responseBody,
-            metadata,
-          },
-          { cause: e },
-        ).toObject()
-      case e instanceof Error:
-        return new NamedError.Unknown({ message: e.toString() }, { cause: e }).toObject()
-      default:
-        return new NamedError.Unknown({ message: JSON.stringify(e) }, { cause: e })
+    if (e instanceof DOMException && e.name === "AbortError") {
+      return new MessageV2.AbortedError(
+        { message: e.message },
+        {
+          cause: e,
+        },
+      ).toObject()
     }
+    if (MessageV2.OutputLengthError.isInstance(e)) {
+      return e
+    }
+    if (LoadAPIKeyError.isInstance(e)) {
+      return new MessageV2.AuthError(
+        {
+          providerID: ctx.providerID,
+          message: e.message,
+        },
+        { cause: e },
+      ).toObject()
+    }
+    if ((e as SystemError)?.code === "ECONNRESET") {
+      return new MessageV2.APIError(
+        {
+          message: "Connection reset by server",
+          isRetryable: true,
+          metadata: {
+            code: (e as SystemError).code ?? "",
+            syscall: (e as SystemError).syscall ?? "",
+            message: (e as SystemError).message ?? "",
+          },
+        },
+        { cause: e },
+      ).toObject()
+    }
+    if (APICallError.isInstance(e)) {
+      const message = iife(() => {
+        const msg = e.message
+        if (msg === "") {
+          if (e.responseBody) return e.responseBody
+          if (e.statusCode) {
+            const err = STATUS_CODES[e.statusCode]
+            if (err) return err
+          }
+          return "Unknown error"
+        }
+        const transformed = ProviderTransform.error(ctx.providerID, e)
+        if (transformed !== msg) {
+          return transformed
+        }
+        if (!e.responseBody || (e.statusCode && msg !== STATUS_CODES[e.statusCode])) {
+          return msg
+        }
+
+        try {
+          const body = JSON.parse(e.responseBody)
+          // try to extract common error message fields
+          const errMsg = body.message || body.error || body.error?.message
+          if (errMsg && typeof errMsg === "string") {
+            return `${msg}: ${errMsg}`
+          }
+        } catch {}
+
+        return `${msg}: ${e.responseBody}`
+      }).trim()
+
+      const metadata = e.url ? { url: e.url } : undefined
+      return new MessageV2.APIError(
+        {
+          message,
+          statusCode: e.statusCode,
+          isRetryable: ctx.providerID.startsWith("openai") ? isOpenAiErrorRetryable(e) : e.isRetryable,
+          responseHeaders: e.responseHeaders,
+          responseBody: e.responseBody,
+          metadata,
+        },
+        { cause: e },
+      ).toObject()
+    }
+    if (e instanceof Error) {
+      return new NamedError.Unknown({ message: e.toString() }, { cause: e }).toObject()
+    }
+
+    return new NamedError.Unknown({ message: JSON.stringify(e) }, { cause: e })
   }
 }
