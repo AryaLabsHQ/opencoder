@@ -5,6 +5,7 @@ import type { PermissionNext } from "../../src/permission/next"
 import type { Tool } from "../../src/tool/tool"
 import { Instance } from "../../src/project/instance"
 import { SkillTool } from "../../src/tool/skill"
+import { testModel } from "./fixtures/model"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 
@@ -16,6 +17,7 @@ const baseCtx: Omit<Tool.Context, "ask"> = {
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
+  model: testModel,
 }
 
 describe("tool.skill", () => {
