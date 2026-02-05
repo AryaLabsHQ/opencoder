@@ -9,7 +9,7 @@ import { mergeDeep, pipe, unique } from "remeda"
 import { Global } from "../global"
 import fs from "fs/promises"
 import { lazy } from "../util/lazy"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencoder-ai/util/error"
 import { Flag } from "../flag/flag"
 import { Auth } from "../auth"
 import {
@@ -65,14 +65,8 @@ export namespace Config {
   export const state = Instance.state(async () => {
     const auth = await Auth.all()
 
-    // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
-    // 1) Remote .well-known/opencode (org defaults)
-    // 2) Global config (~/.config/opencode/opencode.json{,c})
-    // 3) Custom config (OPENCODE_CONFIG)
-    // 4) Project config (opencode.json{,c})
-    // 5) .opencode directories (.opencode/agents/, .opencode/commands/, .opencode/plugins/, .opencode/opencode.json{,c})
-    // 6) Inline config (OPENCODE_CONFIG_CONTENT)
-    // Managed config directory is enterprise-only and always overrides everything above.
+    // Load remote/well-known config first as the base layer (lowest precedence)
+    // This allows organizations to provide default configs that users can override
     let result: Info = {}
     for (const [key, value] of Object.entries(auth)) {
       if (value.type === "wellknown") {
@@ -94,16 +88,16 @@ export namespace Config {
       }
     }
 
-    // Global user config overrides remote config.
+    // Global user config overrides remote config
     result = mergeConfigConcatArrays(result, await global())
 
-    // Custom config path overrides global config.
+    // Custom config path overrides global
     if (Flag.OPENCODE_CONFIG) {
       result = mergeConfigConcatArrays(result, await loadFile(Flag.OPENCODE_CONFIG))
       log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
     }
 
-    // Project config overrides global and remote config.
+    // Project config has highest precedence (overrides global and remote)
     if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
       for (const file of ["opencode.jsonc", "opencode.json"]) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
@@ -111,6 +105,12 @@ export namespace Config {
           result = mergeConfigConcatArrays(result, await loadFile(resolved))
         }
       }
+    }
+
+    // Inline config content has highest precedence
+    if (Flag.OPENCODE_CONFIG_CONTENT) {
+      result = mergeConfigConcatArrays(result, JSON.parse(Flag.OPENCODE_CONFIG_CONTENT))
+      log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
     }
 
     result.agent = result.agent || {}
@@ -139,7 +139,6 @@ export namespace Config {
       )),
     ]
 
-    // .opencode directory config overrides (project and global) config sources.
     if (Flag.OPENCODE_CONFIG_DIR) {
       directories.push(Flag.OPENCODE_CONFIG_DIR)
       log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
@@ -170,12 +169,6 @@ export namespace Config {
       result.agent = mergeDeep(result.agent, await loadAgent(dir))
       result.agent = mergeDeep(result.agent, await loadMode(dir))
       result.plugin.push(...(await loadPlugin(dir)))
-    }
-
-    // Inline config content overrides all non-managed config sources.
-    if (Flag.OPENCODE_CONFIG_CONTENT) {
-      result = mergeConfigConcatArrays(result, JSON.parse(Flag.OPENCODE_CONFIG_CONTENT))
-      log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
     }
 
     // Load managed config files last (highest priority) - enterprise admin-controlled
@@ -256,7 +249,7 @@ export namespace Config {
       .catch(() => ({}))
     json.dependencies = {
       ...json.dependencies,
-      "@opencode-ai/plugin": targetVersion,
+      "@opencoder-ai/plugin": targetVersion,
     }
     await Bun.write(pkg, JSON.stringify(json, null, 2))
     await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -264,7 +257,6 @@ export namespace Config {
     const gitignore = path.join(dir, ".gitignore")
     const hasGitIgnore = await Bun.file(gitignore).exists()
     if (!hasGitIgnore) await Bun.write(gitignore, ["node_modules", "package.json", "bun.lock", ".gitignore"].join("\n"))
-
     // Install any additional dependencies defined in the package.json
     // This allows local plugins and custom tools to use external packages
     await BunProc.run(
@@ -305,15 +297,15 @@ export namespace Config {
 
     const parsed = await pkgFile.json().catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@opencode-ai/plugin"]
+    const depVersion = dependencies["@opencoder-ai/plugin"]
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@opencode-ai/plugin", depVersion, dir)
+      const isOutdated = await PackageRegistry.isOutdated("@opencoder-ai/plugin", depVersion, dir)
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@opencode-ai/plugin",
+        pkg: "@opencoder-ai/plugin",
         cachedVersion: depVersion,
       })
       return true
@@ -321,7 +313,6 @@ export namespace Config {
     if (depVersion === targetVersion) return false
     return true
   }
-
   function rel(item: string, patterns: string[]) {
     for (const pattern of patterns) {
       const index = item.indexOf(pattern)
@@ -666,10 +657,6 @@ export namespace Config {
   export const Agent = z
     .object({
       model: z.string().optional(),
-      variant: z
-        .string()
-        .optional()
-        .describe("Default model variant for this agent (applies only when using the agent's configured model)."),
       temperature: z.number().optional(),
       top_p: z.number().optional(),
       prompt: z.string().optional(),
@@ -683,12 +670,10 @@ export namespace Config {
         .describe("Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)"),
       options: z.record(z.string(), z.any()).optional(),
       color: z
-        .union([
-          z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color format"),
-          z.enum(["primary", "secondary", "accent", "success", "warning", "error", "info"]),
-        ])
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color format")
         .optional()
-        .describe("Hex color code (e.g., #FF5733) or theme color (e.g., primary)"),
+        .describe("Hex color code for the agent (e.g., #FF5733)"),
       steps: z
         .number()
         .int()
@@ -709,7 +694,6 @@ export namespace Config {
       const knownKeys = new Set([
         "name",
         "model",
-        "variant",
         "prompt",
         "description",
         "temperature",
@@ -936,7 +920,6 @@ export namespace Config {
       port: z.number().int().positive().optional().describe("Port to listen on"),
       hostname: z.string().optional().describe("Hostname to listen on"),
       mdns: z.boolean().optional().describe("Enable mDNS service discovery"),
-      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: opencode.local)"),
       cors: z.array(z.string()).optional().describe("Additional domains to allow for CORS"),
     })
     .strict()
