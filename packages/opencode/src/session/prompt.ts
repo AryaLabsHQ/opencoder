@@ -17,8 +17,8 @@ import { ProviderTransform } from "../provider/transform"
 import { SystemPrompt } from "./system"
 import { InstructionPrompt } from "./instruction"
 import { Plugin } from "../plugin"
-import PROMPT_PLAN from "../session/prompt/plan.txt"
 import BUILD_SWITCH from "../session/prompt/build-switch.txt"
+import PROMPT_PLAN from "../session/prompt/plan.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { defer } from "../util/defer"
 import { clone } from "remeda"
@@ -1229,7 +1229,7 @@ export namespace SessionPrompt {
     const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
     if (!userMessage) return input.messages
 
-    // If agent has a reminder configured (string), inject it
+    // If reminder is false or undefined, skip injection
     if (typeof input.agent.reminder === "string") {
       userMessage.parts.push({
         id: Identifier.ascending("part"),
