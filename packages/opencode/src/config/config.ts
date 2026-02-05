@@ -920,6 +920,7 @@ export namespace Config {
       port: z.number().int().positive().optional().describe("Port to listen on"),
       hostname: z.string().optional().describe("Hostname to listen on"),
       mdns: z.boolean().optional().describe("Enable mDNS service discovery"),
+      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service"),
       cors: z.array(z.string()).optional().describe("Additional domains to allow for CORS"),
     })
     .strict()
@@ -1460,3 +1461,5 @@ export namespace Config {
     return state().then((x) => x.directories)
   }
 }
+
+export type KeybindsConfig = z.infer<typeof Config.Keybinds>
