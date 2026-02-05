@@ -530,7 +530,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
           const key = keyFor(directory, sessionID)
           return runInflight(inflightTodo, key, () =>
-            retry(() => client.session.todo({ sessionID })).then((todo) => {
+            retry(() => client.session.todo.list({ sessionID })).then((todo) => {
               if (!tracked(directory, sessionID)) return
               const list = todo.data ?? []
               setStore("todo", sessionID, reconcile(list, { key: "id" }))
