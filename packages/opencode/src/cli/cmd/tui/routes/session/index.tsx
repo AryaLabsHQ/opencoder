@@ -7,7 +7,6 @@ import {
   For,
   Match,
   on,
-  onMount,
   Show,
   Switch,
   useContext,
@@ -1973,66 +1972,61 @@ function Task(props: ToolProps<typeof TaskTool>) {
   const keybind = useKeybind()
   const { navigate } = useRoute()
   const local = useLocal()
-  const sync = useSync()
 
-  onMount(() => {
-    if (props.metadata.sessionId && !sync.data.message[props.metadata.sessionId]?.length)
-      sync.session.sync(props.metadata.sessionId)
-  })
-
-  const messages = createMemo(() => sync.data.message[props.metadata.sessionId ?? ""] ?? [])
-
-  const tools = createMemo(() => {
-    return messages().flatMap((msg) =>
-      (sync.data.part[msg.id] ?? [])
-        .filter((part): part is ToolPart => part.type === "tool")
-        .map((part) => ({ tool: part.tool, state: part.state })),
-    )
-  })
-
-  const current = createMemo(() => tools().findLast((x) => (x.state as any).title))
-
+  const agentType = createMemo(() => props.input.subagent_type ?? props.metadata.subagent_type ?? "unknown")
+  const current = createMemo(() => props.metadata.summary?.findLast((x) => x.state.status !== "pending"))
   const isRunning = createMemo(() => props.part.state.status === "running")
-
-  const duration = createMemo(() => {
-    const first = messages().find((x) => x.role === "user")?.time.created
-    const assistant = messages().findLast((x) => x.role === "assistant")?.time.completed
-    if (!first || !assistant) return 0
-    return assistant - first
-  })
-
-  const content = createMemo(() => {
-    if (!props.input.description) return ""
-    let content = [`Task ${props.input.description}`]
-
-    if (isRunning() && tools().length > 0) {
-      // content[0] += ` · ${tools().length} toolcalls`
-      if (current()) content.push(`↳ ${Locale.titlecase(current()!.tool)} ${(current()!.state as any).title}`)
-      else content.push(`↳ ${tools().length} toolcalls`)
-    }
-
-    if (props.part.state.status === "completed") {
-      content.push(`└ ${tools().length} toolcalls · ${Locale.duration(duration())}`)
-    }
-
-    return content.join("\n")
-  })
+  const color = createMemo(() => local.agent.color(agentType()))
 
   return (
-    <InlineTool
-      icon="│"
-      spinner={isRunning()}
-      complete={props.input.description}
-      pending="Delegating..."
-      part={props.part}
-      onClick={() => {
-        if (props.metadata.sessionId) {
-          navigate({ type: "session", sessionID: props.metadata.sessionId })
-        }
-      }}
-    >
-      {content()}
-    </InlineTool>
+    <Switch>
+      <Match when={props.input.description || props.input.subagent_type}>
+        <BlockTool
+          title={"# " + Locale.titlecase(agentType()) + " Task"}
+          onClick={
+            props.metadata.sessionId
+              ? () => navigate({ type: "session", sessionID: props.metadata.sessionId! })
+              : undefined
+          }
+          part={props.part}
+          spinner={isRunning()}
+        >
+          <box>
+            <text style={{ fg: theme.textMuted }}>
+              {props.input.description ?? props.metadata.description} ({props.metadata.summary?.length ?? 0} toolcalls)
+            </text>
+            <Show when={current()}>
+              {(item) => {
+                const title = item().state.status === "completed" ? (item().state as any).title : ""
+                return (
+                  <text style={{ fg: item().state.status === "error" ? theme.error : theme.textMuted }}>
+                    └ {Locale.titlecase(item().tool)} {title}
+                  </text>
+                )
+              }}
+            </Show>
+          </box>
+          <Show when={props.metadata.sessionId}>
+            <text fg={theme.text}>
+              {keybind.print("session_child_first")}
+              <span style={{ fg: theme.textMuted }}> view subagents</span>
+            </text>
+          </Show>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool
+          icon="◉"
+          iconColor={color()}
+          pending="Delegating..."
+          complete={props.input.subagent_type ?? props.metadata.subagent_type ?? props.input.description ?? props.metadata.description}
+          part={props.part}
+        >
+          <span style={{ fg: theme.text }}>{Locale.titlecase(agentType())}</span> Task "
+          {props.input.description ?? props.metadata.description}"
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
