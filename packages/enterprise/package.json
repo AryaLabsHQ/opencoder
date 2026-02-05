@@ -13,13 +13,13 @@
     "shell-prod": "sst shell --target Teams --stage production"
   },
   "dependencies": {
-    "@opencoder-ai/util": "workspace:*",
     "@opencoder-ai/ui": "workspace:*",
-    "aws4fetch": "^1.0.20",
+    "@opencoder-ai/util": "workspace:*",
     "@pierre/diffs": "catalog:",
+    "@solidjs/meta": "catalog:",
     "@solidjs/router": "catalog:",
     "@solidjs/start": "catalog:",
-    "@solidjs/meta": "catalog:",
+    "aws4fetch": "1.0.20",
     "hono": "catalog:",
     "hono-openapi": "catalog:",
     "js-base64": "3.7.7",
@@ -31,8 +31,8 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@tailwindcss/vite": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "@types/luxon": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"
