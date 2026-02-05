@@ -5,16 +5,20 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    "./*": "./src/*.ts"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/*.ts"
+    }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
   },
   "dependencies": {
     "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
-    "@types/bun": "catalog:"
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
   }
 }
