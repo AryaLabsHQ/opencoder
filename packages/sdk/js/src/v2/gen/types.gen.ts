@@ -1338,7 +1338,7 @@ export type ServerConfig = {
    */
   mdns?: boolean
   /**
-   * Custom domain name for mDNS service (default: opencode.local)
+   * Custom domain name for mDNS service
    */
   mdnsDomain?: string
   /**
@@ -1381,10 +1381,6 @@ export type PermissionConfig =
 
 export type AgentConfig = {
   model?: string
-  /**
-   * Default model variant for this agent (applies only when using the agent's configured model).
-   */
-  variant?: string
   temperature?: number
   top_p?: number
   prompt?: string
@@ -1408,9 +1404,9 @@ export type AgentConfig = {
     [key: string]: unknown
   }
   /**
-   * Hex color code (e.g., #FF5733) or theme color (e.g., primary)
+   * Hex color code for the agent (e.g., #FF5733)
    */
-  color?: string | "primary" | "secondary" | "accent" | "success" | "warning" | "error" | "info"
+  color?: string
   /**
    * Maximum number of agentic iterations before forcing text-only response
    */
@@ -1439,13 +1435,6 @@ export type AgentConfig = {
         [key: string]: unknown
       }
     | string
-    | "primary"
-    | "secondary"
-    | "accent"
-    | "success"
-    | "warning"
-    | "error"
-    | "info"
     | number
     | PermissionConfig
     | string
