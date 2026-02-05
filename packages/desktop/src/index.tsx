@@ -6,9 +6,9 @@ import {
   AppInterface,
   PlatformProvider,
   Platform,
+  DisplayBackend,
   useCommand,
-  handleNotificationClick,
-} from "@opencode-ai/app"
+} from "@opencoder-ai/app"
 import { open, save } from "@tauri-apps/plugin-dialog"
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link"
 import { openPath as openerOpenPath } from "@tauri-apps/plugin-opener"
@@ -21,7 +21,7 @@ import { relaunch } from "@tauri-apps/plugin-process"
 import { AsyncStorage } from "@solid-primitives/storage"
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http"
 import { Store } from "@tauri-apps/plugin-store"
-import { Splash } from "@opencode-ai/ui/logo"
+import { Splash } from "@opencoder-ai/ui/logo"
 import { createSignal, Show, Accessor, JSX, createResource, onMount, onCleanup } from "solid-js"
 import { readImage } from "@tauri-apps/plugin-clipboard-manager"
 
@@ -336,7 +336,10 @@ const createPlatform = (password: Accessor<string | null>): Platform => {
             void win.show().catch(() => undefined)
             void win.unminimize().catch(() => undefined)
             void win.setFocus().catch(() => undefined)
-            handleNotificationClick(href)
+            if (href) {
+              window.history.pushState(null, "", href)
+              window.dispatchEvent(new PopStateEvent("popstate"))
+            }
             notification.close()
           }
         })
