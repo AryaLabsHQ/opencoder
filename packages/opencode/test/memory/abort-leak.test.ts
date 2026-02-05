@@ -2,6 +2,7 @@ import { describe, test, expect } from "bun:test"
 import path from "path"
 import { Instance } from "../../src/project/instance"
 import { WebFetchTool } from "../../src/tool/webfetch"
+import { testModel } from "../tool/fixtures/model"
 
 const projectRoot = path.join(__dirname, "../..")
 
@@ -14,6 +15,7 @@ const ctx = {
   messages: [],
   metadata: () => {},
   ask: async () => {},
+  model: testModel,
 }
 
 const MB = 1024 * 1024
