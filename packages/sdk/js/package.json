@@ -9,12 +9,30 @@
     "build": "./script/build.ts"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./client": "./src/client.ts",
-    "./server": "./src/server.ts",
-    "./v2": "./src/v2/index.ts",
-    "./v2/client": "./src/v2/client.ts",
-    "./v2/server": "./src/v2/server.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./src/client.ts"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./src/server.ts"
+    },
+    "./v2": {
+      "types": "./dist/v2/index.d.ts",
+      "default": "./src/v2/index.ts"
+    },
+    "./v2/client": {
+      "types": "./dist/v2/client.d.ts",
+      "default": "./src/v2/client.ts"
+    },
+    "./v2/server": {
+      "types": "./dist/v2/server.d.ts",
+      "default": "./src/v2/server.ts"
+    }
   },
   "files": [
     "dist"
@@ -23,10 +41,9 @@
     "@hey-api/openapi-ts": "0.90.10",
     "@tsconfig/node22": "catalog:",
     "@types/node": "catalog:",
-    "typescript": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
   },
-  "dependencies": {},
   "publishConfig": {
     "directory": "dist"
   }
