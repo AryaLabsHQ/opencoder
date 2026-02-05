@@ -162,12 +162,13 @@ export default function () {
 
   return (
     <ErrorBoundary
-      fallback={(error) => {
+      fallback={(error: unknown) => {
         if (SessionDataMissingError.isInstance(error)) {
           return <NotFound />
         }
         console.error(error)
-        const details = error instanceof Error ? (error.stack ?? error.message) : String(error)
+        const err = error as Error
+        const details = err?.stack ?? err?.message ?? String(error)
         return (
           <div class="min-h-screen w-full bg-background-base text-text-base flex flex-col items-center justify-center gap-4 p-6 text-center">
             <p class="text-16-medium">Unable to render this share.</p>
