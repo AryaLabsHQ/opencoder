@@ -1408,5 +1408,5 @@ export namespace Config {
     return state().then((x) => x.directories)
   }
 }
-Filesystem.write
-Filesystem.write
+
+export type KeybindsConfig = z.infer<typeof Config.Keybinds>
