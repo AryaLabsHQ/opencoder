@@ -1,5 +1,6 @@
 /// <reference path="../env.d.ts" />
-import { tool } from "@opencode-ai/plugin"
+// import { Octokit } from "@octokit/rest"
+import { tool } from "@opencoder-ai/plugin"
 import DESCRIPTION from "./github-triage.txt"
 
 const TEAM = {
