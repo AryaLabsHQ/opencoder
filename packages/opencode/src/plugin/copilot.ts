@@ -309,12 +309,14 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
       }
 
       const session = await sdk.session
-        .get({
-          path: {
-            id: input.sessionID,
+        .get(
+          {
+            sessionID: input.sessionID,
           },
-          throwOnError: true,
-        })
+          {
+            throwOnError: true,
+          },
+        )
         .catch(() => undefined)
       if (!session || !session.data.parentID) return
       // mark subagent sessions as agent initiated matching standard that other copilot tools have
