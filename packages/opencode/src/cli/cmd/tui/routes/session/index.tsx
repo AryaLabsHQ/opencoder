@@ -1854,27 +1854,17 @@ function Task(props: ToolProps<typeof TaskTool>) {
   const keybind = useKeybind()
   const { navigate } = useRoute()
   const local = useLocal()
-  const sync = useSync()
 
-  const tools = createMemo(() => {
-    const sessionID = props.metadata.sessionId
-    const msgs = sync.data.message[sessionID ?? ""] ?? []
-    return msgs.flatMap((msg) =>
-      (sync.data.part[msg.id] ?? [])
-        .filter((part): part is ToolPart => part.type === "tool")
-        .map((part) => ({ tool: part.tool, state: part.state })),
-    )
-  })
-
-  const current = createMemo(() => tools().findLast((x) => x.state.status !== "pending"))
-
+  const agentType = createMemo(() => props.input.subagent_type ?? props.metadata.subagent_type ?? "unknown")
+  const current = createMemo(() => props.metadata.summary?.findLast((x) => x.state.status !== "pending"))
   const isRunning = createMemo(() => props.part.state.status === "running")
+  const color = createMemo(() => local.agent.color(agentType()))
 
   return (
     <Switch>
       <Match when={props.input.description || props.input.subagent_type}>
         <BlockTool
-          title={"# " + Locale.titlecase(props.input.subagent_type ?? "unknown") + " Task"}
+          title={"# " + Locale.titlecase(agentType()) + " Task"}
           onClick={
             props.metadata.sessionId
               ? () => navigate({ type: "session", sessionID: props.metadata.sessionId! })
@@ -1885,7 +1875,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
         >
           <box>
             <text style={{ fg: theme.textMuted }}>
-              {props.input.description} ({tools().length} toolcalls)
+              {props.input.description ?? props.metadata.description} ({props.metadata.summary?.length ?? 0} toolcalls)
             </text>
             <Show when={current()}>
               {(item) => {
@@ -1907,8 +1897,15 @@ function Task(props: ToolProps<typeof TaskTool>) {
         </BlockTool>
       </Match>
       <Match when={true}>
-        <InlineTool icon="#" pending="Delegating..." complete={props.input.subagent_type} part={props.part}>
-          {props.input.subagent_type} Task {props.input.description}
+        <InlineTool
+          icon="◉"
+          iconColor={color()}
+          pending="Delegating..."
+          complete={props.input.subagent_type ?? props.metadata.subagent_type ?? props.input.description ?? props.metadata.description}
+          part={props.part}
+        >
+          <span style={{ fg: theme.text }}>{Locale.titlecase(agentType())}</span> Task "
+          {props.input.description ?? props.metadata.description}"
         </InlineTool>
       </Match>
     </Switch>
