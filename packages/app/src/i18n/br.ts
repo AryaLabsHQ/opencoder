@@ -38,6 +38,7 @@ export const dict = {
   "command.language.set": "Usar idioma: {{language}}",
   "command.session.new": "Nova sessão",
   "command.file.open": "Abrir arquivo",
+  "command.file.open.description": "Abrir arquivo",
   "command.tab.close": "Fechar aba",
   "command.context.addSelection": "Adicionar seleção ao contexto",
   "command.context.addSelection.description": "Adicionar as linhas selecionadas do arquivo atual",
