@@ -6,6 +6,7 @@ import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 import { PermissionNext } from "../../src/permission/next"
 import { Agent } from "../../src/agent/agent"
+import { testModel } from "./fixtures/model"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "fixtures")
 
@@ -14,6 +15,7 @@ const ctx = {
   messageID: "",
   callID: "",
   agent: "build",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
