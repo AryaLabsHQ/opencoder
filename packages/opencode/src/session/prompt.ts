@@ -410,6 +410,7 @@ export namespace SessionPrompt {
             tool: "task",
             sessionID,
             callID: part.id,
+            agent: task.agent,
           },
           { args: taskArgs },
         )
@@ -454,6 +455,7 @@ export namespace SessionPrompt {
             sessionID,
             callID: part.id,
             args: taskArgs,
+            agent: task.agent,
           },
           result,
         )
@@ -794,6 +796,7 @@ export namespace SessionPrompt {
               tool: item.id,
               sessionID: ctx.sessionID,
               callID: ctx.callID,
+              agent: input.agent.name,
             },
             {
               args,
@@ -807,6 +810,7 @@ export namespace SessionPrompt {
               sessionID: ctx.sessionID,
               callID: ctx.callID,
               args,
+              agent: input.agent.name,
             },
             result,
           )
@@ -831,6 +835,7 @@ export namespace SessionPrompt {
             tool: key,
             sessionID: ctx.sessionID,
             callID: opts.toolCallId,
+            agent: input.agent.name,
           },
           {
             args,
@@ -853,6 +858,7 @@ export namespace SessionPrompt {
             sessionID: ctx.sessionID,
             callID: opts.toolCallId,
             args,
+            agent: input.agent.name,
           },
           result,
         )

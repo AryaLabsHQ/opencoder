@@ -17,10 +17,10 @@ import type {
   ProviderListResponse,
   ProviderAuthMethod,
   VcsInfo,
-} from "@opencode-ai/sdk/v2"
+} from "@opencoder-ai/sdk/v2"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useSDK } from "@tui/context/sdk"
-import { Binary } from "@opencode-ai/util/binary"
+import { Binary } from "@opencoder-ai/util/binary"
 import { createSimpleContext } from "./helper"
 import type { Snapshot } from "@/snapshot"
 import { useExit } from "./exit"
@@ -28,6 +28,150 @@ import { useArgs } from "./args"
 import { batch, onMount } from "solid-js"
 import { Log } from "@/util/log"
 import type { Path } from "@opencode-ai/sdk"
+import {
+  createAgentClient,
+  type GetMailInboxResponse,
+  type GetMailThreadsByThreadIdMessagesResponse,
+} from "@agni/agent-sdk"
+
+type AgniConfig = {
+  apiKey: string
+  organizationId: string
+  projectId: string
+  baseUrl?: string
+}
+
+type AgniThread = GetMailInboxResponse[number]
+type AgniMessage = GetMailThreadsByThreadIdMessagesResponse[number]
+
+const resolveAgniConfig = (): AgniConfig | null => {
+  const apiKey = process.env.AGNI_API_KEY
+  const organizationId = process.env.AGNI_ORGANIZATION_ID ?? process.env.AGNI_ORG_ID
+  const projectId = process.env.AGNI_PROJECT_ID
+  const baseUrl = process.env.AGNI_BASE_URL
+  if (!apiKey || !organizationId || !projectId) return null
+  return {
+    apiKey,
+    organizationId,
+    projectId,
+    baseUrl,
+  }
+}
+
+const agniConfig = resolveAgniConfig()
+const agniClient = agniConfig
+  ? createAgentClient({
+      apiKey: agniConfig.apiKey,
+      organizationId: agniConfig.organizationId,
+      baseUrl: agniConfig.baseUrl,
+    })
+  : null
+
+const agniRunBySession = new Map<string, string>()
+
+const resolveAgentHandle = (messages: { info: Message }[], fallback?: string) => {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i]?.info
+    if (message?.role === "user" && message.agent) {
+      return message.agent
+    }
+  }
+  return fallback ?? "build"
+}
+
+const ensureAgniRun = async (sessionID: string, agentHandle: string) => {
+  if (!agniClient || !agniConfig) return null
+  if (!agentHandle) return null
+  const cached = agniRunBySession.get(sessionID)
+  if (cached) return cached
+  try {
+    const run = await agniClient.agentRuns.ensure({
+      projectId: agniConfig.projectId,
+      harness: "opencode",
+      harnessSessionId: sessionID,
+      agentHandle,
+      status: "running",
+    })
+    if (!run?.runId) {
+      Log.Default.warn("invalid agni run response", {
+        sessionID,
+        agentHandle,
+        run,
+      })
+      return null
+    }
+    agniRunBySession.set(sessionID, run.runId)
+    return run.runId
+  } catch (error) {
+    Log.Default.warn("failed to ensure agni run", {
+      error,
+      sessionID,
+      agentHandle,
+    })
+  }
+  return null
+}
+
+const fetchAgniInbox = async (sessionID: string, agentHandle: string) => {
+  if (!agniClient || !agniConfig) return []
+  const runId = await ensureAgniRun(sessionID, agentHandle)
+  if (!runId) return []
+  try {
+    const threads =
+      (await agniClient.mail.inbox.list({
+        projectId: agniConfig.projectId,
+        runId,
+        limit: 20,
+      })) ?? []
+
+    if (threads.length === 0) return []
+
+    const latestMessages = await Promise.all(
+      threads.map(async (thread) => {
+        try {
+          const messages =
+            (await agniClient.mail.messages.list({
+              threadId: thread.id,
+              limit: 1,
+            })) ?? []
+          return {
+            thread,
+            message: messages[0] ?? null,
+          }
+        } catch (error) {
+          Log.Default.warn("failed to load agni thread messages", {
+            error,
+            threadId: thread.id,
+          })
+          return { thread, message: null }
+        }
+      }),
+    )
+
+    return latestMessages.map(({ thread, message }) => {
+      const createdAt = message?.createdAt ?? thread.updatedAt
+      const createdAtDate = new Date(createdAt)
+      const lastReadAt = thread.lastReadAt ? new Date(thread.lastReadAt) : null
+      const isRead = lastReadAt ? createdAtDate <= lastReadAt : false
+      return {
+        id: thread.id,
+        senderId:
+          message?.senderRun.agent.handle ??
+          thread.createdByRun.agent.handle ??
+          "unknown",
+        subject: message?.subject ?? thread.subject ?? "No subject",
+        body: message?.body ?? "",
+        type: "mail",
+        priority: message?.priority ?? 0,
+        isRead,
+        createdAt: createdAtDate,
+      }
+    })
+  } catch (error) {
+    Log.Default.warn("failed to load agni inbox", { error })
+    return []
+  }
+}
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -73,6 +217,18 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       formatter: FormatterStatus[]
       vcs: VcsInfo | undefined
       path: Path
+      inbox: {
+        [sessionID: string]: Array<{
+          id: string
+          senderId: string
+          subject: string
+          body: string
+          type: string
+          priority: number
+          isRead: boolean
+          createdAt: Date
+        }>
+      }
     }>({
       provider_next: {
         all: [],
@@ -100,6 +256,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       formatter: [],
       vcs: undefined,
       path: { state: "", config: "", worktree: "", directory: "" },
+      inbox: {},
     })
 
     const sdk = useSDK()
@@ -444,9 +601,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const [session, messages, todo, diff] = await Promise.all([
             sdk.client.session.get({ sessionID }, { throwOnError: true }),
             sdk.client.session.messages({ sessionID, limit: 100 }),
-            sdk.client.session.todo({ sessionID }),
+            sdk.client.session.todo.list({ sessionID }),
             sdk.client.session.diff({ sessionID }),
           ])
+          const agentHandle = resolveAgentHandle(messages.data ?? [], store.config.default_agent)
+          const inbox = await fetchAgniInbox(sessionID, agentHandle)
           setStore(
             produce((draft) => {
               const match = Binary.search(draft.session, sessionID, (s) => s.id)
@@ -458,6 +617,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
                 draft.part[message.info.id] = message.parts
               }
               draft.session_diff[sessionID] = diff.data ?? []
+              draft.inbox[sessionID] = inbox
             }),
           )
           fullSyncedSessions.add(sessionID)
