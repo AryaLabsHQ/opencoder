@@ -157,7 +157,7 @@ export const SessionRoutes = lazy(() =>
       describeRoute({
         summary: "Get session todos",
         description: "Retrieve the todo list associated with a specific session, showing tasks and action items.",
-        operationId: "session.todo",
+        operationId: "session.todo.list",
         responses: {
           200: {
             description: "Todo list",
@@ -179,6 +179,43 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const sessionID = c.req.valid("param").sessionID
         const todos = await Todo.get(sessionID)
+        return c.json(todos)
+      },
+    )
+    .put(
+      "/:sessionID/todo",
+      describeRoute({
+        summary: "Update session todos",
+        description: "Replace the todo list associated with a specific session.",
+        operationId: "session.todo.update",
+        responses: {
+          200: {
+            description: "Updated todo list",
+            content: {
+              "application/json": {
+                schema: resolver(Todo.Info.array()),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          sessionID: z.string().meta({ description: "Session ID" }),
+        }),
+      ),
+      validator(
+        "json",
+        z.object({
+          todos: Todo.Info.array(),
+        }),
+      ),
+      async (c) => {
+        const sessionID = c.req.valid("param").sessionID
+        const { todos } = c.req.valid("json")
+        await Todo.update({ sessionID, todos })
         return c.json(todos)
       },
     )
