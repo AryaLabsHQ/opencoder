@@ -1,15 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@opencode-ai/console-core",
-  "version": "1.2.15",
+  "name": "@opencoder-ai/console-core",
+  "version": "1.2.10",
   "private": true,
   "type": "module",
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-sts": "3.782.0",
     "@jsx-email/render": "1.1.1",
-    "@opencode-ai/console-mail": "workspace:*",
-    "@opencode-ai/console-resource": "workspace:*",
+    "@opencoder-ai/console-mail": "workspace:*",
+    "@opencoder-ai/console-resource": "workspace:*",
     "@planetscale/database": "1.19.0",
     "aws4fetch": "1.0.20",
     "drizzle-orm": "catalog:",
@@ -37,9 +37,6 @@
     "update-black": "script/update-black.ts",
     "promote-black-to-dev": "script/promote-black.ts dev",
     "promote-black-to-prod": "script/promote-black.ts production",
-    "update-lite": "script/update-lite.ts",
-    "promote-lite-to-dev": "script/promote-lite.ts dev",
-    "promote-lite-to-prod": "script/promote-lite.ts production",
     "typecheck": "tsgo --noEmit"
   },
   "devDependencies": {

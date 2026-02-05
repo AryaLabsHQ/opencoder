@@ -1,11 +1,13 @@
 import "@/index.css"
-import { File } from "@opencode-ai/ui/file"
-import { I18nProvider } from "@opencode-ai/ui/context"
-import { DialogProvider } from "@opencode-ai/ui/context/dialog"
-import { FileComponentProvider } from "@opencode-ai/ui/context/file"
-import { MarkedProvider } from "@opencode-ai/ui/context/marked"
-import { Font } from "@opencode-ai/ui/font"
-import { ThemeProvider } from "@opencode-ai/ui/theme"
+import { Code } from "@opencoder-ai/ui/code"
+import { I18nProvider } from "@opencoder-ai/ui/context"
+import { CodeComponentProvider } from "@opencoder-ai/ui/context/code"
+import { DialogProvider } from "@opencoder-ai/ui/context/dialog"
+import { DiffComponentProvider } from "@opencoder-ai/ui/context/diff"
+import { MarkedProvider } from "@opencoder-ai/ui/context/marked"
+import { Diff } from "@opencoder-ai/ui/diff"
+import { Font } from "@opencoder-ai/ui/font"
+import { ThemeProvider } from "@opencoder-ai/ui/theme"
 import { MetaProvider } from "@solidjs/meta"
 import { Navigate, Route, Router } from "@solidjs/router"
 import { ErrorBoundary, type JSX, lazy, type ParentProps, Show, Suspense } from "solid-js"
@@ -120,7 +122,9 @@ export function AppBaseProviders(props: ParentProps) {
             <ErrorBoundary fallback={(error) => <ErrorPage error={error} />}>
               <DialogProvider>
                 <MarkedProviderWithNativeParser>
-                  <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
+                  <DiffComponentProvider component={Diff}>
+                    <CodeComponentProvider component={Code}>{props.children}</CodeComponentProvider>
+                  </DiffComponentProvider>
                 </MarkedProviderWithNativeParser>
               </DialogProvider>
             </ErrorBoundary>

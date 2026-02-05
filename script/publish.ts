@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
-import { Script } from "@opencode-ai/script"
+import { Script } from "@opencoder-ai/script"
 import { fileURLToPath } from "url"
 
 const highlightsTemplate = `
