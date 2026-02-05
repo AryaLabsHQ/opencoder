@@ -3,38 +3,49 @@ import { Global } from "../global"
 import { Log } from "../util/log"
 import path from "path"
 import { Filesystem } from "../util/filesystem"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencoder-ai/util/error"
+import { readableStreamToText } from "bun"
 import { Lock } from "../util/lock"
 import { PackageRegistry } from "./registry"
 import { proxied } from "@/util/proxied"
-import { Process } from "../util/process"
 
 export namespace BunProc {
   const log = Log.create({ service: "bun" })
 
-  export async function run(cmd: string[], options?: Process.RunOptions) {
-    const full = [which(), ...cmd]
+  export async function run(cmd: string[], options?: Bun.SpawnOptions.OptionsObject<any, any, any>) {
     log.info("running", {
-      cmd: full,
+      cmd: [which(), ...cmd],
       ...options,
     })
-    const result = await Process.run(full, {
-      cwd: options?.cwd,
-      abort: options?.abort,
-      kill: options?.kill,
-      timeout: options?.timeout,
-      nothrow: options?.nothrow,
+    const result = Bun.spawn([which(), ...cmd], {
+      ...options,
+      stdout: "pipe",
+      stderr: "pipe",
       env: {
         ...process.env,
         ...options?.env,
         BUN_BE_BUN: "1",
       },
     })
+    const code = await result.exited
+    const stdout = result.stdout
+      ? typeof result.stdout === "number"
+        ? result.stdout
+        : await readableStreamToText(result.stdout)
+      : undefined
+    const stderr = result.stderr
+      ? typeof result.stderr === "number"
+        ? result.stderr
+        : await readableStreamToText(result.stderr)
+      : undefined
     log.info("done", {
-      code: result.code,
-      stdout: result.stdout.toString(),
-      stderr: result.stderr.toString(),
+      code,
+      stdout,
+      stderr,
     })
+    if (code !== 0) {
+      throw new Error(`Command failed with exit code ${result.exitCode}`)
+    }
     return result
   }
 
@@ -82,7 +93,7 @@ export namespace BunProc {
       "--force",
       "--exact",
       // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
-      ...(proxied() || process.env.CI ? ["--no-cache"] : []),
+      ...(proxied() ? ["--no-cache"] : []),
       "--cwd",
       Global.Path.cache,
       pkg + "@" + version,

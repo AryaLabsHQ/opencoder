@@ -1,8 +1,7 @@
 import { createEffect, createMemo, onCleanup, onMount, type Accessor } from "solid-js"
 import { createStore } from "solid-js/store"
-import { createSimpleContext } from "@opencode-ai/ui/context"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
-import { dict as en } from "@/i18n/en"
+import { createSimpleContext } from "@opencoder-ai/ui/context"
+import { useDialog } from "@opencoder-ai/ui/context/dialog"
 import { useLanguage } from "@/context/language"
 import { useSettings } from "@/context/settings"
 import { Persist, persisted } from "@/utils/persist"
@@ -13,27 +12,6 @@ const PALETTE_ID = "command.palette"
 const DEFAULT_PALETTE_KEYBIND = "mod+shift+p"
 const SUGGESTED_PREFIX = "suggested."
 const EDITABLE_KEYBIND_IDS = new Set(["terminal.toggle", "terminal.new", "file.attach"])
-
-type KeyLabel =
-  | "common.key.ctrl"
-  | "common.key.alt"
-  | "common.key.shift"
-  | "common.key.meta"
-  | "common.key.space"
-  | "common.key.backspace"
-  | "common.key.enter"
-  | "common.key.tab"
-  | "common.key.delete"
-  | "common.key.home"
-  | "common.key.end"
-  | "common.key.pageUp"
-  | "common.key.pageDown"
-  | "common.key.insert"
-  | "common.key.esc"
-
-function keyText(key: KeyLabel, t?: (key: KeyLabel) => string) {
-  return t ? t(key) : en[key]
-}
 
 function actionId(id: string) {
   if (!id.startsWith(SUGGESTED_PREFIX)) return id
@@ -167,7 +145,7 @@ export function matchKeybind(keybinds: Keybind[], event: KeyboardEvent): boolean
   return false
 }
 
-export function formatKeybind(config: string, t?: (key: KeyLabel) => string): string {
+export function formatKeybind(config: string): string {
   if (!config || config === "none") return ""
 
   const keybinds = parseKeybind(config)
@@ -176,10 +154,10 @@ export function formatKeybind(config: string, t?: (key: KeyLabel) => string): st
   const kb = keybinds[0]
   const parts: string[] = []
 
-  if (kb.ctrl) parts.push(IS_MAC ? "⌃" : keyText("common.key.ctrl", t))
-  if (kb.alt) parts.push(IS_MAC ? "⌥" : keyText("common.key.alt", t))
-  if (kb.shift) parts.push(IS_MAC ? "⇧" : keyText("common.key.shift", t))
-  if (kb.meta) parts.push(IS_MAC ? "⌘" : keyText("common.key.meta", t))
+  if (kb.ctrl) parts.push(IS_MAC ? "⌃" : "Ctrl")
+  if (kb.alt) parts.push(IS_MAC ? "⌥" : "Alt")
+  if (kb.shift) parts.push(IS_MAC ? "⇧" : "Shift")
+  if (kb.meta) parts.push(IS_MAC ? "⌘" : "Meta")
 
   if (kb.key) {
     const keys: Record<string, string> = {
@@ -189,29 +167,10 @@ export function formatKeybind(config: string, t?: (key: KeyLabel) => string): st
       arrowright: "→",
       comma: ",",
       plus: "+",
-    }
-    const named: Record<string, KeyLabel> = {
-      backspace: "common.key.backspace",
-      delete: "common.key.delete",
-      end: "common.key.end",
-      enter: "common.key.enter",
-      esc: "common.key.esc",
-      escape: "common.key.esc",
-      home: "common.key.home",
-      insert: "common.key.insert",
-      pagedown: "common.key.pageDown",
-      pageup: "common.key.pageUp",
-      space: "common.key.space",
-      tab: "common.key.tab",
+      space: "Space",
     }
     const key = kb.key.toLowerCase()
-    const displayKey =
-      keys[key] ??
-      (named[key]
-        ? keyText(named[key], t)
-        : key.length === 1
-          ? key.toUpperCase()
-          : key.charAt(0).toUpperCase() + key.slice(1))
+    const displayKey = keys[key] ?? (key.length === 1 ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1))
     parts.push(displayKey)
   }
 
@@ -405,17 +364,17 @@ export const { use: useCommand, provider: CommandProvider } = createSimpleContex
       },
       keybind(id: string) {
         if (id === PALETTE_ID) {
-          return formatKeybind(settings.keybinds.get(PALETTE_ID) ?? DEFAULT_PALETTE_KEYBIND, language.t)
+          return formatKeybind(settings.keybinds.get(PALETTE_ID) ?? DEFAULT_PALETTE_KEYBIND)
         }
 
         const base = actionId(id)
         const option = options().find((x) => actionId(x.id) === base)
-        if (option?.keybind) return formatKeybind(option.keybind, language.t)
+        if (option?.keybind) return formatKeybind(option.keybind)
 
         const meta = catalog[base]
         const config = bind(base, meta?.keybind)
         if (!config) return ""
-        return formatKeybind(config, language.t)
+        return formatKeybind(config)
       },
       show: showPalette,
       keybinds(enabled: boolean) {

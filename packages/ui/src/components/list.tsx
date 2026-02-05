@@ -1,5 +1,5 @@
-import { type FilteredListProps, useFilteredList } from "@opencode-ai/ui/hooks"
-import { createEffect, For, onCleanup, type JSX, on, Show } from "solid-js"
+import { type FilteredListProps, useFilteredList } from "@opencoder-ai/ui/hooks"
+import { createEffect, createSignal, For, onCleanup, type JSX, on, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useI18n } from "../context/i18n"
 import { Icon, type IconProps } from "./icon"
@@ -56,16 +56,12 @@ export interface ListRef {
 
 export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) {
   const i18n = useI18n()
+  const [scrollRef, setScrollRef] = createSignal<HTMLDivElement | undefined>(undefined)
+  const [internalFilter, setInternalFilter] = createSignal("")
   let inputRef: HTMLInputElement | HTMLTextAreaElement | undefined
   const [store, setStore] = createStore({
     mouseActive: false,
-    scrollRef: undefined as HTMLDivElement | undefined,
-    internalFilter: "",
   })
-  const scrollRef = () => store.scrollRef
-  const setScrollRef = (el: HTMLDivElement | undefined) => setStore("scrollRef", el)
-  const internalFilter = () => store.internalFilter
-  const setInternalFilter = (value: string) => setStore("internalFilter", value)
 
   const scrollIntoView = (container: HTMLDivElement, node: HTMLElement, block: "center" | "nearest") => {
     const containerRect = container.getBoundingClientRect()
@@ -212,20 +208,18 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
   }
 
   function GroupHeader(groupProps: { group: { category: string; items: T[] } }): JSX.Element {
-    const [state, setState] = createStore({
-      stuck: false,
-      header: undefined as HTMLDivElement | undefined,
-    })
+    const [stuck, setStuck] = createSignal(false)
+    const [header, setHeader] = createSignal<HTMLDivElement | undefined>(undefined)
 
     createEffect(() => {
       const scroll = scrollRef()
-      const node = state.header
+      const node = header()
       if (!scroll || !node) return
 
       const handler = () => {
         const rect = node.getBoundingClientRect()
         const scrollRect = scroll.getBoundingClientRect()
-        setState("stuck", rect.top <= scrollRect.top + 1 && scroll.scrollTop > 0)
+        setStuck(rect.top <= scrollRect.top + 1 && scroll.scrollTop > 0)
       }
 
       scroll.addEventListener("scroll", handler, { passive: true })
@@ -234,7 +228,7 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
     })
 
     return (
-      <div data-slot="list-header" data-stuck={state.stuck} ref={(el) => setState("header", el)}>
+      <div data-slot="list-header" data-stuck={stuck()} ref={setHeader}>
         {props.groupHeader?.(groupProps.group) ?? groupProps.group.category}
       </div>
     )

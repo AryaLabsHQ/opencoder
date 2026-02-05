@@ -1,7 +1,5 @@
 import z from "zod"
-import { SessionID } from "./schema"
-import { ModelID, ProviderID } from "../provider/schema"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencoder-ai/util/error"
 
 export namespace Message {
   export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
@@ -144,7 +142,7 @@ export namespace Message {
           error: z
             .discriminatedUnion("name", [AuthError.Schema, NamedError.Unknown.Schema, OutputLengthError.Schema])
             .optional(),
-          sessionID: SessionID.zod,
+          sessionID: z.string(),
           tool: z.record(
             z.string(),
             z
@@ -161,8 +159,8 @@ export namespace Message {
           assistant: z
             .object({
               system: z.string().array(),
-              modelID: ModelID.zod,
-              providerID: ProviderID.zod,
+              modelID: z.string(),
+              providerID: z.string(),
               path: z.object({
                 cwd: z.string(),
                 root: z.string(),
