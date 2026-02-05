@@ -2,12 +2,14 @@ import { describe, expect, test, spyOn, beforeEach, afterEach } from "bun:test"
 import { z } from "zod"
 import { QuestionTool } from "../../src/tool/question"
 import * as QuestionModule from "../../src/question"
+import { testModel } from "./fixtures/model"
 
 const ctx = {
   sessionID: "test-session",
   messageID: "test-message",
   callID: "test-call",
   agent: "test-agent",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
