@@ -235,7 +235,9 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                 <box
                   flexDirection="row"
                   gap={1}
-                  onMouseDown={() => (sync.data.inbox[props.sessionID]?.length ?? 0) > 2 && setExpanded("inbox", !expanded.inbox)}
+                  onMouseDown={() =>
+                    (sync.data.inbox[props.sessionID]?.length ?? 0) > 2 && setExpanded("inbox", !expanded.inbox)
+                  }
                 >
                   <Show when={(sync.data.inbox[props.sessionID]?.length ?? 0) > 2}>
                     <text fg={theme.text}>{expanded.inbox ? "▼" : "▶"}</text>
@@ -243,7 +245,10 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                   <text fg={theme.text}>
                     <b>Inbox</b>
                     <Show when={(sync.data.inbox[props.sessionID]?.filter((m) => !m.isRead).length ?? 0) > 0}>
-                      <span style={{ fg: theme.warning }}> {(sync.data.inbox[props.sessionID]?.filter((m) => !m.isRead).length ?? 0)} new</span>
+                      <span style={{ fg: theme.warning }}>
+                        {" "}
+                        {sync.data.inbox[props.sessionID]?.filter((m) => !m.isRead).length ?? 0} new
+                      </span>
                     </Show>
                   </text>
                 </box>
@@ -255,7 +260,8 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                           <b>{message.senderId}</b>: {message.subject}
                         </text>
                         <text fg={theme.textMuted} wrapMode="word">
-                          {message.body.slice(0, 80)}{message.body.length > 80 ? "..." : ""}
+                          {message.body.slice(0, 80)}
+                          {message.body.length > 80 ? "..." : ""}
                         </text>
                       </box>
                     )}

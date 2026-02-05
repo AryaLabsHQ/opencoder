@@ -2138,9 +2138,7 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
       <Match when={todos()}>
         <BlockTool title="# Todos" part={props.part}>
           <box>
-            <For each={todos() ?? []}>
-              {(todo) => <TodoItem status={todo.status} content={todo.content} />}
-            </For>
+            <For each={todos() ?? []}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
           </box>
         </BlockTool>
       </Match>
