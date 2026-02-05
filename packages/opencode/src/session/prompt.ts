@@ -29,7 +29,6 @@ import { ReadTool } from "../tool/read"
 import { FileTime } from "../file/time"
 import { Flag } from "../flag/flag"
 import { ulid } from "ulid"
-import { spawn } from "child_process"
 import { Command } from "../command"
 import { $ } from "bun"
 import { pathToFileURL, fileURLToPath } from "url"
@@ -421,6 +420,7 @@ export namespace SessionPrompt {
           sessionID: sessionID,
           abort,
           callID: part.callID,
+          model: { providerID: taskModel.providerID, modelID: taskModel.id },
           extra: { bypassAgentCheck: true },
           messages: msgs,
           async metadata(input) {
@@ -751,7 +751,8 @@ export namespace SessionPrompt {
       abort: options.abortSignal!,
       messageID: input.processor.message.id,
       callID: options.toolCallId,
-      extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
+      model: { providerID: input.model.providerID, modelID: input.model.id },
+      extra: { bypassAgentCheck: input.bypassAgentCheck },
       agent: input.agent.name,
       messages: input.messages,
       metadata: async (val: { title?: string; metadata?: any }) => {
@@ -1143,13 +1144,14 @@ export namespace SessionPrompt {
 
                 await ReadTool.init()
                   .then(async (t) => {
-                    const model = await Provider.getModel(info.model.providerID, info.model.modelID)
+                    const model = info.model ?? (await Provider.defaultModel())
                     const readCtx: Tool.Context = {
                       sessionID: input.sessionID,
                       abort: new AbortController().signal,
                       agent: input.agent!,
                       messageID: info.id,
-                      extra: { bypassCwdCheck: true, model },
+                      model,
+                      extra: { bypassCwdCheck: true },
                       messages: [],
                       metadata: async () => {},
                       ask: async () => {},
@@ -1203,11 +1205,13 @@ export namespace SessionPrompt {
 
               if (part.mime === "application/x-directory") {
                 const args = { filePath: filepath }
+                const model = info.model ?? (await Provider.defaultModel())
                 const listCtx: Tool.Context = {
                   sessionID: input.sessionID,
                   abort: new AbortController().signal,
                   agent: input.agent!,
                   messageID: info.id,
+                  model,
                   extra: { bypassCwdCheck: true },
                   messages: [],
                   metadata: async () => {},
@@ -1325,6 +1329,17 @@ export namespace SessionPrompt {
     const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
     if (!userMessage) return input.messages
 
+    // If agent has a reminder configured (string), inject it
+    if (typeof input.agent.reminder === "string") {
+      userMessage.parts.push({
+        id: Identifier.ascending("part"),
+        messageID: userMessage.info.id,
+        sessionID: userMessage.info.sessionID,
+        type: "text",
+        text: input.agent.reminder,
+        synthetic: true,
+      })
+    }
     // Original logic when experimental plan mode is disabled
     if (!Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE) {
       if (input.agent.name === "plan") {
@@ -1565,6 +1580,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       },
     }
     await Session.updatePart(part)
+
     const shell = Shell.preferred()
     const shellName = (
       process.platform === "win32" ? path.win32.basename(shell, ".exe") : path.basename(shell)
