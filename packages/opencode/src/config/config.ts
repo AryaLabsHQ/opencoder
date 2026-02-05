@@ -1498,3 +1498,5 @@ export namespace Config {
     return state().then((x) => x.directories)
   }
 }
+
+export type KeybindsConfig = z.infer<typeof Config.Keybinds>
