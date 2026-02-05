@@ -7,8 +7,15 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "allowJs": true,
-    "noEmit": true,
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "isolatedModules": true
-  }
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
 }
