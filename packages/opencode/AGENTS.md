@@ -1,17 +1,24 @@
-# opencode agent guidelines
+# OpenCode CLI - TUI Application
+
+**Package:** `packages/opencode`
+**Type:** Main CLI/TUI application
+
+## Overview
+
+The core OpenCode terminal interface. Built with custom TUI, handles agent orchestration, file operations, and interactive sessions.
 
 ## Build/Test Commands
 
 - **Install**: `bun install`
 - **Run**: `bun run --conditions=browser ./src/index.ts`
-- **Typecheck**: `bun run typecheck` (npm run typecheck)
-- **Test**: `bun test` (runs all tests)
-- **Single test**: `bun test test/tool/tool.test.ts` (specific test file)
+- **Typecheck**: `bun run typecheck`
+- **Test**: `bun test`
+- **Single test**: `bun test test/tool/tool.test.ts`
 
 ## Code Style
 
 - **Runtime**: Bun with TypeScript ESM modules
-- **Imports**: Use relative imports for local modules, named imports preferred
+- **Imports**: Relative imports for local modules, named imports preferred
 - **Types**: Zod schemas for validation, TypeScript interfaces for structure
 - **Naming**: camelCase for variables/functions, PascalCase for classes/namespaces
 - **Error handling**: Use Result patterns, avoid throwing exceptions in tools
@@ -24,4 +31,26 @@
 - **Validation**: All inputs validated with Zod schemas
 - **Logging**: Use `Log.create({ service: "name" })` pattern
 - **Storage**: Use `Storage` namespace for persistence
-- **API Client**: The TypeScript TUI (built with SolidJS + OpenTUI) communicates with the OpenCode server using `@opencoder-ai/sdk`. When adding/modifying server endpoints in `packages/opencode/src/server/server.ts`, run `./script/generate.ts` to regenerate the SDK and related files.
+- **SDK Generation**: When modifying server endpoints in `server.ts`, run `./script/generate.ts`
+
+## Structure
+
+```
+packages/opencode/src/
+├── agent/           # Agent definitions and prompts
+├── cli/             # CLI commands
+├── file/            # File operations (has path security TODOs)
+├── permission/      # Permission system (incomplete)
+├── provider/        # LLM providers (legacy code marked for removal)
+├── server/          # Server (too large - needs refactor)
+├── session/         # Session management
+├── tool/            # Tool definitions
+└── bun/             # Bun runtime utilities
+```
+
+## Technical Debt (Priority)
+
+1. **Path security** (`src/file/index.ts`): Symlink escaping, Windows bypass
+2. **Legacy provider code** (`src/provider/provider.ts`): Marked for removal
+3. **Server refactor** (`src/server/server.ts`): Too large, needs splitting
+4. **Permission system** (`src/permission/next.ts`): Incomplete implementation
