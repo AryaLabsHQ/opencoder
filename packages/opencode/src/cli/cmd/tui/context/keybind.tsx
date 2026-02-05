@@ -16,7 +16,10 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
     const keybinds = createMemo(() => {
       const parsed = Config.Keybinds.safeParse(sync.data.config.keybinds ?? {})
       const values = parsed.success ? parsed.data : Config.Keybinds.parse({})
-      return pipe(values, mapValues((value) => Keybind.parse(value)))
+      return pipe(
+        values,
+        mapValues((value) => Keybind.parse(value)),
+      )
     })
     const [store, setStore] = createStore({
       leader: false,
