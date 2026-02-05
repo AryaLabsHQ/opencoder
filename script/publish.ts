@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
-import { Script } from "@opencode-ai/script"
+import { Script } from "@opencoder-ai/script"
+import { buildNotes, getLatestRelease } from "./changelog"
 
 const highlightsTemplate = `
 <!--
