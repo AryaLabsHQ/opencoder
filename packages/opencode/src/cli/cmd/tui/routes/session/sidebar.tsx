@@ -25,6 +25,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
     diff: true,
     todo: true,
     lsp: true,
+    inbox: true,
   })
 
   // Sort MCP servers alphabetically for consistent display order
@@ -226,6 +227,39 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                 </box>
                 <Show when={todo().length <= 2 || expanded.todo}>
                   <For each={todo()}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
+                </Show>
+              </box>
+            </Show>
+            <Show when={sync.data.inbox[props.sessionID]?.length > 0}>
+              <box>
+                <box
+                  flexDirection="row"
+                  gap={1}
+                  onMouseDown={() => (sync.data.inbox[props.sessionID]?.length ?? 0) > 2 && setExpanded("inbox", !expanded.inbox)}
+                >
+                  <Show when={(sync.data.inbox[props.sessionID]?.length ?? 0) > 2}>
+                    <text fg={theme.text}>{expanded.inbox ? "▼" : "▶"}</text>
+                  </Show>
+                  <text fg={theme.text}>
+                    <b>Inbox</b>
+                    <Show when={(sync.data.inbox[props.sessionID]?.filter((m) => !m.isRead).length ?? 0) > 0}>
+                      <span style={{ fg: theme.warning }}> {(sync.data.inbox[props.sessionID]?.filter((m) => !m.isRead).length ?? 0)} new</span>
+                    </Show>
+                  </text>
+                </box>
+                <Show when={(sync.data.inbox[props.sessionID]?.length ?? 0) <= 2 || expanded.inbox}>
+                  <For each={sync.data.inbox[props.sessionID] ?? []}>
+                    {(message) => (
+                      <box flexDirection="column" gap={0}>
+                        <text fg={message.isRead ? theme.textMuted : theme.text} wrapMode="word">
+                          <b>{message.senderId}</b>: {message.subject}
+                        </text>
+                        <text fg={theme.textMuted} wrapMode="word">
+                          {message.body.slice(0, 80)}{message.body.length > 80 ? "..." : ""}
+                        </text>
+                      </box>
+                    )}
+                  </For>
                 </Show>
               </box>
             </Show>
