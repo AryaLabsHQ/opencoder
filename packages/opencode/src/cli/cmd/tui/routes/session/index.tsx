@@ -2032,12 +2032,37 @@ function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
 }
 
 function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
+  // Try to get todos from metadata, or parse from output if missing
+  const todos = createMemo(() => {
+    // Priority 1: Use metadata.todos if available
+    if (props.metadata.todos && props.metadata.todos.length > 0) {
+      return props.metadata.todos
+    }
+    
+    // Priority 2: Try to parse todos from output JSON
+    if (props.output) {
+      try {
+        const parsed = JSON.parse(props.output)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Validate that it looks like todos (has id, content, status)
+          if (parsed[0]?.id && parsed[0]?.content && parsed[0]?.status) {
+            return parsed
+          }
+        }
+      } catch {
+        // JSON parse failed, continue to fallback
+      }
+    }
+    
+    return null
+  })
+
   return (
     <Switch>
-      <Match when={props.metadata.todos?.length}>
+      <Match when={todos()}>
         <BlockTool title="# Todos" part={props.part}>
           <box>
-            <For each={props.input.todos ?? []}>
+            <For each={todos() ?? []}>
               {(todo) => <TodoItem status={todo.status} content={todo.content} />}
             </For>
           </box>
