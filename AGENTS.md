@@ -107,8 +107,8 @@ const table = sqliteTable("session", {
 ## Testing
 
 - Avoid mocks as much as possible
-- Test actual implementation, do not duplicate logic into tests
-=======
+- # Test actual implementation, do not duplicate logic into tests
+
 ## Overview
 
 OpenCode is an open-source AI coding agent with terminal-first experience. Provider-agnostic architecture supports Claude, OpenAI, Google, and local models.
