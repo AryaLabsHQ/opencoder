@@ -38,6 +38,7 @@ export const dict = {
   "command.language.set": "Użyj języka: {{language}}",
   "command.session.new": "Nowa sesja",
   "command.file.open": "Otwórz plik",
+  "command.file.open.description": "Otwórz plik",
   "command.tab.close": "Zamknij kartę",
   "command.context.addSelection": "Dodaj zaznaczenie do kontekstu",
   "command.context.addSelection.description": "Dodaj zaznaczone linie z bieżącego pliku",
