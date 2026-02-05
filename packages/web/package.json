@@ -17,7 +17,7 @@
     "@astrojs/solid-js": "5.1.0",
     "@astrojs/starlight": "0.34.3",
     "@fontsource/ibm-plex-mono": "5.2.5",
-    "@shikijs/transformers": "3.20.0",
+    "@shikijs/transformers": "3.9.2",
     "@types/luxon": "catalog:",
     "ai": "catalog:",
     "astro": "5.7.13",
@@ -35,9 +35,9 @@
     "vscode-languageserver-types": "3.17.5"
   },
   "devDependencies": {
-    "opencoder": "workspace:*",
-    "@types/node": "catalog:",
     "@astrojs/check": "0.9.6",
+    "@types/node": "catalog:",
+    "opencoder": "workspace:*",
     "typescript": "catalog:"
   }
 }
