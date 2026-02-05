@@ -1,16 +1,16 @@
 import type {
   Event,
-  createOpencodeClient,
   Project,
   Model,
   Provider,
-  Permission,
+  PermissionRequest,
   UserMessage,
   Message,
   Part,
   Auth,
   Config,
-} from "@opencode-ai/sdk"
+  OpencodeClient,
+} from "@opencode-ai/sdk/v2"
 
 import type { BunShell } from "./shell"
 import { type ToolDefinition } from "./tool"
@@ -24,7 +24,7 @@ export type ProviderContext = {
 }
 
 export type PluginInput = {
-  client: ReturnType<typeof createOpencodeClient>
+  client: OpencodeClient
   project: Project
   directory: string
   worktree: string
@@ -176,7 +176,10 @@ export interface Hooks {
     input: { sessionID: string; agent: string; model: Model; provider: ProviderContext; message: UserMessage },
     output: { headers: Record<string, string> },
   ) => Promise<void>
-  "permission.ask"?: (input: Permission, output: { status: "ask" | "deny" | "allow" }) => Promise<void>
+  "permission.ask"?: (
+    input: PermissionRequest,
+    output: { status: "ask" | "deny" | "allow" | "reject" },
+  ) => Promise<void>
   "command.execute.before"?: (
     input: { command: string; sessionID: string; arguments: string },
     output: { parts: Part[] },
