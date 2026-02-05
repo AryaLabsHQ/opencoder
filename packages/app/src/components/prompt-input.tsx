@@ -1,5 +1,5 @@
-import { useFilteredList } from "@opencode-ai/ui/hooks"
-import { createEffect, on, Component, Show, onCleanup, Switch, Match, createMemo, createSignal } from "solid-js"
+import { useFilteredList } from "@opencoder-ai/ui/hooks"
+import { createEffect, on, Component, Show, For, onCleanup, Switch, Match, createMemo, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createFocusSignal } from "@solid-primitives/active-element"
 import { useLocal } from "@/context/local"
@@ -19,15 +19,16 @@ import { useSDK } from "@/context/sdk"
 import { useParams } from "@solidjs/router"
 import { useSync } from "@/context/sync"
 import { useComments } from "@/context/comments"
-import { Button } from "@opencode-ai/ui/button"
-import { DockShellForm, DockTray } from "@opencode-ai/ui/dock-surface"
-import { Icon } from "@opencode-ai/ui/icon"
-import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
-import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { Select } from "@opencode-ai/ui/select"
-import { RadioGroup } from "@opencode-ai/ui/radio-group"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { Button } from "@opencoder-ai/ui/button"
+import { DockShellForm, DockTray } from "@opencoder-ai/ui/dock-surface"
+import { Icon } from "@opencoder-ai/ui/icon"
+import { ProviderIcon } from "@opencoder-ai/ui/provider-icon"
+import type { IconName } from "@opencoder-ai/ui/icons/provider"
+import { Tooltip, TooltipKeybind } from "@opencoder-ai/ui/tooltip"
+import { IconButton } from "@opencoder-ai/ui/icon-button"
+import { Select } from "@opencoder-ai/ui/select"
+import { RadioGroup } from "@opencoder-ai/ui/radio-group"
+import { useDialog } from "@opencoder-ai/ui/context/dialog"
 import { ModelSelectorPopover } from "@/components/dialog-select-model"
 import { DialogSelectModelUnpaid } from "@/components/dialog-select-model-unpaid"
 import { useProviders } from "@/hooks/use-providers"
@@ -53,7 +54,7 @@ import { PromptContextItems } from "./prompt-input/context-items"
 import { PromptImageAttachments } from "./prompt-input/image-attachments"
 import { PromptDragOverlay } from "./prompt-input/drag-overlay"
 import { promptPlaceholder } from "./prompt-input/placeholder"
-import { ImagePreview } from "@opencode-ai/ui/image-preview"
+import { ImagePreview } from "@opencoder-ai/ui/image-preview"
 
 interface PromptInputProps {
   class?: string
@@ -1309,45 +1310,43 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </div>
           </div>
 
-          <div class="pointer-events-none absolute bottom-2 left-2">
-            <div class="pointer-events-auto">
-              <TooltipKeybind
-                placement="top"
-                gutter={8}
-                title={language.t(
-                  accepting() ? "command.permissions.autoaccept.disable" : "command.permissions.autoaccept.enable",
-                )}
-                keybind={command.keybind("permissions.autoaccept")}
-              >
-                <Button
-                  data-action="prompt-permissions"
-                  variant="ghost"
-                  disabled={!params.id}
-                  onClick={() => {
-                    if (!params.id) return
-                    permission.toggleAutoAccept(params.id, sdk.directory)
-                  }}
-                  classList={{
-                    "size-6 flex items-center justify-center": true,
-                    "text-text-base": !accepting(),
-                    "hover:bg-surface-success-base": accepting(),
-                  }}
-                  aria-label={
-                    accepting()
-                      ? language.t("command.permissions.autoaccept.disable")
-                      : language.t("command.permissions.autoaccept.enable")
-                  }
-                  aria-pressed={accepting()}
+          <Show when={store.mode === "normal" && permission.permissionsEnabled() && params.id}>
+            <div class="pointer-events-none absolute bottom-2 left-2">
+              <div class="pointer-events-auto">
+                <TooltipKeybind
+                  placement="top"
+                  gutter={8}
+                  title={language.t(
+                    accepting() ? "command.permissions.autoaccept.disable" : "command.permissions.autoaccept.enable",
+                  )}
+                  keybind={command.keybind("permissions.autoaccept")}
                 >
-                  <Icon
-                    name="chevron-double-right"
-                    size="small"
-                    classList={{ "text-icon-success-base": accepting() }}
-                  />
-                </Button>
-              </TooltipKeybind>
+                  <Button
+                    data-action="prompt-permissions"
+                    variant="ghost"
+                    onClick={() => permission.toggleAutoAccept(params.id!, sdk.directory)}
+                    classList={{
+                      "_hidden group-hover/prompt-input:flex size-6 items-center justify-center": true,
+                      "text-text-base": !accepting(),
+                      "hover:bg-surface-success-base": accepting(),
+                    }}
+                    aria-label={
+                      accepting()
+                        ? language.t("command.permissions.autoaccept.disable")
+                        : language.t("command.permissions.autoaccept.enable")
+                    }
+                    aria-pressed={accepting()}
+                  >
+                    <Icon
+                      name="chevron-double-right"
+                      size="small"
+                      classList={{ "text-icon-success-base": accepting() }}
+                    />
+                  </Button>
+                </TooltipKeybind>
+              </div>
             </div>
-          </div>
+          </Show>
         </div>
       </DockShellForm>
       <Show when={store.mode === "normal" || store.mode === "shell"}>
@@ -1397,7 +1396,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       >
                         <Show when={local.model.current()?.provider?.id}>
                           <ProviderIcon
-                            id={local.model.current()!.provider.id}
+                            id={local.model.current()!.provider.id as IconName}
                             class="size-4 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity duration-150"
                             style={{ "will-change": "opacity", transform: "translateZ(0)" }}
                           />
@@ -1427,7 +1426,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     >
                       <Show when={local.model.current()?.provider?.id}>
                         <ProviderIcon
-                          id={local.model.current()!.provider.id}
+                          id={local.model.current()!.provider.id as IconName}
                           class="size-4 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity duration-150"
                           style={{ "will-change": "opacity", transform: "translateZ(0)" }}
                         />
