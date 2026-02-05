@@ -9,7 +9,7 @@ import { mergeDeep, pipe, unique } from "remeda"
 import { Global } from "../global"
 import fs from "fs/promises"
 import { lazy } from "../util/lazy"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencoder-ai/util/error"
 import { Flag } from "../flag/flag"
 import { Auth } from "../auth"
 import {
@@ -258,7 +258,7 @@ export namespace Config {
       .catch(() => ({}))
     json.dependencies = {
       ...json.dependencies,
-      "@opencode-ai/plugin": targetVersion,
+      "@opencoder-ai/plugin": targetVersion,
     }
     await Bun.write(pkg, JSON.stringify(json, null, 2))
     await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -307,15 +307,15 @@ export namespace Config {
 
     const parsed = await pkgFile.json().catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@opencode-ai/plugin"]
+    const depVersion = dependencies["@opencoder-ai/plugin"]
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@opencode-ai/plugin", depVersion, dir)
+      const isOutdated = await PackageRegistry.isOutdated("@opencoder-ai/plugin", depVersion, dir)
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@opencode-ai/plugin",
+        pkg: "@opencoder-ai/plugin",
         cachedVersion: depVersion,
       })
       return true
