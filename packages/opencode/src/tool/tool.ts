@@ -18,6 +18,7 @@ export namespace Tool {
     sessionID: SessionID
     messageID: MessageID
     agent: string
+    model: { providerID: string; modelID: string }
     abort: AbortSignal
     callID?: string
     extra?: { [key: string]: any }

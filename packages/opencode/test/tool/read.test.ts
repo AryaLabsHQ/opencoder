@@ -7,6 +7,7 @@ import { tmpdir } from "../fixture/fixture"
 import { PermissionNext } from "../../src/permission/next"
 import { Agent } from "../../src/agent/agent"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { testModel } from "./fixtures/model"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "fixtures")
 
@@ -15,6 +16,7 @@ const ctx = {
   messageID: MessageID.make(""),
   callID: "",
   agent: "build",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

@@ -5,12 +5,14 @@ import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { testModel } from "./fixtures/model"
 
 const baseCtx = {
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make(""),
   callID: "",
   agent: "build",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

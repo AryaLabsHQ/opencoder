@@ -3,12 +3,14 @@ import { z } from "zod"
 import { QuestionTool } from "../../src/tool/question"
 import * as QuestionModule from "../../src/question"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { testModel } from "./fixtures/model"
 
 const ctx = {
   sessionID: SessionID.make("ses_test-session"),
   messageID: MessageID.make("test-message"),
   callID: "test-call",
   agent: "test-agent",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
