@@ -144,8 +144,11 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         ctx.metadata({
           title: params.description,
           metadata: {
+            summary: Object.values(parts).sort((a, b) => a.id.localeCompare(b.id)),
+            subagent_type: params.subagent_type,
             sessionId: session.id,
             model,
+            description: params.description,
           },
         })
       })
@@ -202,8 +205,10 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         title: params.description,
         metadata: {
           summary,
+          subagent_type: params.subagent_type,
           sessionId: session.id,
           model,
+          description: params.description,
         },
         output,
       }
