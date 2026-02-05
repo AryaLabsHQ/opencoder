@@ -155,10 +155,7 @@ const fetchAgniInbox = async (sessionID: string, agentHandle: string) => {
       const isRead = lastReadAt ? createdAtDate <= lastReadAt : false
       return {
         id: thread.id,
-        senderId:
-          message?.senderRun.agent.handle ??
-          thread.createdByRun.agent.handle ??
-          "unknown",
+        senderId: message?.senderRun.agent.handle ?? thread.createdByRun.agent.handle ?? "unknown",
         subject: message?.subject ?? thread.subject ?? "No subject",
         body: message?.body ?? "",
         type: "mail",
