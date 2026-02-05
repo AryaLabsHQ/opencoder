@@ -1,10 +1,14 @@
+# AGENTS
+
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `dev`.
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
 
-## Style Guide
+**Generated:** 2026-01-29
+**Branch:** dev
+**Type:** Bun + Turborepo monorepo
 
 ### General Principles
 
