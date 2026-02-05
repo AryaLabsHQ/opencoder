@@ -1,9 +1,8 @@
-import { AssistantMessage, type FileDiff, Message as MessageType, Part as PartType } from "@opencode-ai/sdk/v2/client"
+import { AssistantMessage, type FileDiff, Message as MessageType, Part as PartType } from "@opencoder-ai/sdk/v2/client"
 import { useData } from "../context"
 import { useDiffComponent } from "../context/diff"
-
-import { Binary } from "@opencode-ai/util/binary"
-import { getDirectory, getFilename } from "@opencode-ai/util/path"
+import { Binary } from "@opencoder-ai/util/binary"
+import { getDirectory, getFilename } from "@opencoder-ai/util/path"
 import { createMemo, createSignal, For, ParentProps, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Message } from "./message-part"
