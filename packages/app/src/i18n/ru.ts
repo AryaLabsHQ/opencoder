@@ -44,6 +44,7 @@ export const dict = {
 
   "command.session.new": "Новая сессия",
   "command.file.open": "Открыть файл",
+  "command.file.open.description": "Открыть файл",
   "command.context.addSelection": "Добавить выделение в контекст",
   "command.context.addSelection.description": "Добавить выбранные строки из текущего файла",
   "command.terminal.toggle": "Переключить терминал",
