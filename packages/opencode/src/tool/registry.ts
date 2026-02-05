@@ -71,8 +71,7 @@ export namespace ToolRegistry {
             model: ctx.model,
           } as unknown as PluginToolContext
           const result = await def.execute(args as any, pluginCtx)
-          const normalized =
-            typeof result === "string" ? { title: "", metadata: {}, output: result } : result
+          const normalized = typeof result === "string" ? { title: "", metadata: {}, output: result } : result
           const out = await Truncate.output(normalized.output, {}, initCtx?.agent)
           return {
             title: normalized.title,
