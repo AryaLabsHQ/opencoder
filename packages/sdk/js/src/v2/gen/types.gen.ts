@@ -1420,6 +1420,10 @@ export type AgentConfig = {
    */
   maxSteps?: number
   permission?: PermissionConfig
+  /**
+   * Custom reminder text injected into user messages for this agent. Set to false to disable the default reminder.
+   */
+  reminder?: string | false
   [key: string]:
     | unknown
     | string
@@ -1444,6 +1448,8 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
+    | string
+    | false
     | undefined
 }
 
@@ -2094,7 +2100,6 @@ export type File = {
   removed: number
   status: "added" | "deleted" | "modified"
 }
-
 export type McpStatusConnected = {
   status: "connected"
 }
@@ -2167,6 +2172,7 @@ export type Agent = {
     [key: string]: unknown
   }
   steps?: number
+  reminder?: string | false
 }
 
 export type LspStatus = {
