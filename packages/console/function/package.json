@@ -12,18 +12,18 @@
     "@cloudflare/workers-types": "catalog:",
     "@tsconfig/node22": "22.0.2",
     "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "openai": "5.11.0",
-    "typescript": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "2.0.0",
-    "@ai-sdk/openai": "2.0.2",
-    "@ai-sdk/openai-compatible": "1.0.1",
+    "@ai-sdk/anthropic": "2.0.57",
+    "@ai-sdk/openai": "2.0.89",
+    "@ai-sdk/openai-compatible": "1.0.30",
     "@hono/zod-validator": "catalog:",
+    "@openauthjs/openauth": "0.0.0-20250322224806",
     "@opencoder-ai/console-core": "workspace:*",
     "@opencoder-ai/console-resource": "workspace:*",
-    "@openauthjs/openauth": "0.0.0-20250322224806",
     "ai": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
