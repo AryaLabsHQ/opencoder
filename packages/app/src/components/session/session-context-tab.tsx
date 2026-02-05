@@ -3,16 +3,15 @@ import type { JSX } from "solid-js"
 import { useParams } from "@solidjs/router"
 import { useSync } from "@/context/sync"
 import { useLayout } from "@/context/layout"
-import { checksum } from "@opencode-ai/util/encode"
-import { findLast } from "@opencode-ai/util/array"
+import { checksum } from "@opencoder-ai/util/encode"
+import { findLast } from "@opencoder-ai/util/array"
 import { same } from "@/utils/same"
-import { Icon } from "@opencode-ai/ui/icon"
-import { Accordion } from "@opencode-ai/ui/accordion"
-import { StickyAccordionHeader } from "@opencode-ai/ui/sticky-accordion-header"
-import { File } from "@opencode-ai/ui/file"
-import { Markdown } from "@opencode-ai/ui/markdown"
-import { ScrollView } from "@opencode-ai/ui/scroll-view"
-import type { Message, Part, UserMessage } from "@opencode-ai/sdk/v2/client"
+import { Icon } from "@opencoder-ai/ui/icon"
+import { Accordion } from "@opencoder-ai/ui/accordion"
+import { StickyAccordionHeader } from "@opencoder-ai/ui/sticky-accordion-header"
+import { Code } from "@opencoder-ai/ui/code"
+import { Markdown } from "@opencoder-ai/ui/markdown"
+import type { Message, Part, UserMessage } from "@opencoder-ai/sdk/v2/client"
 import { useLanguage } from "@/context/language"
 import { getSessionContextMetrics } from "./session-context-metrics"
 import { estimateSessionContextBreakdown, type SessionContextBreakdownKey } from "./session-context-breakdown"
@@ -47,8 +46,7 @@ function RawMessageContent(props: { message: Message; getParts: (id: string) => 
   })
 
   return (
-    <File
-      mode="text"
+    <Code
       file={file()}
       overflow="wrap"
       class="select-text"
@@ -270,9 +268,9 @@ export function SessionContextTab() {
   })
 
   return (
-    <ScrollView
-      class="@container h-full pb-10"
-      viewportRef={(el) => {
+    <div
+      class="@container h-full overflow-y-auto no-scrollbar pb-10"
+      ref={(el) => {
         scroll = el
         restoreScroll()
       }}
@@ -338,6 +336,6 @@ export function SessionContextTab() {
           </Accordion>
         </div>
       </div>
-    </ScrollView>
+    </div>
   )
 }
