@@ -27,7 +27,7 @@ import { useExit } from "./exit"
 import { useArgs } from "./args"
 import { batch, onMount } from "solid-js"
 import { Log } from "@/util/log"
-import type { Path } from "@opencode-ai/sdk"
+import type { Path } from "@opencoder-ai/sdk"
 import {
   createAgentClient,
   type GetMailInboxResponse,
