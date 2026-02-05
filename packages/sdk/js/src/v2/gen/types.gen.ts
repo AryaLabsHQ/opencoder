@@ -2099,6 +2099,7 @@ export type File = {
   removed: number
   status: "added" | "deleted" | "modified"
 }
+
 export type McpStatusConnected = {
   status: "connected"
 }
