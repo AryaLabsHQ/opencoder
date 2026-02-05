@@ -39,7 +39,7 @@ import type { IconName } from "@opencode-ai/ui/icons/provider"
 import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Select } from "@opencode-ai/ui/select"
-import { getDirectory, getFilename, getFilenameTruncated } from "@opencode-ai/util/path"
+import { getDirectory, getFilename } from "@opencode-ai/util/path"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { ImagePreview } from "@opencode-ai/ui/image-preview"
 import { ModelSelectorPopover } from "@/components/dialog-select-model"
@@ -1784,7 +1784,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       <div class="flex items-center gap-1.5">
                         <FileIcon node={{ path: item.path, type: "file" }} class="shrink-0 size-3.5" />
                         <div class="flex items-center text-11-regular min-w-0 font-medium">
-                          <span class="text-text-strong whitespace-nowrap">{getFilenameTruncated(item.path, 14)}</span>
+                          <span class="text-text-strong whitespace-nowrap">{getFilename(item.path)}</span>
                           <Show when={item.selection}>
                             {(sel) => (
                               <span class="text-text-weak whitespace-nowrap shrink-0">
