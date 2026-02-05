@@ -280,7 +280,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const pending = inflightTodo.get(key)
           if (pending) return pending
 
-          const promise = retry(() => client.session.todo({ sessionID }))
+          const promise = retry(() => client.session.todo.list({ sessionID }))
             .then((todo) => {
               setStore("todo", sessionID, reconcile(todo.data ?? [], { key: "id" }))
             })
