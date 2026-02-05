@@ -3,12 +3,14 @@ import path from "path"
 import { GrepTool } from "../../src/tool/grep"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
+import { testModel } from "./fixtures/model"
 
 const ctx = {
   sessionID: "test",
   messageID: "",
   callID: "",
   agent: "build",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

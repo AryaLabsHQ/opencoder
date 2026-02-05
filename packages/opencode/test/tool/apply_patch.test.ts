@@ -4,12 +4,14 @@ import * as fs from "fs/promises"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
+import { testModel } from "./fixtures/model"
 
 const baseCtx = {
   sessionID: "test",
   messageID: "",
   callID: "",
   agent: "build",
+  model: testModel,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
