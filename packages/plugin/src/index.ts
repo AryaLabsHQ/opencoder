@@ -10,7 +10,7 @@ import type {
   Auth,
   Config,
   OpencodeClient,
-} from "@opencode-ai/sdk/v2"
+} from "@opencoder-ai/sdk/v2"
 
 import type { BunShell } from "./shell"
 import { type ToolDefinition } from "./tool"
