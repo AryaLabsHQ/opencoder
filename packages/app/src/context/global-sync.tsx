@@ -18,10 +18,10 @@ import {
   type PermissionRequest,
   type QuestionRequest,
   createOpencodeClient,
-} from "@opencode-ai/sdk/v2/client"
+} from "@opencoder-ai/sdk/v2/client"
 import { createStore, produce, reconcile, type SetStoreFunction, type Store } from "solid-js/store"
-import { Binary } from "@opencode-ai/util/binary"
-import { retry } from "@opencode-ai/util/retry"
+import { Binary } from "@opencoder-ai/util/binary"
+import { retry } from "@opencoder-ai/util/retry"
 import { useGlobalSDK } from "./global-sdk"
 import type { InitError } from "../pages/error"
 import {
@@ -40,8 +40,8 @@ import {
   Switch,
   Match,
 } from "solid-js"
-import { showToast } from "@opencode-ai/ui/toast"
-import { getFilename } from "@opencode-ai/util/path"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { getFilename } from "@opencoder-ai/util/path"
 import { usePlatform } from "./platform"
 import { useLanguage } from "@/context/language"
 import { Persist, persisted } from "@/utils/persist"
