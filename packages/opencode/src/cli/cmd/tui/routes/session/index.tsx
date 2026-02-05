@@ -7,7 +7,6 @@ import {
   For,
   Match,
   on,
-  onMount,
   Show,
   Switch,
   useContext,
@@ -29,7 +28,7 @@ import {
   RGBA,
 } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@opencode-ai/sdk/v2"
+import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@opencoder-ai/sdk/v2"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
@@ -567,7 +566,7 @@ export function Session() {
     {
       title: conceal() ? "Disable code concealment" : "Enable code concealment",
       value: "session.toggle.conceal",
-      keybind: "messages_toggle_conceal" as any,
+      keybind: "messages_toggle_conceal",
       category: "Session",
       onSelect: (dialog) => {
         setConceal((prev) => !prev)
@@ -1324,8 +1323,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.time.completed - user.time.created
   })
 
-  const keybind = useKeybind()
-
   return (
     <>
       <For each={props.parts}>
@@ -1343,14 +1340,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           )
         }}
       </For>
-      <Show when={props.parts.some((x) => x.type === "tool" && x.tool === "task")}>
-        <box paddingTop={1} paddingLeft={3}>
-          <text fg={theme.text}>
-            {keybind.print("session_child_first")}
-            <span style={{ fg: theme.textMuted }}> view subagents</span>
-          </text>
-        </box>
-      </Show>
       <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
         <box
           border={["left"]}
@@ -1620,7 +1609,6 @@ function InlineTool(props: {
   iconColor?: RGBA
   complete: any
   pending: string
-  spinner?: boolean
   children: JSX.Element
   part: ToolPart
 }) {
@@ -1677,18 +1665,11 @@ function InlineTool(props: {
         }
       }}
     >
-      <Switch>
-        <Match when={props.spinner}>
-          <Spinner color={fg()} children={props.children} />
-        </Match>
-        <Match when={true}>
-          <text paddingLeft={3} fg={fg()} attributes={denied() ? TextAttributes.STRIKETHROUGH : undefined}>
-            <Show fallback={<>~ {props.pending}</>} when={props.complete}>
-              <span style={{ fg: props.iconColor }}>{props.icon}</span> {props.children}
-            </Show>
-          </text>
-        </Match>
-      </Switch>
+      <text paddingLeft={3} fg={fg()} attributes={denied() ? TextAttributes.STRIKETHROUGH : undefined}>
+        <Show fallback={<>~ {props.pending}</>} when={props.complete}>
+          <span style={{ fg: props.iconColor }}>{props.icon}</span> {props.children}
+        </Show>
+      </text>
       <Show when={error() && !denied()}>
         <text fg={theme.error}>{error()}</text>
       </Show>
@@ -1855,7 +1836,6 @@ function Glob(props: ToolProps<typeof GlobTool>) {
 
 function Read(props: ToolProps<typeof ReadTool>) {
   const { theme } = useTheme()
-  const isRunning = createMemo(() => props.part.state.status === "running")
   const loaded = createMemo(() => {
     if (props.part.state.status !== "completed") return []
     if (props.part.state.time.compacted) return []
@@ -1865,13 +1845,7 @@ function Read(props: ToolProps<typeof ReadTool>) {
   })
   return (
     <>
-      <InlineTool
-        icon="→"
-        pending="Reading file..."
-        complete={props.input.filePath}
-        spinner={isRunning()}
-        part={props.part}
-      >
+      <InlineTool icon="→" pending="Reading file..." complete={props.input.filePath} part={props.part}>
         Read {normalizePath(props.input.filePath!)} {input(props.input, ["filePath"])}
       </InlineTool>
       <For each={loaded()}>
@@ -1945,62 +1919,66 @@ function Task(props: ToolProps<typeof TaskTool>) {
   const keybind = useKeybind()
   const { navigate } = useRoute()
   const local = useLocal()
-  const sync = useSync()
 
-  onMount(() => {
-    if (props.metadata.sessionId && !sync.data.message[props.metadata.sessionId]?.length)
-      sync.session.sync(props.metadata.sessionId)
-  })
-
-  const messages = createMemo(() => sync.data.message[props.metadata.sessionId ?? ""] ?? [])
-
-  const tools = createMemo(() => {
-    return messages().flatMap((msg) =>
-      (sync.data.part[msg.id] ?? [])
-        .filter((part): part is ToolPart => part.type === "tool")
-        .map((part) => ({ tool: part.tool, state: part.state })),
-    )
-  })
-
-  const current = createMemo(() => tools().findLast((x) => (x.state as any).title))
-
+  const agentType = createMemo(() => props.input.subagent_type ?? props.metadata.subagent_type ?? "unknown")
+  const current = createMemo(() => props.metadata.summary?.findLast((x) => x.state.status !== "pending"))
   const isRunning = createMemo(() => props.part.state.status === "running")
-
-  const duration = createMemo(() => {
-    const first = messages().find((x) => x.role === "user")?.time.created
-    const assistant = messages().findLast((x) => x.role === "assistant")?.time.completed
-    if (!first || !assistant) return 0
-    return assistant - first
-  })
+  const color = createMemo(() => local.agent.color(agentType()))
 
   return (
-    <InlineTool
-      icon="≡"
-      spinner={isRunning()}
-      complete={props.input.description}
-      pending="Delegating..."
-      part={props.part}
-    >
-      {props.input.description}
-      <Show when={isRunning() && tools().length > 0}>
-        {" "}
-        · {tools().length} toolcalls
-        <Show fallback={"\n└ Running..."} when={current()}>
-          {(item) => {
-            const title = createMemo(() => (item().state as any).title)
-            return (
-              <>
-                {"\n"}└ {Locale.titlecase(item().tool)} {title()}
-              </>
-            )
-          }}
-        </Show>
-      </Show>
-      <Show when={duration() && props.part.state.status === "completed"}>
-        {"\n  "}
-        {tools().length} toolcalls · {Locale.duration(duration())}
-      </Show>
-    </InlineTool>
+    <Switch>
+      <Match when={props.input.description || props.input.subagent_type}>
+        <BlockTool
+          title={"# " + Locale.titlecase(agentType()) + " Task"}
+          onClick={
+            props.metadata.sessionId
+              ? () => navigate({ type: "session", sessionID: props.metadata.sessionId! })
+              : undefined
+          }
+          part={props.part}
+          spinner={isRunning()}
+        >
+          <box>
+            <text style={{ fg: theme.textMuted }}>
+              {props.input.description ?? props.metadata.description} ({props.metadata.summary?.length ?? 0} toolcalls)
+            </text>
+            <Show when={current()}>
+              {(item) => {
+                const title = item().state.status === "completed" ? (item().state as any).title : ""
+                return (
+                  <text style={{ fg: item().state.status === "error" ? theme.error : theme.textMuted }}>
+                    └ {Locale.titlecase(item().tool)} {title}
+                  </text>
+                )
+              }}
+            </Show>
+          </box>
+          <Show when={props.metadata.sessionId}>
+            <text fg={theme.text}>
+              {keybind.print("session_child_first")}
+              <span style={{ fg: theme.textMuted }}> view subagents</span>
+            </text>
+          </Show>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool
+          icon="◉"
+          iconColor={color()}
+          pending="Delegating..."
+          complete={
+            props.input.subagent_type ??
+            props.metadata.subagent_type ??
+            props.input.description ??
+            props.metadata.description
+          }
+          part={props.part}
+        >
+          <span style={{ fg: theme.text }}>{Locale.titlecase(agentType())}</span> Task "
+          {props.input.description ?? props.metadata.description}"
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
@@ -2132,14 +2110,37 @@ function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
 }
 
 function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
+  // Try to get todos from metadata, or parse from output if missing
+  const todos = createMemo(() => {
+    // Priority 1: Use metadata.todos if available
+    if (props.metadata.todos && props.metadata.todos.length > 0) {
+      return props.metadata.todos
+    }
+
+    // Priority 2: Try to parse todos from output JSON
+    if (props.output) {
+      try {
+        const parsed = JSON.parse(props.output)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Validate that it looks like todos (has id, content, status)
+          if (parsed[0]?.id && parsed[0]?.content && parsed[0]?.status) {
+            return parsed
+          }
+        }
+      } catch {
+        // JSON parse failed, continue to fallback
+      }
+    }
+
+    return null
+  })
+
   return (
     <Switch>
-      <Match when={props.metadata.todos?.length}>
+      <Match when={todos()}>
         <BlockTool title="# Todos" part={props.part}>
           <box>
-            <For each={props.input.todos ?? []}>
-              {(todo) => <TodoItem status={todo.status} content={todo.content} />}
-            </For>
+            <For each={todos() ?? []}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
           </box>
         </BlockTool>
       </Match>
