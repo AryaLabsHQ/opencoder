@@ -38,6 +38,7 @@ export const dict = {
   "command.language.set": "言語を使用: {{language}}",
   "command.session.new": "新しいセッション",
   "command.file.open": "ファイルを開く",
+  "command.file.open.description": "ファイルを開く",
   "command.tab.close": "タブを閉じる",
   "command.context.addSelection": "選択範囲をコンテキストに追加",
   "command.context.addSelection.description": "現在のファイルから選択した行を追加",

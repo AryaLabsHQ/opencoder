@@ -42,6 +42,7 @@ export const dict = {
   "command.language.set": "Sprache verwenden: {{language}}",
   "command.session.new": "Neue Sitzung",
   "command.file.open": "Datei öffnen",
+  "command.file.open.description": "Datei öffnen",
   "command.tab.close": "Tab schließen",
   "command.context.addSelection": "Auswahl zum Kontext hinzufügen",
   "command.context.addSelection.description": "Ausgewählte Zeilen aus der aktuellen Datei hinzufügen",
