@@ -3068,7 +3068,7 @@ export type SessionChildrenResponses = {
 
 export type SessionChildrenResponse = SessionChildrenResponses[keyof SessionChildrenResponses]
 
-export type SessionTodoData = {
+export type SessionTodoListData = {
   body?: never
   path: {
     /**
@@ -3082,7 +3082,7 @@ export type SessionTodoData = {
   url: "/session/{sessionID}/todo"
 }
 
-export type SessionTodoErrors = {
+export type SessionTodoListErrors = {
   /**
    * Bad request
    */
@@ -3093,16 +3093,54 @@ export type SessionTodoErrors = {
   404: NotFoundError
 }
 
-export type SessionTodoError = SessionTodoErrors[keyof SessionTodoErrors]
+export type SessionTodoListError = SessionTodoListErrors[keyof SessionTodoListErrors]
 
-export type SessionTodoResponses = {
+export type SessionTodoListResponses = {
   /**
    * Todo list
    */
   200: Array<Todo>
 }
 
-export type SessionTodoResponse = SessionTodoResponses[keyof SessionTodoResponses]
+export type SessionTodoListResponse = SessionTodoListResponses[keyof SessionTodoListResponses]
+
+export type SessionTodoUpdateData = {
+  body?: {
+    todos: Array<Todo>
+  }
+  path: {
+    /**
+     * Session ID
+     */
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/todo"
+}
+
+export type SessionTodoUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionTodoUpdateError = SessionTodoUpdateErrors[keyof SessionTodoUpdateErrors]
+
+export type SessionTodoUpdateResponses = {
+  /**
+   * Updated todo list
+   */
+  200: Array<Todo>
+}
+
+export type SessionTodoUpdateResponse = SessionTodoUpdateResponses[keyof SessionTodoUpdateResponses]
 
 export type SessionInitData = {
   body?: {
