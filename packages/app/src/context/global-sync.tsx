@@ -6,9 +6,9 @@ import type {
   ProviderAuthResponse,
   ProviderListResponse,
   Todo,
-} from "@opencode-ai/sdk/v2/client"
-import { showToast } from "@opencode-ai/ui/toast"
-import { getFilename } from "@opencode-ai/util/path"
+} from "@opencoder-ai/sdk/v2/client"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { getFilename } from "@opencoder-ai/util/path"
 import {
   createContext,
   getOwner,

@@ -1,8 +1,9 @@
-import { Button } from "@opencode-ai/ui/button"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
-import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
-import { Tag } from "@opencode-ai/ui/tag"
-import { showToast } from "@opencode-ai/ui/toast"
+import { Button } from "@opencoder-ai/ui/button"
+import { useDialog } from "@opencoder-ai/ui/context/dialog"
+import { ProviderIcon } from "@opencoder-ai/ui/provider-icon"
+import { Tag } from "@opencoder-ai/ui/tag"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { iconNames, type IconName } from "@opencoder-ai/ui/icons/provider"
 import { popularProviders, useProviders } from "@/hooks/use-providers"
 import { createMemo, type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
@@ -32,6 +33,11 @@ export const SettingsProviders: Component = () => {
   const globalSDK = useGlobalSDK()
   const globalSync = useGlobalSync()
   const providers = useProviders()
+
+  const icon = (id: string): IconName => {
+    if (iconNames.includes(id as IconName)) return id as IconName
+    return "synthetic"
+  }
 
   const connected = createMemo(() => {
     return providers
@@ -149,7 +155,7 @@ export const SettingsProviders: Component = () => {
                 {(item) => (
                   <div class="group flex flex-wrap items-center justify-between gap-4 min-h-16 py-3 border-b border-border-weak-base last:border-none">
                     <div class="flex items-center gap-3 min-w-0">
-                      <ProviderIcon id={item.id} class="size-5 shrink-0 icon-strong-base" />
+                      <ProviderIcon id={icon(item.id)} class="size-5 shrink-0 icon-strong-base" />
                       <span class="text-14-medium text-text-strong truncate">{item.name}</span>
                       <Tag>{type(item)}</Tag>
                     </div>
@@ -157,7 +163,7 @@ export const SettingsProviders: Component = () => {
                       when={canDisconnect(item)}
                       fallback={
                         <span class="text-14-regular text-text-base opacity-0 group-hover:opacity-100 transition-opacity duration-200 pr-3 cursor-default">
-                          {language.t("settings.providers.connected.environmentDescription")}
+                          Connected from your environment variables
                         </span>
                       }
                     >
@@ -180,7 +186,7 @@ export const SettingsProviders: Component = () => {
                 <div class="flex flex-wrap items-center justify-between gap-4 min-h-16 py-3 border-b border-border-weak-base last:border-none">
                   <div class="flex flex-col min-w-0">
                     <div class="flex items-center gap-x-3">
-                      <ProviderIcon id={item.id} class="size-5 shrink-0 icon-strong-base" />
+                      <ProviderIcon id={icon(item.id)} class="size-5 shrink-0 icon-strong-base" />
                       <span class="text-14-medium text-text-strong">{item.name}</span>
                       <Show when={item.id === "opencode"}>
                         <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
@@ -213,13 +219,11 @@ export const SettingsProviders: Component = () => {
             >
               <div class="flex flex-col min-w-0">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <ProviderIcon id="synthetic" class="size-5 shrink-0 icon-strong-base" />
-                  <span class="text-14-medium text-text-strong">{language.t("provider.custom.title")}</span>
+                  <ProviderIcon id={icon("synthetic")} class="size-5 shrink-0 icon-strong-base" />
+                  <span class="text-14-medium text-text-strong">Custom provider</span>
                   <Tag>{language.t("settings.providers.tag.custom")}</Tag>
                 </div>
-                <span class="text-12-regular text-text-weak pl-8">
-                  {language.t("settings.providers.custom.description")}
-                </span>
+                <span class="text-12-regular text-text-weak pl-8">Add an OpenAI-compatible provider by base URL.</span>
               </div>
               <Button
                 size="large"
