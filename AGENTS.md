@@ -1,4 +1,10 @@
-# OpenCode - AI Coding Agent
+# AGENTS
+
+- To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
+- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
+- The default branch in this repo is `dev`.
+- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
+- Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
 
 **Generated:** 2026-01-29
 **Branch:** dev
@@ -107,111 +113,4 @@ const table = sqliteTable("session", {
 ## Testing
 
 - Avoid mocks as much as possible
-- # Test actual implementation, do not duplicate logic into tests
-
-## Overview
-
-OpenCode is an open-source AI coding agent with terminal-first experience. Provider-agnostic architecture supports Claude, OpenAI, Google, and local models.
-
-**Tech Stack:**
-
-- **Frontend:** SolidJS (web/desktop), custom TUI
-- **Backend:** Hono (Edge Functions via Cloudflare Workers/SST)
-- **Language:** TypeScript throughout
-- **Build:** Bun + Turbo
-- **Packages:** 20+ workspace packages
-
-## Structure
-
-```
-opencode/
-├── .github/workflows/     # CI/CD
-├── packages/
-│   ├── opencode/          # CLI/TUI (main app)
-│   ├── console/           # Web dashboard
-│   │   ├── app/           # Console frontend
-│   │   ├── core/          # Console backend
-│   │   ├── function/      # Cloudflare Workers
-│   │   ├── resource/      # Resource handlers
-│   │   └── mail/          # Email service
-│   ├── desktop/           # Electron desktop app
-│   ├── web/               # Marketing site (Astro)
-│   ├── sdk/               # JavaScript SDK
-│   ├── ui/                # Shared UI components
-│   ├── app/               # Web app (SolidJS)
-│   ├── enterprise/        # Enterprise features
-│   ├── slack/             # Slack integration
-│   ├── plugin/            # Plugin system
-│   ├── function/          # Serverless utilities
-│   ├── script/            # Script utilities
-│   └── util/              # Shared utilities
-├── sdks/
-│   └── vscode/            # VSCode extension
-├── infra/                 # Infrastructure configs
-├── nix/                   # Nix packages
-├── script/                # Build scripts
-└── specs/                 # Specs
-```
-
-## Commands
-
-```bash
-# Dev (TUI)
-bun dev
-
-# Type checking
-bun typecheck
-
-# Build all
-bun turbo build
-
-# Test
-bun turbo test
-
-# Regenerate JS SDK
-./packages/sdk/js/script/build.ts
-```
-
-## Conventions
-
-- **Single-word naming:** Prefer single-word variables/functions when possible
-- **No `let`:** Use `const` with ternary operators
-- **No `else`:** Use early returns
-- **No `try/catch`:** When avoidable
-- **No `any`:** Type inference preferred
-- **Bun APIs:** Use `Bun.file()` for file operations
-- **Parallel tools:** Always use parallel tools when applicable
-- **Automation:** Execute requested actions without confirmation unless blocked by missing info or safety/irreversibility
-
-## Anti-Patterns (Forbidden)
-
-- **Git operations:** Never force-push main, never amend after push, never skip hooks
-- **File operations:** Never use bash `cat/sed/awk/echo` - use Read/Edit/Write tools
-- **File creation:** Never create files unless necessary - prefer editing existing
-- **Comments:** Never add comments unless asked
-- **Tool names:** Never say tool names to users - describe actions instead
-- **Verification:** Never end turn without solving the problem - verify all changes
-
-## Technical Debt (Priority)
-
-1. **Path security vulnerabilities** (`packages/opencode/src/file/index.ts`):
-   - Symlink path escaping vulnerability
-   - Windows cross-drive path bypass
-
-2. **Legacy provider code** (`packages/opencode/src/provider/provider.ts`) - marked for removal
-
-3. **Server architecture refactor** (`packages/opencode/src/server/server.ts`) - too large
-
-4. **Permission system incomplete** (`packages/opencode/src/permission/next.ts`)
-
-## Package-Level AGENTS.md
-
-Each package has its own AGENTS.md with package-specific conventions:
-
-- `packages/opencode/AGENTS.md` - CLI behavior, agent prompts
-- `packages/app/AGENTS.md` - Web app patterns
-- `packages/console/*/AGENTS.md` - Console subpackages
-- `packages/sdk/js/AGENTS.md` - SDK generation
-- `packages/ui/AGENTS.md` - UI components
-- `packages/desktop/AGENTS.md` - Desktop app
-- `packages/enterprise/AGENTS.md` - Enterprise logic
+- Test actual implementation, do not duplicate logic into tests
