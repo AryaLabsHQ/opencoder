@@ -78,10 +78,31 @@ import { same } from "@/utils/same"
 
 type DiffStyle = "unified" | "split"
 
+type HandoffSession = {
+  prompt: string
+  files: Record<string, SelectedLineRange | null>
+}
+
+const HANDOFF_MAX = 40
+
 const handoff = {
-  prompt: "",
-  terminals: [] as string[],
-  files: {} as Record<string, SelectedLineRange | null>,
+  session: new Map<string, HandoffSession>(),
+  terminal: new Map<string, string[]>(),
+}
+
+const touch = <K, V>(map: Map<K, V>, key: K, value: V) => {
+  map.delete(key)
+  map.set(key, value)
+  while (map.size > HANDOFF_MAX) {
+    const first = map.keys().next().value
+    if (first === undefined) return
+    map.delete(first)
+  }
+}
+
+const setSessionHandoff = (key: string, patch: Partial<HandoffSession>) => {
+  const prev = handoff.session.get(key) ?? { prompt: "", files: {} }
+  touch(handoff.session, key, { ...prev, ...patch })
 }
 
 interface SessionReviewTabProps {
@@ -269,6 +290,10 @@ export default function Page() {
     pendingMessage: undefined as string | undefined,
     scrollGesture: 0,
     autoCreated: false,
+    scroll: {
+      overflow: false,
+      bottom: true,
+    },
   })
 
   createEffect(
@@ -294,8 +319,46 @@ export default function Page() {
       .finally(() => setUi("responding", false))
   }
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
+  const workspaceKey = createMemo(() => params.dir ?? "")
+  const workspaceTabs = createMemo(() => layout.tabs(workspaceKey))
   const tabs = createMemo(() => layout.tabs(sessionKey))
   const view = createMemo(() => layout.view(sessionKey))
+
+  createEffect(
+    on(
+      () => params.id,
+      (id, prev) => {
+        if (!id) return
+        if (prev) return
+
+        const pending = layout.handoff.tabs()
+        if (!pending) return
+        if (Date.now() - pending.at > 60_000) {
+          layout.handoff.clearTabs()
+          return
+        }
+
+        if (pending.id !== id) return
+        layout.handoff.clearTabs()
+        if (pending.dir !== (params.dir ?? "")) return
+
+        const from = workspaceTabs().tabs()
+        if (from.all.length === 0 && !from.active) return
+
+        const current = tabs().tabs()
+        if (current.all.length > 0 || current.active) return
+
+        const all = normalizeTabs(from.all)
+        const active = from.active ? normalizeTab(from.active) : undefined
+        tabs().setAll(all)
+        tabs().setActive(active && all.includes(active) ? active : all[0])
+
+        workspaceTabs().setAll([])
+        workspaceTabs().setActive(undefined)
+      },
+      { defer: true },
+    ),
+  )
 
   if (import.meta.env.DEV) {
     createEffect(
@@ -618,6 +681,7 @@ export default function Page() {
       </Dialog>
     )
   }
+
   const emptyUserMessages: UserMessage[] = []
   const userMessages = createMemo(
     () => messages().filter((m) => m.role === "user") as UserMessage[],
@@ -724,9 +788,7 @@ export default function Page() {
     const out = new Map<string, "add" | "del" | "mix">()
     for (const diff of diffs()) {
       const file = normalize(diff.file)
-      const add = diff.additions > 0
-      const del = diff.deletions > 0
-      const kind = add && del ? "mix" : add ? "add" : del ? "del" : "mix"
+      const kind = diff.status === "added" ? "add" : diff.status === "deleted" ? "del" : "mix"
 
       out.set(file, kind)
 
@@ -752,6 +814,7 @@ export default function Page() {
   let inputRef!: HTMLDivElement
   let promptDock: HTMLDivElement | undefined
   let scroller: HTMLDivElement | undefined
+  let content: HTMLDivElement | undefined
 
   const scrollGestureWindowMs = 250
 
@@ -771,8 +834,10 @@ export default function Page() {
   const hasScrollGesture = () => Date.now() - ui.scrollGesture < scrollGestureWindowMs
 
   createEffect(() => {
-    if (!params.id) return
-    sync.session.sync(params.id)
+    sdk.directory
+    const id = params.id
+    if (!id) return
+    sync.session.sync(id)
   })
 
   createEffect(() => {
@@ -840,7 +905,7 @@ export default function Page() {
 
   createEffect(
     on(
-      () => params.id,
+      sessionKey,
       () => {
         setStore("messageId", undefined)
         setStore("expanded", {})
@@ -920,11 +985,23 @@ export default function Page() {
     {
       id: "file.open",
       title: language.t("command.file.open"),
-      description: language.t("command.file.open.description"),
+      description: language.t("palette.search.placeholder"),
       category: language.t("command.category.file"),
       keybind: "mod+p",
       slash: "open",
       onSelect: () => dialog.show(() => <DialogSelectFile onOpenFile={() => showAllFiles()} />),
+    },
+    {
+      id: "tab.close",
+      title: language.t("command.tab.close"),
+      category: language.t("command.category.file"),
+      keybind: "mod+w",
+      disabled: !tabs().active(),
+      onSelect: () => {
+        const active = tabs().active()
+        if (!active) return
+        tabs().close(active)
+      },
     },
     {
       id: "context.addSelection",
@@ -1365,12 +1442,15 @@ export default function Page() {
     activeDiff: undefined as string | undefined,
   })
 
-  const reviewScroll = () => tree.reviewScroll
-  const setReviewScroll = (value: HTMLDivElement | undefined) => setTree("reviewScroll", value)
-  const pendingDiff = () => tree.pendingDiff
-  const setPendingDiff = (value: string | undefined) => setTree("pendingDiff", value)
-  const activeDiff = () => tree.activeDiff
-  const setActiveDiff = (value: string | undefined) => setTree("activeDiff", value)
+  createEffect(
+    on(
+      sessionKey,
+      () => {
+        setTree({ reviewScroll: undefined, pendingDiff: undefined, activeDiff: undefined })
+      },
+      { defer: true },
+    ),
+  )
 
   const showAllFiles = () => {
     if (fileTreeTab() !== "changes") return
@@ -1438,8 +1518,8 @@ export default function Page() {
                 view={view}
                 diffStyle={layout.review.diffStyle()}
                 onDiffStyleChange={layout.review.setDiffStyle}
-                onScrollRef={setReviewScroll}
-                focusedFile={activeDiff()}
+                onScrollRef={(el) => setTree("reviewScroll", el)}
+                focusedFile={tree.activeDiff}
                 onLineComment={(comment) => addCommentToContext({ ...comment, origin: "review" })}
                 comments={comments.all()}
                 focusedComment={comments.focus()}
@@ -1489,7 +1569,7 @@ export default function Page() {
   }
 
   const reviewDiffTop = (path: string) => {
-    const root = reviewScroll()
+    const root = tree.reviewScroll
     if (!root) return
 
     const id = reviewDiffId(path)
@@ -1505,7 +1585,7 @@ export default function Page() {
   }
 
   const scrollToReviewDiff = (path: string) => {
-    const root = reviewScroll()
+    const root = tree.reviewScroll
     if (!root) return false
 
     const top = reviewDiffTop(path)
@@ -1519,24 +1599,23 @@ export default function Page() {
   const focusReviewDiff = (path: string) => {
     const current = view().review.open() ?? []
     if (!current.includes(path)) view().review.setOpen([...current, path])
-    setActiveDiff(path)
-    setPendingDiff(path)
+    setTree({ activeDiff: path, pendingDiff: path })
   }
 
   createEffect(() => {
-    const pending = pendingDiff()
+    const pending = tree.pendingDiff
     if (!pending) return
-    if (!reviewScroll()) return
+    if (!tree.reviewScroll) return
     if (!diffsReady()) return
 
     const attempt = (count: number) => {
-      if (pendingDiff() !== pending) return
+      if (tree.pendingDiff !== pending) return
       if (count > 60) {
-        setPendingDiff(undefined)
+        setTree("pendingDiff", undefined)
         return
       }
 
-      const root = reviewScroll()
+      const root = tree.reviewScroll
       if (!root) {
         requestAnimationFrame(() => attempt(count + 1))
         return
@@ -1554,7 +1633,7 @@ export default function Page() {
       }
 
       if (Math.abs(root.scrollTop - top) <= 1) {
-        setPendingDiff(undefined)
+        setTree("pendingDiff", undefined)
         return
       }
 
@@ -1639,14 +1718,18 @@ export default function Page() {
     void sync.session.diff(id)
   })
 
+  let treeDir: string | undefined
   createEffect(() => {
+    const dir = sdk.directory
     if (!isDesktop()) return
     if (!view().reviewPanel.opened()) return
     if (!layout.fileTree.opened()) return
     if (sync.status === "loading") return
 
     fileTreeTab()
-    void file.tree.list("")
+    const refresh = treeDir !== dir
+    treeDir = dir
+    void (refresh ? file.tree.refresh("") : file.tree.list(""))
   })
 
   createEffect(
@@ -1675,10 +1758,40 @@ export default function Page() {
     window.history.replaceState(null, "", window.location.href.replace(/#.*$/, ""))
   }
 
+  let scrollStateFrame: number | undefined
+  let scrollStateTarget: HTMLDivElement | undefined
+
+  const updateScrollState = (el: HTMLDivElement) => {
+    const max = el.scrollHeight - el.clientHeight
+    const overflow = max > 1
+    const bottom = !overflow || el.scrollTop >= max - 2
+
+    if (ui.scroll.overflow === overflow && ui.scroll.bottom === bottom) return
+    setUi("scroll", { overflow, bottom })
+  }
+
+  const scheduleScrollState = (el: HTMLDivElement) => {
+    scrollStateTarget = el
+    if (scrollStateFrame !== undefined) return
+
+    scrollStateFrame = requestAnimationFrame(() => {
+      scrollStateFrame = undefined
+
+      const target = scrollStateTarget
+      scrollStateTarget = undefined
+      if (!target) return
+
+      updateScrollState(target)
+    })
+  }
+
   const resumeScroll = () => {
     setStore("messageId", undefined)
     autoScroll.forceScrollToBottom()
     clearMessageHash()
+
+    const el = scroller
+    if (el) scheduleScrollState(el)
   }
 
   // When the user returns to the bottom, treat the active message as "latest".
@@ -1697,12 +1810,33 @@ export default function Page() {
   let scrollSpyFrame: number | undefined
   let scrollSpyTarget: HTMLDivElement | undefined
 
+  createEffect(
+    on(
+      sessionKey,
+      () => {
+        if (scrollSpyFrame !== undefined) cancelAnimationFrame(scrollSpyFrame)
+        scrollSpyFrame = undefined
+        scrollSpyTarget = undefined
+      },
+      { defer: true },
+    ),
+  )
+
   const anchor = (id: string) => `message-${id}`
 
   const setScrollRef = (el: HTMLDivElement | undefined) => {
     scroller = el
     autoScroll.scrollRef(el)
+    if (el) scheduleScrollState(el)
   }
+
+  createResizeObserver(
+    () => content,
+    () => {
+      const el = scroller
+      if (el) scheduleScrollState(el)
+    },
+  )
 
   const turnInit = 20
   const turnBatch = 20
@@ -1804,6 +1938,8 @@ export default function Page() {
           el.scrollTo({ top: el.scrollHeight, behavior: "auto" })
         })
       }
+
+      if (el) scheduleScrollState(el)
     },
   )
 
@@ -1811,20 +1947,14 @@ export default function Page() {
     window.history.replaceState(null, "", `#${anchor(id)}`)
   }
 
-  createEffect(() => {
-    const sessionID = params.id
-    if (!sessionID) return
-    const raw = sessionStorage.getItem("opencode.pendingMessage")
-    if (!raw) return
-    const parts = raw.split("|")
-    const pendingSessionID = parts[0]
-    const messageID = parts[1]
-    if (!pendingSessionID || !messageID) return
-    if (pendingSessionID !== sessionID) return
-
-    sessionStorage.removeItem("opencode.pendingMessage")
-    setUi("pendingMessage", messageID)
-  })
+  createEffect(
+    on(sessionKey, (key) => {
+      if (!params.id) return
+      const messageID = layout.pendingMessage.consume(key)
+      if (!messageID) return
+      setUi("pendingMessage", messageID)
+    }),
+  )
 
   const scrollToElement = (el: HTMLElement, behavior: ScrollBehavior) => {
     const root = scroller
@@ -1890,6 +2020,9 @@ export default function Page() {
     const hash = window.location.hash.slice(1)
     if (!hash) {
       autoScroll.forceScrollToBottom()
+
+      const el = scroller
+      if (el) scheduleScrollState(el)
       return
     }
 
@@ -1915,6 +2048,9 @@ export default function Page() {
     }
 
     autoScroll.forceScrollToBottom()
+
+    const el = scroller
+    if (el) scheduleScrollState(el)
   }
 
   const closestMessage = (node: Element | null): HTMLElement | null => {
@@ -2038,7 +2174,7 @@ export default function Page() {
 
   createEffect(() => {
     if (!prompt.ready()) return
-    handoff.prompt = previewPrompt()
+    setSessionHandoff(sessionKey(), { prompt: previewPrompt() })
   })
 
   createEffect(() => {
@@ -2058,26 +2194,29 @@ export default function Page() {
       return language.t("terminal.title")
     }
 
-    handoff.terminals = terminal.all().map(label)
+    touch(handoff.terminal, params.dir!, terminal.all().map(label))
   })
 
   createEffect(() => {
     if (!file.ready()) return
-    handoff.files = Object.fromEntries(
-      tabs()
-        .all()
-        .flatMap((tab) => {
-          const path = file.pathFromTab(tab)
-          if (!path) return []
-          return [[path, file.selectedLines(path) ?? null] as const]
-        }),
-    )
+    setSessionHandoff(sessionKey(), {
+      files: Object.fromEntries(
+        tabs()
+          .all()
+          .flatMap((tab) => {
+            const path = file.pathFromTab(tab)
+            if (!path) return []
+            return [[path, file.selectedLines(path) ?? null] as const]
+          }),
+      ),
+    })
   })
 
   onCleanup(() => {
     cancelTurnBackfill()
     document.removeEventListener("keydown", handleKeyDown)
     if (scrollSpyFrame !== undefined) cancelAnimationFrame(scrollSpyFrame)
+    if (scrollStateFrame !== undefined) cancelAnimationFrame(scrollStateFrame)
   })
 
   return (
@@ -2173,7 +2312,7 @@ export default function Page() {
                                 diffs={reviewDiffs}
                                 view={view}
                                 diffStyle="unified"
-                                focusedFile={activeDiff()}
+                                focusedFile={tree.activeDiff}
                                 onLineComment={(comment) => addCommentToContext({ ...comment, origin: "review" })}
                                 comments={comments.all()}
                                 focusedComment={comments.focus()}
@@ -2208,8 +2347,9 @@ export default function Page() {
                       <div
                         class="absolute left-1/2 -translate-x-1/2 bottom-[calc(var(--prompt-height,8rem)+32px)] z-[60] pointer-events-none transition-all duration-200 ease-out"
                         classList={{
-                          "opacity-100 translate-y-0 scale-100": autoScroll.userScrolled(),
-                          "opacity-0 translate-y-2 scale-95 pointer-events-none": !autoScroll.userScrolled(),
+                          "opacity-100 translate-y-0 scale-100": ui.scroll.overflow && !ui.scroll.bottom,
+                          "opacity-0 translate-y-2 scale-95 pointer-events-none":
+                            !ui.scroll.overflow || ui.scroll.bottom,
                         }}
                       >
                         <button
@@ -2307,6 +2447,7 @@ export default function Page() {
                           markScrollGesture(e.currentTarget)
                         }}
                         onScroll={(e) => {
+                          scheduleScrollState(e.currentTarget)
                           if (!hasScrollGesture()) return
                           autoScroll.handleScroll()
                           markScrollGesture(e.currentTarget)
@@ -2322,35 +2463,129 @@ export default function Page() {
                               "sticky top-0 z-30 bg-background-stronger": true,
                               "w-full": true,
                               "px-4 md:px-6": true,
-                              "md:max-w-200 md:mx-auto": centered(),
+                              "md:max-w-200 md:mx-auto 3xl:max-w-[1200px]": centered(),
                             }}
                           >
-                            <div class="h-10 flex items-center gap-1">
-                              <Show when={info()?.parentID}>
-                                <IconButton
-                                  tabIndex={-1}
-                                  icon="arrow-left"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    navigate(`/${params.dir}/session/${info()?.parentID}`)
-                                  }}
-                                  aria-label={language.t("common.goBack")}
-                                />
-                              </Show>
-                              <Show when={info()?.title}>
-                                <h1 class="text-16-medium text-text-strong truncate">{info()?.title}</h1>
+                            <div class="h-10 w-full flex items-center justify-between gap-2">
+                              <div class="flex items-center gap-1 min-w-0 flex-1">
+                                <Show when={info()?.parentID}>
+                                  <IconButton
+                                    tabIndex={-1}
+                                    icon="arrow-left"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      navigate(`/${params.dir}/session/${info()?.parentID}`)
+                                    }}
+                                    aria-label={language.t("common.goBack")}
+                                  />
+                                </Show>
+                                <Show when={info()?.title || title.editing}>
+                                  <Show
+                                    when={title.editing}
+                                    fallback={
+                                      <h1
+                                        class="text-16-medium text-text-strong truncate min-w-0"
+                                        onDblClick={openTitleEditor}
+                                      >
+                                        {info()?.title}
+                                      </h1>
+                                    }
+                                  >
+                                    <InlineInput
+                                      ref={(el) => {
+                                        titleRef = el
+                                      }}
+                                      value={title.draft}
+                                      disabled={title.saving}
+                                      class="text-16-medium text-text-strong grow-1 min-w-0"
+                                      onInput={(event) => setTitle("draft", event.currentTarget.value)}
+                                      onKeyDown={(event) => {
+                                        event.stopPropagation()
+                                        if (event.key === "Enter") {
+                                          event.preventDefault()
+                                          void saveTitleEditor()
+                                          return
+                                        }
+                                        if (event.key === "Escape") {
+                                          event.preventDefault()
+                                          closeTitleEditor()
+                                        }
+                                      }}
+                                      onBlur={() => closeTitleEditor()}
+                                    />
+                                  </Show>
+                                </Show>
+                              </div>
+                              <Show when={params.id}>
+                                {(id) => (
+                                  <div class="shrink-0 flex items-center">
+                                    <DropdownMenu
+                                      open={title.menuOpen}
+                                      onOpenChange={(open) => setTitle("menuOpen", open)}
+                                    >
+                                      <Tooltip value={language.t("common.moreOptions")} placement="top">
+                                        <DropdownMenu.Trigger
+                                          as={IconButton}
+                                          icon="dot-grid"
+                                          variant="ghost"
+                                          class="size-6 rounded-md data-[expanded]:bg-surface-base-active"
+                                          aria-label={language.t("common.moreOptions")}
+                                        />
+                                      </Tooltip>
+                                      <DropdownMenu.Portal>
+                                        <DropdownMenu.Content
+                                          onCloseAutoFocus={(event) => {
+                                            if (!title.pendingRename) return
+                                            event.preventDefault()
+                                            setTitle("pendingRename", false)
+                                            openTitleEditor()
+                                          }}
+                                        >
+                                          <DropdownMenu.Item
+                                            onSelect={() => {
+                                              setTitle({ pendingRename: true, menuOpen: false })
+                                            }}
+                                          >
+                                            <DropdownMenu.ItemLabel>
+                                              {language.t("common.rename")}
+                                            </DropdownMenu.ItemLabel>
+                                          </DropdownMenu.Item>
+                                          <DropdownMenu.Item onSelect={() => void archiveSession(id())}>
+                                            <DropdownMenu.ItemLabel>
+                                              {language.t("common.archive")}
+                                            </DropdownMenu.ItemLabel>
+                                          </DropdownMenu.Item>
+                                          <DropdownMenu.Separator />
+                                          <DropdownMenu.Item
+                                            onSelect={() => dialog.show(() => <DialogDeleteSession sessionID={id()} />)}
+                                          >
+                                            <DropdownMenu.ItemLabel>
+                                              {language.t("common.delete")}
+                                            </DropdownMenu.ItemLabel>
+                                          </DropdownMenu.Item>
+                                        </DropdownMenu.Content>
+                                      </DropdownMenu.Portal>
+                                    </DropdownMenu>
+                                  </div>
+                                )}
                               </Show>
                             </div>
                           </div>
                         </Show>
 
                         <div
-                          ref={autoScroll.contentRef}
+                          ref={(el) => {
+                            content = el
+                            autoScroll.contentRef(el)
+
+                            const root = scroller
+                            if (root) scheduleScrollState(root)
+                          }}
                           role="log"
-                          class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
+                          class="flex flex-col gap-12 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
                           classList={{
                             "w-full": true,
-                            "md:max-w-200 md:mx-auto": centered(),
+                            "md:max-w-200 md:mx-auto 3xl:max-w-[1200px]": centered(),
                             "mt-0.5": centered(),
                             "mt-0": !centered(),
                           }}
@@ -2403,7 +2638,7 @@ export default function Page() {
                                   data-message-id={message.id}
                                   classList={{
                                     "min-w-0 w-full max-w-full": true,
-                                    "md:max-w-200": centered(),
+                                    "md:max-w-200 3xl:max-w-[1200px]": centered(),
                                   }}
                                 >
                                   <SessionTurn
@@ -2460,7 +2695,7 @@ export default function Page() {
             <div
               classList={{
                 "w-full px-4 pointer-events-auto": true,
-                "md:max-w-200 md:mx-auto": centered(),
+                "md:max-w-200 md:mx-auto 3xl:max-w-[1200px]": centered(),
               }}
             >
               <Show when={questionRequest()} keyed>
@@ -2534,33 +2769,33 @@ export default function Page() {
                       </div>
                     </div>
                   </div>
-	                )}
-	              </Show>
+                )}
+              </Show>
 
-	              <Show when={!blocked()}>
-	                <Show
-	                  when={prompt.ready()}
-	                  fallback={
-	                    <div class="w-full min-h-32 md:min-h-40 rounded-md border border-border-weak-base bg-background-base/50 px-4 py-3 text-text-weak whitespace-pre-wrap pointer-events-none">
-	                      {handoff.prompt || language.t("prompt.loading")}
-	                    </div>
-	                  }
-	                >
-	                  <PromptInput
-	                    ref={(el) => {
+              <Show when={!blocked()}>
+                <Show
+                  when={prompt.ready()}
+                  fallback={
+                    <div class="w-full min-h-32 md:min-h-40 rounded-md border border-border-weak-base bg-background-base/50 px-4 py-3 text-text-weak whitespace-pre-wrap pointer-events-none">
+                      {handoff.session.get(sessionKey())?.prompt || language.t("prompt.loading")}
+                    </div>
+                  }
+                >
+                  <PromptInput
+                    ref={(el) => {
                       inputRef = el
                     }}
                     newSessionWorktree={newSessionWorktree()}
                     onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
                     onSubmit={() => {
                       comments.clear()
-	                      resumeScroll()
-	                    }}
-	                  />
-	                </Show>
-	              </Show>
-	            </div>
-	          </div>
+                      resumeScroll()
+                    }}
+                  />
+                </Show>
+              </Show>
+            </div>
+          </div>
 
           <Show when={isDesktop() && view().reviewPanel.opened()}>
             <ResizeHandle
@@ -2771,6 +3006,7 @@ export default function Page() {
                             const c = state()?.content
                             return c?.mimeType === "image/svg+xml"
                           })
+                          const isBinary = createMemo(() => state()?.content?.type === "binary")
                           const svgContent = createMemo(() => {
                             if (!isSvg()) return
                             const c = state()?.content
@@ -2814,7 +3050,7 @@ export default function Page() {
                             const p = path()
                             if (!p) return null
                             if (file.ready()) return file.selectedLines(p) ?? null
-                            return handoff.files[p] ?? null
+                            return handoff.session.get(sessionKey())?.files[p] ?? null
                           })
 
                           let wrap: HTMLDivElement | undefined
@@ -3223,6 +3459,19 @@ export default function Page() {
                                     </Show>
                                   </div>
                                 </Match>
+                                <Match when={state()?.loaded && isBinary()}>
+                                  <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
+                                    <Mark class="w-14 opacity-10" />
+                                    <div class="flex flex-col gap-2 max-w-md">
+                                      <div class="text-14-semibold text-text-strong truncate">
+                                        {path()?.split("/").pop()}
+                                      </div>
+                                      <div class="text-14-regular text-text-weak">
+                                        {language.t("session.files.binaryContent")}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Match>
                                 <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
                                 <Match when={state()?.loading}>
                                   <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
@@ -3295,7 +3544,7 @@ export default function Page() {
                               allowed={diffFiles()}
                               kinds={kinds()}
                               draggable={false}
-                              active={activeDiff()}
+                              active={tree.activeDiff}
                               onFileClick={(node) => focusReviewDiff(node.path)}
                             />
                           </Show>
@@ -3355,7 +3604,7 @@ export default function Page() {
             fallback={
               <div class="flex flex-col h-full pointer-events-none">
                 <div class="h-10 flex items-center gap-2 px-2 border-b border-border-weak-base bg-background-stronger overflow-hidden">
-                  <For each={handoff.terminals}>
+                  <For each={handoff.terminal.get(params.dir!) ?? []}>
                     {(title) => (
                       <div class="px-2 py-1 rounded-md bg-surface-base text-14-regular text-text-weak truncate max-w-40">
                         {title}
