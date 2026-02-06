@@ -5,10 +5,7 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    }
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,4 +16,3 @@
     "typescript": "catalog:"
   }
 }
-
