@@ -2,14 +2,13 @@ import { createEffect, createMemo, For, Match, on, onCleanup, Show, Switch } fro
 import { createStore, produce } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
 import { useParams } from "@solidjs/router"
-import { useCodeComponent } from "@opencode-ai/ui/context/code"
-import { sampledChecksum } from "@opencode-ai/util/encode"
+import { useCodeComponent } from "@opencoder-ai/ui/context/code"
+import { sampledChecksum } from "@opencoder-ai/util/encode"
 import { decode64 } from "@/utils/base64"
-import { showToast } from "@opencode-ai/ui/toast"
-import { LineComment as LineCommentView, LineCommentEditor } from "@opencode-ai/ui/line-comment"
-import { Mark } from "@opencode-ai/ui/logo"
-import { Tabs } from "@opencode-ai/ui/tabs"
-import { ScrollView } from "@opencode-ai/ui/scroll-view"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { LineComment as LineCommentView, LineCommentEditor } from "@opencoder-ai/ui/line-comment"
+import { Mark } from "@opencoder-ai/ui/logo"
+import { Tabs } from "@opencoder-ai/ui/tabs"
 import { useLayout } from "@/context/layout"
 import { selectionFromLines, useFile, type FileSelection, type SelectedLineRange } from "@/context/file"
 import { useComments } from "@/context/comments"
@@ -510,52 +509,51 @@ export function FileTabContent(props: { tab: string }) {
   )
 
   return (
-    <Tabs.Content value={props.tab} class="mt-3 relative h-full">
-      <ScrollView
-        class="h-full"
-        viewportRef={(el: HTMLDivElement) => {
-          scroll = el
-          restoreScroll()
-        }}
-        onScroll={handleScroll as any}
-      >
-        <Switch>
-          <Match when={state()?.loaded && isImage()}>
-            <div class="px-6 py-4 pb-40">
-              <img
-                src={imageDataUrl()}
-                alt={path()}
-                class="max-w-full"
-                onLoad={() => requestAnimationFrame(restoreScroll)}
-              />
-            </div>
-          </Match>
-          <Match when={state()?.loaded && isSvg()}>
-            <div class="flex flex-col gap-4 px-6 py-4">
-              {renderCode(svgContent() ?? "", "")}
-              <Show when={svgPreviewUrl()}>
-                <div class="flex justify-center pb-40">
-                  <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
-                </div>
-              </Show>
-            </div>
-          </Match>
-          <Match when={state()?.loaded && isBinary()}>
-            <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
-              <Mark class="w-14 opacity-10" />
-              <div class="flex flex-col gap-2 max-w-md">
-                <div class="text-14-semibold text-text-strong truncate">{path()?.split("/").pop()}</div>
-                <div class="text-14-regular text-text-weak">{language.t("session.files.binaryContent")}</div>
+    <Tabs.Content
+      value={props.tab}
+      class="mt-3 relative"
+      ref={(el: HTMLDivElement) => {
+        scroll = el
+        restoreScroll()
+      }}
+      onScroll={handleScroll}
+    >
+      <Switch>
+        <Match when={state()?.loaded && isImage()}>
+          <div class="px-6 py-4 pb-40">
+            <img
+              src={imageDataUrl()}
+              alt={path()}
+              class="max-w-full"
+              onLoad={() => requestAnimationFrame(restoreScroll)}
+            />
+          </div>
+        </Match>
+        <Match when={state()?.loaded && isSvg()}>
+          <div class="flex flex-col gap-4 px-6 py-4">
+            {renderCode(svgContent() ?? "", "")}
+            <Show when={svgPreviewUrl()}>
+              <div class="flex justify-center pb-40">
+                <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
               </div>
+            </Show>
+          </div>
+        </Match>
+        <Match when={state()?.loaded && isBinary()}>
+          <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
+            <Mark class="w-14 opacity-10" />
+            <div class="flex flex-col gap-2 max-w-md">
+              <div class="text-14-semibold text-text-strong truncate">{path()?.split("/").pop()}</div>
+              <div class="text-14-regular text-text-weak">{language.t("session.files.binaryContent")}</div>
             </div>
-          </Match>
-          <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
-          <Match when={state()?.loading}>
-            <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
-          </Match>
-          <Match when={state()?.error}>{(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}</Match>
-        </Switch>
-      </ScrollView>
+          </div>
+        </Match>
+        <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
+        <Match when={state()?.loading}>
+          <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
+        </Match>
+        <Match when={state()?.error}>{(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}</Match>
+      </Switch>
     </Tabs.Content>
   )
 }
