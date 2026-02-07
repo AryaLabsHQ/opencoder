@@ -1,11 +1,7 @@
 import { createEffect, on, onCleanup, type JSX } from "solid-js"
-import type { FileDiff } from "@opencode-ai/sdk/v2"
-import { SessionReview } from "@opencode-ai/ui/session-review"
-import type {
-  SessionReviewCommentActions,
-  SessionReviewCommentDelete,
-  SessionReviewCommentUpdate,
-} from "@opencode-ai/ui/session-review"
+import { createStore } from "solid-js/store"
+import type { FileDiff } from "@opencoder-ai/sdk/v2"
+import { SessionReview } from "@opencoder-ai/ui/session-review"
 import type { SelectedLineRange } from "@/context/file"
 import { useSDK } from "@/context/sdk"
 import { useLayout } from "@/context/layout"
@@ -22,9 +18,6 @@ export interface SessionReviewTabProps {
   onDiffStyleChange?: (style: DiffStyle) => void
   onViewFile?: (file: string) => void
   onLineComment?: (comment: { file: string; selection: SelectedLineRange; comment: string; preview?: string }) => void
-  onLineCommentUpdate?: (comment: SessionReviewCommentUpdate) => void
-  onLineCommentDelete?: (comment: SessionReviewCommentDelete) => void
-  lineCommentActions?: SessionReviewCommentActions
   comments?: LineComment[]
   focusedComment?: { file: string; id: string } | null
   onFocusedCommentChange?: (focus: { file: string; id: string } | null) => void
@@ -38,8 +31,38 @@ export interface SessionReviewTabProps {
 }
 
 export function StickyAddButton(props: { children: JSX.Element }) {
+  const [state, setState] = createStore({ stuck: false })
+  let button: HTMLDivElement | undefined
+
+  createEffect(() => {
+    const node = button
+    if (!node) return
+
+    const scroll = node.parentElement
+    if (!scroll) return
+
+    const handler = () => {
+      const rect = node.getBoundingClientRect()
+      const scrollRect = scroll.getBoundingClientRect()
+      setState("stuck", rect.right >= scrollRect.right && scroll.scrollWidth > scroll.clientWidth)
+    }
+
+    scroll.addEventListener("scroll", handler, { passive: true })
+    const observer = new ResizeObserver(handler)
+    observer.observe(scroll)
+    handler()
+    onCleanup(() => {
+      scroll.removeEventListener("scroll", handler)
+      observer.disconnect()
+    })
+  })
+
   return (
-    <div class="bg-background-stronger h-full shrink-0 sticky right-0 z-10 flex items-center justify-center pr-3">
+    <div
+      ref={button}
+      class="bg-background-base h-full shrink-0 sticky right-0 z-10 flex items-center justify-center border-b border-border-weak-base px-3"
+      classList={{ "border-l": state.stuck }}
+    >
       {props.children}
     </div>
   )
@@ -47,11 +70,10 @@ export function StickyAddButton(props: { children: JSX.Element }) {
 
 export function SessionReviewTab(props: SessionReviewTabProps) {
   let scroll: HTMLDivElement | undefined
-  let restoreFrame: number | undefined
-  let userInteracted = false
+  let frame: number | undefined
+  let pending: { x: number; y: number } | undefined
 
   const sdk = useSDK()
-  const layout = useLayout()
 
   const readFile = async (path: string) => {
     return sdk.client.file
@@ -63,81 +85,48 @@ export function SessionReviewTab(props: SessionReviewTabProps) {
       })
   }
 
-  const handleInteraction = () => {
-    userInteracted = true
-  }
-
-  const doRestore = () => {
-    restoreFrame = undefined
+  const restoreScroll = () => {
     const el = scroll
-    if (!el || !layout.ready() || userInteracted) return
-    if (el.clientHeight === 0 || el.clientWidth === 0) return
+    if (!el) return
 
     const s = props.view().scroll("review")
-    if (!s || (s.x === 0 && s.y === 0)) return
+    if (!s) return
 
-    const maxY = Math.max(0, el.scrollHeight - el.clientHeight)
-    const maxX = Math.max(0, el.scrollWidth - el.clientWidth)
-
-    const targetY = Math.min(s.y, maxY)
-    const targetX = Math.min(s.x, maxX)
-
-    if (el.scrollTop !== targetY) el.scrollTop = targetY
-    if (el.scrollLeft !== targetX) el.scrollLeft = targetX
-  }
-
-  const queueRestore = () => {
-    if (userInteracted || restoreFrame !== undefined) return
-    restoreFrame = requestAnimationFrame(doRestore)
+    if (el.scrollTop !== s.y) el.scrollTop = s.y
+    if (el.scrollLeft !== s.x) el.scrollLeft = s.x
   }
 
   const handleScroll = (event: Event & { currentTarget: HTMLDivElement }) => {
-    if (!layout.ready() || !userInteracted) return
+    pending = {
+      x: event.currentTarget.scrollLeft,
+      y: event.currentTarget.scrollTop,
+    }
+    if (frame !== undefined) return
 
-    const el = event.currentTarget
-    if (el.clientHeight === 0 || el.clientWidth === 0) return
+    frame = requestAnimationFrame(() => {
+      frame = undefined
 
-    props.view().setScroll("review", {
-      x: el.scrollLeft,
-      y: el.scrollTop,
+      const next = pending
+      pending = undefined
+      if (!next) return
+
+      props.view().setScroll("review", next)
     })
   }
 
   createEffect(
     on(
       () => props.diffs().length,
-      () => queueRestore(),
-      { defer: true },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => props.diffStyle,
-      () => queueRestore(),
-      { defer: true },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => layout.ready(),
-      (ready) => {
-        if (!ready) return
-        queueRestore()
+      () => {
+        requestAnimationFrame(restoreScroll)
       },
       { defer: true },
     ),
   )
 
   onCleanup(() => {
-    if (restoreFrame !== undefined) cancelAnimationFrame(restoreFrame)
-    if (scroll) {
-      scroll.removeEventListener("wheel", handleInteraction)
-      scroll.removeEventListener("pointerdown", handleInteraction)
-      scroll.removeEventListener("touchstart", handleInteraction)
-      scroll.removeEventListener("keydown", handleInteraction)
-    }
+    if (frame === undefined) return
+    cancelAnimationFrame(frame)
   })
 
   return (
@@ -146,15 +135,11 @@ export function SessionReviewTab(props: SessionReviewTabProps) {
       empty={props.empty}
       scrollRef={(el) => {
         scroll = el
-        el.addEventListener("wheel", handleInteraction, { passive: true, capture: true })
-        el.addEventListener("pointerdown", handleInteraction, { passive: true, capture: true })
-        el.addEventListener("touchstart", handleInteraction, { passive: true, capture: true })
-        el.addEventListener("keydown", handleInteraction, { passive: true, capture: true })
         props.onScrollRef?.(el)
-        queueRestore()
+        restoreScroll()
       }}
       onScroll={handleScroll}
-      onDiffRendered={queueRestore}
+      onDiffRendered={() => requestAnimationFrame(restoreScroll)}
       open={props.view().review.open()}
       onOpenChange={props.view().review.setOpen}
       classes={{
@@ -169,9 +154,6 @@ export function SessionReviewTab(props: SessionReviewTabProps) {
       focusedFile={props.focusedFile}
       readFile={readFile}
       onLineComment={props.onLineComment}
-      onLineCommentUpdate={props.onLineCommentUpdate}
-      onLineCommentDelete={props.onLineCommentDelete}
-      lineCommentActions={props.lineCommentActions}
       comments={props.comments}
       focusedComment={props.focusedComment}
       onFocusedCommentChange={props.onFocusedCommentChange}
