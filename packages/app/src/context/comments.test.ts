@@ -8,7 +8,7 @@ beforeAll(async () => {
   mock.module("@solidjs/router", () => ({
     useParams: () => ({}),
   }))
-  mock.module("@opencode-ai/ui/context", () => ({
+  mock.module("@opencoder-ai/ui/context", () => ({
     createSimpleContext: () => ({
       use: () => undefined,
       provider: () => undefined,
