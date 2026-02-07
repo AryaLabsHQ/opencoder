@@ -9001,7 +9001,7 @@
             "type": "boolean"
           },
           "mdnsDomain": {
-            "description": "Custom domain name for mDNS service",
+            "description": "Custom domain name for mDNS service (default: opencode.local)",
             "type": "string"
           },
           "cors": {
@@ -9115,6 +9115,10 @@
           "model": {
             "type": "string"
           },
+          "variant": {
+            "description": "Default model variant for this agent (applies only when using the agent's configured model).",
+            "type": "string"
+          },
           "temperature": {
             "type": "number"
           },
@@ -9157,9 +9161,17 @@
             "additionalProperties": {}
           },
           "color": {
-            "description": "Hex color code for the agent (e.g., #FF5733)",
-            "type": "string",
-            "pattern": "^#[0-9a-fA-F]{6}$"
+            "description": "Hex color code (e.g., #FF5733) or theme color (e.g., primary)",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "string",
+                "enum": ["primary", "secondary", "accent", "success", "warning", "error", "info"]
+              }
+            ]
           },
           "steps": {
             "description": "Maximum number of agentic iterations before forcing text-only response",
