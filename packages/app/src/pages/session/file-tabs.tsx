@@ -1,20 +1,16 @@
-import { createEffect, createMemo, For, Match, on, onCleanup, Show, Switch } from "solid-js"
+import { type ValidComponent, createEffect, createMemo, For, Match, on, onCleanup, Show, Switch } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
-import { useParams } from "@solidjs/router"
-import { useCodeComponent } from "@opencode-ai/ui/context/code"
-import { sampledChecksum } from "@opencode-ai/util/encode"
+import { sampledChecksum } from "@opencoder-ai/util/encode"
 import { decode64 } from "@/utils/base64"
-import { showToast } from "@opencode-ai/ui/toast"
-import { LineComment as LineCommentView, LineCommentEditor } from "@opencode-ai/ui/line-comment"
-import { Mark } from "@opencode-ai/ui/logo"
-import { Tabs } from "@opencode-ai/ui/tabs"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { LineComment as LineCommentView, LineCommentEditor } from "@opencoder-ai/ui/line-comment"
+import { Mark } from "@opencoder-ai/ui/logo"
+import { Tabs } from "@opencoder-ai/ui/tabs"
 import { useLayout } from "@/context/layout"
-import { selectionFromLines, useFile, type FileSelection, type SelectedLineRange } from "@/context/file"
+import { useFile, type SelectedLineRange } from "@/context/file"
 import { useComments } from "@/context/comments"
 import { useLanguage } from "@/context/language"
-import { usePrompt } from "@/context/prompt"
-import { getSessionHandoff } from "@/pages/session/handoff"
 
 const formatCommentLabel = (range: SelectedLineRange) => {
   const start = Math.min(range.start, range.end)
@@ -23,29 +19,34 @@ const formatCommentLabel = (range: SelectedLineRange) => {
   return `lines ${start}-${end}`
 }
 
-export function FileTabContent(props: { tab: string }) {
-  const params = useParams()
-  const layout = useLayout()
-  const file = useFile()
-  const comments = useComments()
-  const language = useLanguage()
-  const prompt = usePrompt()
-  const codeComponent = useCodeComponent()
-
-  const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
-  const tabs = createMemo(() => layout.tabs(sessionKey))
-  const view = createMemo(() => layout.view(sessionKey))
-
+export function FileTabContent(props: {
+  tab: string
+  activeTab: () => string
+  tabs: () => ReturnType<ReturnType<typeof useLayout>["tabs"]>
+  view: () => ReturnType<ReturnType<typeof useLayout>["view"]>
+  handoffFiles: () => Record<string, SelectedLineRange | null> | undefined
+  file: ReturnType<typeof useFile>
+  comments: ReturnType<typeof useComments>
+  language: ReturnType<typeof useLanguage>
+  codeComponent: NonNullable<ValidComponent>
+  addCommentToContext: (input: {
+    file: string
+    selection: SelectedLineRange
+    comment: string
+    preview?: string
+    origin?: "review" | "file"
+  }) => void
+}) {
   let scroll: HTMLDivElement | undefined
   let scrollFrame: number | undefined
   let pending: { x: number; y: number } | undefined
   let codeScroll: HTMLElement[] = []
 
-  const path = createMemo(() => file.pathFromTab(props.tab))
+  const path = createMemo(() => props.file.pathFromTab(props.tab))
   const state = createMemo(() => {
     const p = path()
     if (!p) return
-    return file.get(p)
+    return props.file.get(p)
   })
   const contents = createMemo(() => state()?.content?.content ?? "")
   const cacheKey = createMemo(() => sampledChecksum(contents()))
@@ -81,7 +82,7 @@ export function FileTabContent(props: { tab: string }) {
     svgToast.shown = true
     showToast({
       variant: "error",
-      title: language.t("toast.file.loadFailed.title"),
+      title: props.language.t("toast.file.loadFailed.title"),
     })
   })
   const svgPreviewUrl = createMemo(() => {
@@ -99,57 +100,16 @@ export function FileTabContent(props: { tab: string }) {
   const selectedLines = createMemo(() => {
     const p = path()
     if (!p) return null
-    if (file.ready()) return file.selectedLines(p) ?? null
-    return getSessionHandoff(sessionKey())?.files[p] ?? null
+    if (props.file.ready()) return props.file.selectedLines(p) ?? null
+    return props.handoffFiles()?.[p] ?? null
   })
-
-  const selectionPreview = (source: string, selection: FileSelection) => {
-    const start = Math.max(1, Math.min(selection.startLine, selection.endLine))
-    const end = Math.max(selection.startLine, selection.endLine)
-    const lines = source.split("\n").slice(start - 1, end)
-    if (lines.length === 0) return undefined
-    return lines.slice(0, 2).join("\n")
-  }
-
-  const addCommentToContext = (input: {
-    file: string
-    selection: SelectedLineRange
-    comment: string
-    preview?: string
-    origin?: "review" | "file"
-  }) => {
-    const selection = selectionFromLines(input.selection)
-    const preview =
-      input.preview ??
-      (() => {
-        if (input.file === path()) return selectionPreview(contents(), selection)
-        const source = file.get(input.file)?.content?.content
-        if (!source) return undefined
-        return selectionPreview(source, selection)
-      })()
-
-    const saved = comments.add({
-      file: input.file,
-      selection: input.selection,
-      comment: input.comment,
-    })
-    prompt.context.add({
-      type: "file",
-      path: input.file,
-      selection,
-      comment: input.comment,
-      commentID: saved.id,
-      commentOrigin: input.origin,
-      preview,
-    })
-  }
 
   let wrap: HTMLDivElement | undefined
 
   const fileComments = createMemo(() => {
     const p = path()
     if (!p) return []
-    return comments.list(p)
+    return props.comments.list(p)
   })
 
   const commentLayout = createMemo(() => {
@@ -268,19 +228,19 @@ export function FileTabContent(props: { tab: string }) {
   })
 
   createEffect(() => {
-    const focus = comments.focus()
+    const focus = props.comments.focus()
     const p = path()
     if (!focus || !p) return
     if (focus.file !== p) return
-    if (tabs().active() !== props.tab) return
+    if (props.activeTab() !== props.tab) return
 
     const target = fileComments().find((comment) => comment.id === focus.id)
     if (!target) return
 
     setNote("openedComment", target.id)
     setNote("commenting", null)
-    file.setSelectedLines(p, target.selection)
-    requestAnimationFrame(() => comments.clearFocus())
+    props.file.setSelectedLines(p, target.selection)
+    requestAnimationFrame(() => props.comments.clearFocus())
   })
 
   const getCodeScroll = () => {
@@ -309,7 +269,7 @@ export function FileTabContent(props: { tab: string }) {
       pending = undefined
       if (!out) return
 
-      view().setScroll(props.tab, out)
+      props.view().setScroll(props.tab, out)
     })
   }
 
@@ -345,7 +305,7 @@ export function FileTabContent(props: { tab: string }) {
     const el = scroll
     if (!el) return
 
-    const s = view().scroll(props.tab)
+    const s = props.view()?.scroll(props.tab)
     if (!s) return
 
     syncCodeScroll()
@@ -383,7 +343,7 @@ export function FileTabContent(props: { tab: string }) {
 
   createEffect(
     on(
-      () => file.ready(),
+      () => props.file.ready(),
       (ready) => {
         if (!ready) return
         requestAnimationFrame(restoreScroll)
@@ -394,7 +354,7 @@ export function FileTabContent(props: { tab: string }) {
 
   createEffect(
     on(
-      () => tabs().active() === props.tab,
+      () => props.tabs().active() === props.tab,
       (active) => {
         if (!active) return
         if (!state()?.loaded) return
@@ -421,7 +381,7 @@ export function FileTabContent(props: { tab: string }) {
       class={`relative overflow-hidden ${wrapperClass}`}
     >
       <Dynamic
-        component={codeComponent}
+        component={props.codeComponent}
         file={{
           name: path() ?? "",
           contents: source,
@@ -437,7 +397,7 @@ export function FileTabContent(props: { tab: string }) {
         onLineSelected={(range: SelectedLineRange | null) => {
           const p = path()
           if (!p) return
-          file.setSelectedLines(p, range)
+          props.file.setSelectedLines(p, range)
           if (!range) setNote("commenting", null)
         }}
         onLineSelectionEnd={(range: SelectedLineRange | null) => {
@@ -463,14 +423,14 @@ export function FileTabContent(props: { tab: string }) {
             onMouseEnter={() => {
               const p = path()
               if (!p) return
-              file.setSelectedLines(p, comment.selection)
+              props.file.setSelectedLines(p, comment.selection)
             }}
             onClick={() => {
               const p = path()
               if (!p) return
               setNote("commenting", null)
               setNote("openedComment", (current) => (current === comment.id ? null : comment.id))
-              file.setSelectedLines(p, comment.selection)
+              props.file.setSelectedLines(p, comment.selection)
             }}
           />
         )}
@@ -487,7 +447,12 @@ export function FileTabContent(props: { tab: string }) {
               onSubmit={(value) => {
                 const p = path()
                 if (!p) return
-                addCommentToContext({ file: p, selection: range(), comment: value, origin: "file" })
+                props.addCommentToContext({
+                  file: p,
+                  selection: range(),
+                  comment: value,
+                  origin: "file",
+                })
                 setNote("commenting", null)
               }}
               onPopoverFocusOut={(e: FocusEvent) => {
@@ -544,13 +509,13 @@ export function FileTabContent(props: { tab: string }) {
             <Mark class="w-14 opacity-10" />
             <div class="flex flex-col gap-2 max-w-md">
               <div class="text-14-semibold text-text-strong truncate">{path()?.split("/").pop()}</div>
-              <div class="text-14-regular text-text-weak">{language.t("session.files.binaryContent")}</div>
+              <div class="text-14-regular text-text-weak">{props.language.t("session.files.binaryContent")}</div>
             </div>
           </div>
         </Match>
         <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
         <Match when={state()?.loading}>
-          <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
+          <div class="px-6 py-4 text-text-weak">{props.language.t("common.loading")}...</div>
         </Match>
         <Match when={state()?.error}>{(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}</Match>
       </Switch>

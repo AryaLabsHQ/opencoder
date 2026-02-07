@@ -8,12 +8,12 @@ import {
   type QuestionRequest,
   type Todo,
   createOpencodeClient,
-} from "@opencode-ai/sdk/v2/client"
+} from "@opencoder-ai/sdk/v2/client"
 import { batch } from "solid-js"
 import { reconcile, type SetStoreFunction, type Store } from "solid-js/store"
-import { retry } from "@opencode-ai/util/retry"
-import { getFilename } from "@opencode-ai/util/path"
-import { showToast } from "@opencode-ai/ui/toast"
+import { retry } from "@opencoder-ai/util/retry"
+import { getFilename } from "@opencoder-ai/util/path"
+import { showToast } from "@opencoder-ai/ui/toast"
 import { cmp, normalizeProviderList } from "./utils"
 import type { State, VcsCache } from "./types"
 
