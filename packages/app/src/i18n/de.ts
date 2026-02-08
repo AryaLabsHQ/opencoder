@@ -51,6 +51,7 @@ export const dict = {
   "command.file.open.description": "Datei öffnen",
   "command.context.addSelection": "Auswahl zum Kontext hinzufügen",
   "command.context.addSelection.description": "Ausgewählte Zeilen aus der aktuellen Datei hinzufügen",
+  "command.input.focus": "Eingabefeld fokussieren",
   "command.terminal.toggle": "Terminal umschalten",
   "command.fileTree.toggle": "Dateibaum umschalten",
   "command.review.toggle": "Überprüfung umschalten",
@@ -254,6 +255,7 @@ export const dict = {
   "prompt.popover.emptyResults": "Keine passenden Ergebnisse",
   "prompt.popover.emptyCommands": "Keine passenden Befehle",
   "prompt.dropzone.label": "Bilder oder PDFs hier ablegen",
+  "prompt.dropzone.file.label": "Ablegen zum @Erwähnen der Datei",
   "prompt.slash.badge.custom": "benutzerdefiniert",
   "prompt.slash.badge.skill": "skill",
   "prompt.slash.badge.mcp": "mcp",
@@ -276,6 +278,7 @@ export const dict = {
   "prompt.toast.shellSendFailed.title": "Shell-Befehl konnte nicht gesendet werden",
   "prompt.toast.commandSendFailed.title": "Befehl konnte nicht gesendet werden",
   "prompt.toast.promptSendFailed.title": "Eingabe konnte nicht gesendet werden",
+  "prompt.toast.promptSendFailed.description": "Sitzung konnte nicht abgerufen werden",
 
   "dialog.mcp.title": "MCPs",
   "dialog.mcp.description": "{{enabled}} von {{total}} aktiviert",
