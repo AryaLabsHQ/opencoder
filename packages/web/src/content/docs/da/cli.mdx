@@ -27,17 +27,18 @@ Start OpenCode terminalbrugergrænsefladen.
 opencode [project]
 ```
 
-#### Flag
+#### Flags
 
-| Flag         | Kort | Beskrivelse                             |
-| ------------ | ---- | --------------------------------------- |
-| `--continue` | `-c` | Fortsæt sidste session                  |
-| `--session`  | `-s` | Sessions-id for at fortsætte            |
-| `--prompt`   |      | Spørg om at bruge                       |
-| `--model`    | `-m` | Model til brug i form af provider/model |
-| `--agent`    |      | Agent hos bruge                         |
-| `--port`     |      | Port at lytte på                        |
-| `--hostname` |      | Værtsnavn at lytte på                   |
+| Flag         | Kort | Beskrivelse                                                                  |
+| ------------ | ---- | ---------------------------------------------------------------------------- |
+| `--continue` | `-c` | Fortsæt sidste session                                                       |
+| `--session`  | `-s` | Sessions-id for at fortsætte                                                 |
+| `--fork`     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`) |
+| `--prompt`   |      | Spørg om at bruge                                                            |
+| `--model`    | `-m` | Model til brug i form af provider/model                                      |
+| `--agent`    |      | Agent hos bruge                                                              |
+| `--port`     |      | Port at lytte på                                                             |
+| `--hostname` |      | Værtsnavn at lytte på                                                        |
 
 ---
 
@@ -49,7 +50,7 @@ OpenCode CLI har også følgende kommandoer.
 
 ### agent
 
-Administratoragent for OpenCode.
+Administrer agenter i OpenCode.
 
 ```bash
 opencode agent [command]
@@ -57,7 +58,7 @@ opencode agent [command]
 
 ---
 
-### vedhæft
+### attach
 
 Tilslut en terminal til en allerede kørende OpenCode backend-server startet via `serve` eller `web` kommandoer.
 
@@ -75,7 +76,7 @@ opencode web --port 4096 --hostname 0.0.0.0
 opencode attach http://10.20.30.40:4096
 ```
 
-#### Flag
+#### Flags
 
 | Flag        | Kort | Beskrivelse                      |
 | ----------- | ---- | -------------------------------- |
@@ -84,9 +85,9 @@ opencode attach http://10.20.30.40:4096
 
 ---
 
-#### oprette
+#### create
 
-Opret en ny agent med tilpasset konfiguration.
+Opret en ny agent med brugerdefineret konfiguration.
 
 ```bash
 opencode agent create
@@ -96,7 +97,7 @@ Denne kommando vil guide dig gennem oprettelse af en ny agent med en brugerdefin
 
 ---
 
-#### liste
+#### list
 
 Liste over alle tilgængelige agenter.
 
@@ -118,7 +119,7 @@ opencode auth [command]
 
 #### login
 
-OpenCode drives af udbyderlisten på [Models.dev](https://models.dev), så du kan bruge `opencode auth login` til at konfigurere API nøgler for enhver udbyder, du vil bruge. Dette er gemt i `~/.local/share/opencode/auth.json`.
+OpenCode drives af udbyderlisten på [Models.dev](https://models.dev), så du kan bruge `opencode auth login` til at konfigurere API-nøgler for enhver udbyder, du vil bruge. Dette er gemt i `~/.local/share/opencode/auth.json`.
 
 ```bash
 opencode auth login
@@ -128,7 +129,7 @@ Når OpenCode starter op, indlæser den udbyderne fra legitimationsfilen. Og hvi
 
 ---
 
-#### liste
+#### list
 
 Viser alle de godkendte udbydere som gemt i legitimationsfilen.
 
@@ -144,7 +145,7 @@ opencode auth ls
 
 ---
 
-#### log ud
+#### logout
 
 Logger dig ud af en udbyder ved at rydde den fra legitimationsfilen.
 
@@ -164,7 +165,7 @@ opencode github [command]
 
 ---
 
-#### installationsprogram
+#### install
 
 Installatør GitHub-agenten i dit lager.
 
@@ -176,7 +177,7 @@ Dette opsætter det nødvendige GitHub Actions workflow og guider dig gennem kon
 
 ---
 
-#### løb
+#### run
 
 Kør GitHub-agenten. Dette bruges typisk i GitHub Actions.
 
@@ -184,7 +185,7 @@ Kør GitHub-agenten. Dette bruges typisk i GitHub Actions.
 opencode github run
 ```
 
-##### Flag
+##### Flags
 
 | Flag      | Beskrivelse                                    |
 | --------- | ---------------------------------------------- |
@@ -203,7 +204,7 @@ opencode mcp [command]
 
 ---
 
-#### tilføje
+#### add
 
 Tilføj en MCP-server til din konfiguration.
 
@@ -215,7 +216,7 @@ Denne kommando vil guide dig gennem tilføjelse af enten en lokal eller ekstern 
 
 ---
 
-#### liste
+#### list
 
 Liste over alle konfigurerede MCP-servere og deres forbindelsesstatus.
 
@@ -255,7 +256,7 @@ opencode mcp auth ls
 
 ---
 
-#### log ud
+#### logout
 
 Fjern OAuth-legitimationsoplysninger for en MCP-server.
 
@@ -265,7 +266,7 @@ opencode mcp logout [name]
 
 ---
 
-#### fejlretning
+#### debug
 
 Fejlfinding af OAuth-forbindelsesproblemer for en MCP-server.
 
@@ -275,7 +276,7 @@ opencode mcp debug <name>
 
 ---
 
-### modeller
+### models
 
 Liste over alle tilgængelige modeller fra konfigurerede udbydere.
 
@@ -293,7 +294,7 @@ Du kan eventuelt videregive et udbyder-id for at filtrere modeller efter den udb
 opencode models anthropic
 ```
 
-#### Flag
+#### Flags
 
 | Flag        | Beskrivelse                                                             |
 | ----------- | ----------------------------------------------------------------------- |
@@ -308,7 +309,7 @@ opencode models --refresh
 
 ---
 
-### løb
+### run
 
 Kør opencode i ikke-interaktiv tilstand ved at sende en prompt direkte.
 
@@ -332,13 +333,14 @@ opencode serve
 opencode run --attach http://localhost:4096 "Explain async/await in JavaScript"
 ```
 
-#### Flag
+#### Flags
 
 | Flag         | Kort | Beskrivelse                                                                         |
 | ------------ | ---- | ----------------------------------------------------------------------------------- |
 | `--command`  |      | Kommandoen til at køre, brug besked til args                                        |
 | `--continue` | `-c` | Fortsæt sidste session                                                              |
 | `--session`  | `-s` | Sessions-id for at fortsætte                                                        |
+| `--fork`     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)        |
 | `--share`    |      | Del sessionen                                                                       |
 | `--model`    | `-m` | Model til brug i form af provider/model                                             |
 | `--agent`    |      | Agent til brug                                                                      |
@@ -350,7 +352,7 @@ opencode run --attach http://localhost:4096 "Explain async/await in JavaScript"
 
 ---
 
-### server
+### serve
 
 Start en hovedløs OpenCode-server til API-adgang. Tjek [server docs](/docs/server) for den fulde HTTP-grænseflade.
 
@@ -360,7 +362,7 @@ opencode serve
 
 Dette starter en HTTP-server, der giver API-adgang til opencode-funktionalitet uden TUI-grænsefladen. Indstil `OPENCODE_SERVER_PASSWORD` for at aktivere HTTP grundlæggende godkendelse (brugernavn er standard til `opencode`).
 
-#### Flag
+#### Flags
 
 | Flag         | Beskrivelse                                      |
 | ------------ | ------------------------------------------------ |
@@ -381,7 +383,7 @@ opencode session [command]
 
 ---
 
-#### liste
+#### list
 
 Liste over alle OpenCode sessioner.
 
@@ -389,7 +391,7 @@ Liste over alle OpenCode sessioner.
 opencode session list
 ```
 
-##### Flag
+##### Flags
 
 | Flag          | Kort | Beskrivelse                            |
 | ------------- | ---- | -------------------------------------- |
@@ -398,7 +400,7 @@ opencode session list
 
 ---
 
-### statistik
+### stats
 
 Vis tokenbrug og omkostningsstatistikker for dine OpenCode-sessioner.
 
@@ -406,7 +408,7 @@ Vis tokenbrug og omkostningsstatistikker for dine OpenCode-sessioner.
 opencode stats
 ```
 
-#### Flag
+#### Flags
 
 | Flag        | Beskrivelse                                                                 |
 | ----------- | --------------------------------------------------------------------------- |
@@ -417,7 +419,7 @@ opencode stats
 
 ---
 
-### eksport
+### export
 
 Eksporter sessionsdata som JSON.
 
@@ -456,7 +458,7 @@ opencode web
 
 Dette starter en HTTP-server og åbner en webbrowser for at få adgang til OpenCode via en webgrænseflade. Indstil `OPENCODE_SERVER_PASSWORD` for at aktivere HTTP grundlæggende godkendelse (brugernavn er standard til `opencode`).
 
-#### Flag
+#### Flags
 
 | Flag         | Beskrivelse                                      |
 | ------------ | ------------------------------------------------ |
@@ -477,7 +479,7 @@ opencode acp
 
 Denne kommando starter en ACP-server, der kommunikerer via stdin/stdout ved hjælp af nd-JSON.
 
-#### Flag
+#### Flags
 
 | Flag         | Beskrivelse           |
 | ------------ | --------------------- |
@@ -487,7 +489,7 @@ Denne kommando starter en ACP-server, der kommunikerer via stdin/stdout ved hjæ
 
 ---
 
-### afinstaller
+### uninstall
 
 Afinstaller OpenCode og fjern alle relaterede filer.
 
@@ -495,7 +497,7 @@ Afinstaller OpenCode og fjern alle relaterede filer.
 opencode uninstall
 ```
 
-#### Flag
+#### Flags
 
 | Flag            | Kort | Beskrivelse                                      |
 | --------------- | ---- | ------------------------------------------------ |
@@ -506,9 +508,9 @@ opencode uninstall
 
 ---
 
-###opgradering
+### upgrade
 
-Opdaterer opencode til den seneste version eller en specifik version.
+Opdaterer OpenCode til den nyeste version eller en specifik version.
 
 ```bash
 opencode upgrade [target]
@@ -526,7 +528,7 @@ For at opgradere til en bestemt version.
 opencode upgrade v0.1.48
 ```
 
-#### Flag
+#### upgrade
 
 | Flag       | Kort | Beskrivelse                                                          |
 | ---------- | ---- | -------------------------------------------------------------------- |
@@ -551,51 +553,51 @@ opencode CLI tager følgende globale flag.
 
 OpenCode kan konfigureres ved hjælp af miljøvariabler.
 
-| Variabel                              | Skriv  | Beskrivelse                                                           |
-| ------------------------------------- | ------ | --------------------------------------------------------------------- |
-| `OPENCODE_AUTO_SHARE`                 | boolsk | Del automatisk session                                                |
-| `OPENCODE_GIT_BASH_PATH`              | styrke | Sti til Git Bash eksekverbar på Windows                               |
-| `OPENCODE_CONFIG`                     | styrke | Sti til konfigurationsfil                                             |
-| `OPENCODE_CONFIG_DIR`                 | styrke | Sti til konfigurationsmappe                                           |
-| `OPENCODE_CONFIG_CONTENT`             | styrke | Indbygget json-konfigurationsindhold                                  |
-| `OPENCODE_DISABLE_AUTOUPDATE`         | boolsk | Deaktiver automatisk opdateringskontrol                               |
-| `OPENCODE_DISABLE_PRUNE`              | boolsk | Deaktiver beskæring af gamle data                                     |
-| `OPENCODE_DISABLE_TERMINAL_TITLE`     | boolsk | Deaktiver automatisk opdatering af terminaltitel                      |
-| `OPENCODE_PERMISSION`                 | styrke | Indbygget json-tilladelseskonfiguration                               |
-| `OPENCODE_DISABLE_DEFAULT_PLUGINS`    | boolsk | Deaktiver standard plugins                                            |
-| `OPENCODE_DISABLE_LSP_DOWNLOAD`       | boolsk | Deaktiver automatisk LSP-serverdownloads                              |
-| `OPENCODE_ENABLE_EXPERIMENTAL_MODELS` | boolsk | Aktive eksperimentelle modeller                                       |
-| `OPENCODE_DISABLE_AUTOCOMPACT`        | boolsk | Deaktiver automatisk kontekstkomprimering                             |
-| `OPENCODE_DISABLE_CLAUDE_CODE`        | boolsk | Deaktiver læsning fra `.claude` (prompt + færdigheder)                |
-| `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT` | boolsk | Deaktiver læsning `~/.claude/CLAUDE.md`                               |
-| `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` | boolsk | Deaktiver indlæsning af `.claude/skills`                              |
-| `OPENCODE_DISABLE_MODELS_FETCH`       | boolsk | Deaktivering af modeller fra eksterne kilder                          |
-| `OPENCODE_FAKE_VCS`                   | styrke | Falsk VCS-udbyder til testformål                                      |
-| `OPENCODE_DISABLE_FILETIME_CHECK`     | boolsk | Deaktiver filtidskontrol for optimering                               |
-| `OPENCODE_CLIENT`                     | styrke | Klient-id (standard til `cli`)                                        |
-| `OPENCODE_ENABLE_EXA`                 | boolsk | Aktiver Exa-websøgeværktøjer                                          |
-| `OPENCODE_SERVER_PASSWORD`            | styrke | Aktiver grundlæggende godkendelse for `serve`/`web`                   |
-| `OPENCODE_SERVER_USERNAME`            | styrke | Tilsidesæt grundlæggende godkendelsesbrugernavn (standard `opencode`) |
-| `OPENCODE_MODELS_URL`                 | styrke | Brugerdefineret URL til hentning af modelkonfiguration                |
+| Variabel                              | Skriv   | Beskrivelse                                                           |
+| ------------------------------------- | ------- | --------------------------------------------------------------------- |
+| `OPENCODE_AUTO_SHARE`                 | boolean | Del automatisk session                                                |
+| `OPENCODE_GIT_BASH_PATH`              | string  | Sti til Git Bash eksekverbar på Windows                               |
+| `OPENCODE_CONFIG`                     | string  | Sti til konfigurationsfil                                             |
+| `OPENCODE_CONFIG_DIR`                 | string  | Sti til konfigurationsmappe                                           |
+| `OPENCODE_CONFIG_CONTENT`             | string  | Indbygget json-konfigurationsindhold                                  |
+| `OPENCODE_DISABLE_AUTOUPDATE`         | boolean | Deaktiver automatisk opdateringskontrol                               |
+| `OPENCODE_DISABLE_PRUNE`              | boolean | Deaktiver beskæring af gamle data                                     |
+| `OPENCODE_DISABLE_TERMINAL_TITLE`     | boolean | Deaktiver automatisk opdatering af terminaltitel                      |
+| `OPENCODE_PERMISSION`                 | string  | Indbygget json-tilladelseskonfiguration                               |
+| `OPENCODE_DISABLE_DEFAULT_PLUGINS`    | boolean | Deaktiver standard plugins                                            |
+| `OPENCODE_DISABLE_LSP_DOWNLOAD`       | boolean | Deaktiver automatisk LSP-serverdownloads                              |
+| `OPENCODE_ENABLE_EXPERIMENTAL_MODELS` | boolean | Aktive eksperimentelle modeller                                       |
+| `OPENCODE_DISABLE_AUTOCOMPACT`        | boolean | Deaktiver automatisk kontekstkomprimering                             |
+| `OPENCODE_DISABLE_CLAUDE_CODE`        | boolean | Deaktiver læsning fra `.claude` (prompt + færdigheder)                |
+| `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT` | boolean | Deaktiver læsning `~/.claude/CLAUDE.md`                               |
+| `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` | boolean | Deaktiver indlæsning af `.claude/skills`                              |
+| `OPENCODE_DISABLE_MODELS_FETCH`       | boolean | Deaktivering af modeller fra eksterne kilder                          |
+| `OPENCODE_FAKE_VCS`                   | string  | Falsk VCS-udbyder til testformål                                      |
+| `OPENCODE_DISABLE_FILETIME_CHECK`     | boolean | Deaktiver filtidskontrol for optimering                               |
+| `OPENCODE_CLIENT`                     | string  | Klient-id (standard til `cli`)                                        |
+| `OPENCODE_ENABLE_EXA`                 | boolean | Aktiver Exa-websøgeværktøjer                                          |
+| `OPENCODE_SERVER_PASSWORD`            | string  | Aktiver grundlæggende godkendelse for `serve`/`web`                   |
+| `OPENCODE_SERVER_USERNAME`            | string  | Tilsidesæt grundlæggende godkendelsesbrugernavn (standard `opencode`) |
+| `OPENCODE_MODELS_URL`                 | string  | Brugerdefineret URL til hentning af modelkonfiguration                |
 
 ---
 
-### Eksperimentel
+### Flags
 
 Disse miljøvariabler muliggør eksperimentelle funktioner, der kan ændres eller fjernes.
 
-| Variabel                                        | Skriv  | Beskrivelse                                |
-| ----------------------------------------------- | ------ | ------------------------------------------ |
-| `OPENCODE_EXPERIMENTAL`                         | boolsk | Aktiver alle eksperimentelle funktioner    |
-| `OPENCODE_EXPERIMENTAL_ICON_DISCOVERY`          | boolsk | Aktiver ikonopdagelse                      |
-| `OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolsk | Deaktiver kopi ved valg i TUI              |
-| `OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | nummer | Standard timeout for bash-kommandoer i ms  |
-| `OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | nummer | Maks. output-tokens for LLM-svar           |
-| `OPENCODE_EXPERIMENTAL_FILEWATCHER`             | boolsk | Aktiver filovervågning for hele dir        |
-| `OPENCODE_EXPERIMENTAL_OXFMT`                   | boolsk | Aktiver oxfmt formatter                    |
-| `OPENCODE_EXPERIMENTAL_LSP_TOOL`                | boolsk | Aktive eksperimenter LSP værktøj           |
-| `OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER`     | boolsk | Deaktiver filovervågning                   |
-| `OPENCODE_EXPERIMENTAL_EXA`                     | boolsk | Aktive eksperimenter Exa-funktioner        |
-| `OPENCODE_EXPERIMENTAL_LSP_TY`                  | boolsk | Aktive forsøg LSP typekontrol              |
-| `OPENCODE_EXPERIMENTAL_MARKDOWN`                | boolsk | Aktive eksperimentelle markdown-funktioner |
-| `OPENCODE_EXPERIMENTAL_PLAN_MODE`               | boolsk | Aktiver plantilstand                       |
+| Variabel                                        | Skriv   | Beskrivelse                                |
+| ----------------------------------------------- | ------- | ------------------------------------------ |
+| `OPENCODE_EXPERIMENTAL`                         | boolean | Aktiver alle eksperimentelle funktioner    |
+| `OPENCODE_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | Aktiver ikonopdagelse                      |
+| `OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | Deaktiver kopi ved valg i TUI              |
+| `OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | nummer  | Standard timeout for bash-kommandoer i ms  |
+| `OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | nummer  | Maks. output-tokens for LLM-svar           |
+| `OPENCODE_EXPERIMENTAL_FILEWATCHER`             | boolean | Aktiver filovervågning for hele dir        |
+| `OPENCODE_EXPERIMENTAL_OXFMT`                   | boolean | Aktiver oxfmt formatter                    |
+| `OPENCODE_EXPERIMENTAL_LSP_TOOL`                | boolean | Aktive eksperimenter LSP værktøj           |
+| `OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER`     | boolean | Deaktiver filovervågning                   |
+| `OPENCODE_EXPERIMENTAL_EXA`                     | boolean | Aktive eksperimenter Exa-funktioner        |
+| `OPENCODE_EXPERIMENTAL_LSP_TY`                  | boolean | Aktive forsøg LSP typekontrol              |
+| `OPENCODE_EXPERIMENTAL_MARKDOWN`                | boolean | Aktive eksperimentelle markdown-funktioner |
+| `OPENCODE_EXPERIMENTAL_PLAN_MODE`               | boolean | Aktiver plantilstand                       |

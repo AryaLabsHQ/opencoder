@@ -6,6 +6,7 @@ let createCommentSessionForTest: typeof import("./comments").createCommentSessio
 
 beforeAll(async () => {
   mock.module("@solidjs/router", () => ({
+    useNavigate: () => () => undefined,
     useParams: () => ({}),
   }))
   mock.module("@opencoder-ai/ui/context", () => ({

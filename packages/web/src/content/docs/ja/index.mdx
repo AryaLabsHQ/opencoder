@@ -7,9 +7,9 @@ import { Tabs, TabItem } from "@astrojs/starlight/components"
 import config from "../../../../config.mjs"
 export const console = config.console
 
-[**OpenCode**](/) は、オープンソースの AI コーディング エージェントです。これは、ターミナルベースのインターフェイス、デスクトップ アプリ、または IDE 拡張機能として利用できます。
+[**OpenCode**](/) は、オープンソースの AI コーディング エージェントです。これは、terminal ベースのインターフェイス、デスクトップ アプリ、または IDE 拡張機能として利用できます。
 
-![オープンコードテーマ](../../../assets/lander/screenshot.png)を使用したOpenCode TUI
+![opencodeテーマ](../../../assets/lander/screenshot.png)を使用したOpenCode TUI
 
 始めましょう。
 
@@ -17,9 +17,9 @@ export const console = config.console
 
 #### 前提条件
 
-ターミナルで OpenCode を使用するには、次のものが必要です。
+terminal で OpenCode を使用するには、次のものが必要です。
 
-1. 次のような最新のターミナル エミュレータ:
+1. 次のような最新のterminal エミュレータ:
    - [WezTerm](https://wezterm.org)、クロスプラットフォーム
    - [Alacritty](https://alacritty.org)、クロスプラットフォーム
    - [Ghostty](https://ghostty.org)、Linux および macOS
@@ -182,7 +182,7 @@ opencode
 これにより、OpenCode がプロジェクトを分析し、`AGENTS.md` ファイルを作成します。
 プロジェクトのルート。
 
-:::ヒント
+:::tip
 プロジェクトの `AGENTS.md` ファイルを Git にコミットする必要があります。
 :::
 
@@ -205,7 +205,7 @@ help.
 
 OpenCode にコードベースの説明を依頼できます。
 
-:::ヒント
+:::tip
 プロジェクト内のファイルをあいまい検索するには、`@` キーを使用します。
 :::
 
@@ -243,7 +243,7 @@ From this screen, the user can undelete a note or permanently delete it.
 自分が何を望んでいるのかを理解するために、OpenCode に十分な詳細を提供したいと考えています。役に立ちます
 チームの若手開発者と話しているように話すことができます。
 
-:::ヒント
+:::tip
 OpenCode に多くのコンテキストと例を提供して、意図する内容を理解できるようにします。
 want.
 :::
@@ -257,12 +257,12 @@ We'd like to design this new screen using a design I've used before.
 [Image #1] Take a look at this image and use it as a reference.
 ```
 
-:::ヒント
-画像をターミナルにドラッグ アンド ドロップして、プロンプトに追加します。
+:::tip
+画像をterminal にドラッグ アンド ドロップして、プロンプトに追加します。
 :::
 
 OpenCode は、指定された画像をスキャンしてプロンプトに追加できます。あなたはできる
-これを行うには、画像をターミナルにドラッグ アンド ドロップします。
+これを行うには、画像をterminal にドラッグ アンド ドロップします。
 
 3. **機能を構築する**
 
@@ -321,7 +321,7 @@ Can you refactor the function in @packages/functions/src/api/index.ts?
 
 ここからプロンプトを調整し、OpenCode に再試行を依頼できます。
 
-:::ヒント
+:::tip
 `/undo` を複数回実行すると、複数の変更を元に戻すことができます。
 :::
 
@@ -344,7 +344,7 @@ OpenCode との会話は [他のユーザーと共有できます]
 
 これにより、現在の会話へのリンクが作成され、クリップボードにコピーされます。
 
-:::注記
+:::note
 会話はデフォルトでは共有されません。
 :::
 

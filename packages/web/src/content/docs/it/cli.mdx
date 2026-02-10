@@ -29,15 +29,16 @@ opencode [project]
 
 #### Flag
 
-| Flag         | Breve | Descrizione                         |
-| ------------ | ----- | ----------------------------------- |
-| `--continue` | `-c`  | Continua l'ultima sessione          |
-| `--session`  | `-s`  | ID sessione da continuare           |
-| `--prompt`   |       | Prompt da usare                     |
-| `--model`    | `-m`  | Modello nel formato provider/model  |
-| `--agent`    |       | Agente da usare                     |
-| `--port`     |       | Porta su cui mettersi in ascolto    |
-| `--hostname` |       | Hostname su cui mettersi in ascolto |
+| Flag         | Breve | Descrizione                                                              |
+| ------------ | ----- | ------------------------------------------------------------------------ |
+| `--continue` | `-c`  | Continua l'ultima sessione                                               |
+| `--session`  | `-s`  | ID sessione da continuare                                                |
+| `--fork`     |       | Duplica la sessione quando continui (usa con `--continue` o `--session`) |
+| `--prompt`   |       | Prompt da usare                                                          |
+| `--model`    | `-m`  | Modello nel formato provider/model                                       |
+| `--agent`    |       | Agente da usare                                                          |
+| `--port`     |       | Porta su cui mettersi in ascolto                                         |
+| `--hostname` |       | Hostname su cui mettersi in ascolto                                      |
 
 ---
 
@@ -59,7 +60,7 @@ opencode agent [command]
 
 ### attach
 
-Collega un terminale a un backend server di OpenCode gia' in esecuzione avviato tramite i comandi `serve` o `web`.
+Collega un terminal a un backend server di OpenCode gia' in esecuzione avviato tramite i comandi `serve` o `web`.
 
 ```bash
 opencode attach [url]
@@ -334,19 +335,20 @@ opencode run --attach http://localhost:4096 "Explain async/await in JavaScript"
 
 #### Flag
 
-| Flag         | Breve | Descrizione                                                           |
-| ------------ | ----- | --------------------------------------------------------------------- |
-| `--command`  |       | Il comando da eseguire; usa message per gli argomenti                 |
-| `--continue` | `-c`  | Continua l'ultima sessione                                            |
-| `--session`  | `-s`  | ID sessione da continuare                                             |
-| `--share`    |       | Condividi la sessione                                                 |
-| `--model`    | `-m`  | Modello nel formato provider/model                                    |
-| `--agent`    |       | Agente da usare                                                       |
-| `--file`     | `-f`  | File da allegare al messaggio                                         |
-| `--format`   |       | Formato: default (formattato) o json (eventi JSON grezzi)             |
-| `--title`    |       | Titolo sessione (usa prompt troncato se non viene fornito un valore)  |
-| `--attach`   |       | Attach a un server opencode in esecuzione (es. http://localhost:4096) |
-| `--port`     |       | Porta per il server locale (di default una porta casuale)             |
+| Flag         | Breve | Descrizione                                                              |
+| ------------ | ----- | ------------------------------------------------------------------------ |
+| `--command`  |       | Il comando da eseguire; usa message per gli argomenti                    |
+| `--continue` | `-c`  | Continua l'ultima sessione                                               |
+| `--session`  | `-s`  | ID sessione da continuare                                                |
+| `--fork`     |       | Duplica la sessione quando continui (usa con `--continue` o `--session`) |
+| `--share`    |       | Condividi la sessione                                                    |
+| `--model`    | `-m`  | Modello nel formato provider/model                                       |
+| `--agent`    |       | Agente da usare                                                          |
+| `--file`     | `-f`  | File da allegare al messaggio                                            |
+| `--format`   |       | Formato: default (formattato) o json (eventi JSON grezzi)                |
+| `--title`    |       | Titolo sessione (usa prompt troncato se non viene fornito un valore)     |
+| `--attach`   |       | Attach a un server opencode in esecuzione (es. http://localhost:4096)    |
+| `--port`     |       | Porta per il server locale (di default una porta casuale)                |
 
 ---
 
@@ -560,7 +562,7 @@ OpenCode puo' essere configurato tramite variabili d'ambiente.
 | `OPENCODE_CONFIG_CONTENT`             | string  | Contenuto JSON di config inline                             |
 | `OPENCODE_DISABLE_AUTOUPDATE`         | boolean | Disabilita i controlli automatici di aggiornamento          |
 | `OPENCODE_DISABLE_PRUNE`              | boolean | Disabilita la potatura dei dati vecchi                      |
-| `OPENCODE_DISABLE_TERMINAL_TITLE`     | boolean | Disabilita aggiornamenti automatici del titolo terminale    |
+| `OPENCODE_DISABLE_TERMINAL_TITLE`     | boolean | Disabilita aggiornamenti automatici del titolo terminal     |
 | `OPENCODE_PERMISSION`                 | string  | Config permessi JSON inline                                 |
 | `OPENCODE_DISABLE_DEFAULT_PLUGINS`    | boolean | Disabilita i plugin di default                              |
 | `OPENCODE_DISABLE_LSP_DOWNLOAD`       | boolean | Disabilita download automatico dei server LSP               |
