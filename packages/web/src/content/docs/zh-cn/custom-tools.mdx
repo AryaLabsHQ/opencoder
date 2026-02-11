@@ -27,7 +27,7 @@ description: 创建 LLM 可以在 opencode 中调用的工具。
 创建工具最简单的方法是使用 `tool()` 帮助程序，它提供类型安全和验证。
 
 ```ts title=".opencode/tools/database.ts" {1}
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencoder-ai/plugin"
 
 export default tool({
   description: "Query the project database",
@@ -50,7 +50,7 @@ export default tool({
 您还可以从单个文件导出多个工具。每个导出都会成为 **一个单独的工具**，名称为 **`<filename>_<exportname>`**：
 
 ```ts title=".opencode/tools/math.ts"
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencoder-ai/plugin"
 
 export const add = tool({
   description: "Add two numbers",
@@ -113,7 +113,7 @@ export default {
 工具接收有关当前会话的上下文：
 
 ```ts title=".opencode/tools/project.ts" {8}
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencoder-ai/plugin"
 
 export default tool({
   description: "Get project information",
@@ -150,7 +150,7 @@ print(a + b)
 然后创建调用它的工具定义：
 
 ```ts title=".opencode/tools/python-add.ts" {10}
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencoder-ai/plugin"
 import path from "path"
 
 export default tool({

@@ -27,7 +27,7 @@ console.log("Generated models-snapshot.ts")
 
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
-const skipInstall = process.argv.includes("--skip-install")
+const skipInstall = process.argv.includes("--skip-install") || process.env.OPENCODE_SKIP_INSTALL === "1"
 
 const allTargets: {
   os: string
@@ -115,8 +115,8 @@ const binaries: Record<string, string> = {}
 if (!skipInstall) {
   // These installs are only to ensure platform artifacts are present for multi-target builds.
   // Avoid mutating bun.lock during builds (keeps CI and automation worktrees clean).
-  await $`HUSKY=0 bun install --no-save --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
-  await $`HUSKY=0 bun install --no-save --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
+  await $`HUSKY=0 TMPDIR=/tmp BUN_TMPDIR=/tmp bun install --no-save --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
+  await $`HUSKY=0 TMPDIR=/tmp BUN_TMPDIR=/tmp bun install --no-save --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
 }
 for (const item of targets) {
   const name = [
