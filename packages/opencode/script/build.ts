@@ -27,7 +27,7 @@ console.log("Generated models-snapshot.ts")
 
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
-const skipInstall = process.argv.includes("--skip-install")
+const skipInstall = process.argv.includes("--skip-install") || process.env.OPENCODE_SKIP_INSTALL === "1"
 
 const allTargets: {
   os: string
