@@ -1,26 +1,4 @@
-# Desktop Application
+# Desktop package notes
 
-**Package:** `packages/desktop`
-**Type:** Electron desktop app
-
-## Overview
-
-Desktop application wrapping the core TUI. Built with Electron + Tauri (src-tauri/).
-
-## Structure
-
-```
-packages/desktop/
-├── src/            # Electron frontend
-└── src-tauri/      # Tauri native bindings
-```
-
-## Commands
-
-```bash
-# Dev
-bun dev
-
-# Build
-bun build
-```
+- Never call `invoke` manually in this package.
+- Use the generated bindings in `packages/desktop/src/bindings.ts` for core commands/events.
