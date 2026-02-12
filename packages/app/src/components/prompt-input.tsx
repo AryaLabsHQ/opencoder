@@ -158,14 +158,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const wantsReview = item.commentOrigin === "review" || (item.commentOrigin !== "file" && commentInReview(item.path))
     if (wantsReview) {
       if (!view().reviewPanel.opened()) view().reviewPanel.open()
-      layout.fileTree.open()
       layout.fileTree.setTab("changes")
+      tabs().setActive("review")
       requestAnimationFrame(() => comments.setFocus(focus))
       return
     }
 
     if (!view().reviewPanel.opened()) view().reviewPanel.open()
-    layout.fileTree.open()
     layout.fileTree.setTab("all")
     const tab = files.tab(item.path)
     tabs().open(tab)
@@ -345,6 +344,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       .filter((agent) => !agent.hidden && agent.mode !== "primary")
       .map((agent): AtOption => ({ type: "agent", name: agent.name, display: agent.name })),
   )
+  const agentNames = createMemo(() => local.agent.list().map((agent) => agent.name))
 
   const handleAtSelect = (option: AtOption | undefined) => {
     if (!option) return
@@ -1038,7 +1038,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   keybind={command.keybind("agent.cycle")}
                 >
                   <Select
-                    options={local.agent.list().map((agent) => agent.name)}
+                    options={agentNames()}
                     current={local.agent.current()?.name ?? ""}
                     onSelect={local.agent.set}
                     class={`capitalize ${local.model.variant.list().length > 0 ? "max-w-full" : "max-w-[120px]"}`}
