@@ -1,7 +1,7 @@
 import { type ValidComponent, createEffect, createMemo, For, Match, on, onCleanup, Show, Switch } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
-import { sampledChecksum } from "@opencoder-ai/util/encode"
+import { checksum } from "@opencoder-ai/util/encode"
 import { decode64 } from "@/utils/base64"
 import { showToast } from "@opencoder-ai/ui/toast"
 import { LineComment as LineCommentView, LineCommentEditor } from "@opencoder-ai/ui/line-comment"
@@ -49,7 +49,7 @@ export function FileTabContent(props: {
     return props.file.get(p)
   })
   const contents = createMemo(() => state()?.content?.content ?? "")
-  const cacheKey = createMemo(() => sampledChecksum(contents()))
+  const cacheKey = createMemo(() => checksum(contents()))
   const isImage = createMemo(() => {
     const c = state()?.content
     return c?.encoding === "base64" && c?.mimeType?.startsWith("image/") && c?.mimeType !== "image/svg+xml"

@@ -1,4 +1,4 @@
-import { sampledChecksum } from "@opencoder-ai/util/encode"
+import { checksum } from "@opencoder-ai/util/encode"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, onCleanup, splitProps } from "solid-js"
@@ -550,8 +550,8 @@ export function Diff<T>(props: DiffProps<T>) {
     const afterContents = typeof local.after?.contents === "string" ? local.after.contents : ""
 
     const cacheKey = (contents: string) => {
-      if (!large()) return sampledChecksum(contents, contents.length)
-      return sampledChecksum(contents)
+      if (!large()) return checksum(contents)
+      return checksum(contents)
     }
 
     instance?.cleanUp()
