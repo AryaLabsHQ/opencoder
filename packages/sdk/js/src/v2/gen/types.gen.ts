@@ -526,6 +526,7 @@ export type EventMessagePartUpdated = {
   type: "message.part.updated"
   properties: {
     part: Part
+    delta?: string
   }
 }
 
