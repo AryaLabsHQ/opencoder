@@ -37,7 +37,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.6",
     "@types/node": "catalog:",
-    "opencode": "workspace:*",
+    "opencoder": "workspace:*",
     "typescript": "catalog:"
   }
 }
