@@ -101,7 +101,6 @@ export default function Page() {
   const sdk = useSDK()
   const prompt = usePrompt()
   const comments = useComments()
-  const permission = usePermission()
 
   const permRequest = createMemo(() => {
     const sessionID = params.id
@@ -272,6 +271,7 @@ export default function Page() {
     if (!path) return
     file.load(path)
     openReviewPanel()
+    tabs().setActive(next)
   }
 
   createEffect(() => {
@@ -769,11 +769,6 @@ export default function Page() {
     return lines.slice(0, 2).join("\n")
   }
 
-  const addSelectionToContext = (path: string, selection: FileSelection) => {
-    const preview = selectionPreview(path, selection)
-    prompt.context.add({ type: "file", path, selection, preview })
-  }
-
   const addCommentToContext = (input: {
     file: string
     selection: SelectedLineRange
@@ -912,31 +907,11 @@ export default function Page() {
   const focusInput = () => inputRef?.focus()
 
   useSessionCommands({
-    command,
-    dialog,
-    file,
-    language,
-    local,
-    permission,
-    prompt,
-    sdk,
-    sync,
-    terminal,
-    layout,
-    params,
-    navigate,
-    tabs,
-    view,
-    info,
-    status,
-    userMessages,
-    visibleUserMessages,
     activeMessage,
     showAllFiles,
     navigateMessageByOffset,
     setExpanded: (id, fn) => setStore("expanded", id, fn),
     setActiveMessage,
-    addSelectionToContext,
     focusInput,
   })
 
