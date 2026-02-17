@@ -223,6 +223,7 @@ export const dict = {
 
   "prompt.placeholder.shell": "Indtast shell-kommando...",
   "prompt.placeholder.normal": 'Spørg om hvad som helst... "{{example}}"',
+  "prompt.placeholder.simple": "Spørg om hvad som helst...",
   "prompt.placeholder.summarizeComments": "Opsummér kommentarer…",
   "prompt.placeholder.summarizeComment": "Opsummér kommentar…",
   "prompt.mode.shell": "Shell",
@@ -501,6 +502,9 @@ export const dict = {
 
   "session.messages.jumpToLatest": "Gå til seneste",
   "session.context.addToContext": "Tilføj {{selection}} til kontekst",
+  "session.todo.title": "Opgaver",
+  "session.todo.collapse": "Skjul",
+  "session.todo.expand": "Udvid",
 
   "session.new.worktree.main": "Hovedgren",
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
