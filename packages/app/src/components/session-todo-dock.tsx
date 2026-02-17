@@ -1,6 +1,6 @@
-import type { Todo } from "@opencode-ai/sdk/v2"
-import { Checkbox } from "@opencode-ai/ui/checkbox"
-import { IconButton } from "@opencode-ai/ui/icon-button"
+import type { Todo } from "@opencoder-ai/sdk/v2"
+import { Checkbox } from "@opencoder-ai/ui/checkbox"
+import { IconButton } from "@opencoder-ai/ui/icon-button"
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 
@@ -65,7 +65,7 @@ export function SessionTodoDock(props: { todos: Todo[]; title: string; collapseL
         role="button"
         tabIndex={0}
         onClick={toggle}
-        onKeyDown={(event) => {
+        onKeyDown={(event: KeyboardEvent) => {
           if (event.key !== "Enter" && event.key !== " ") return
           event.preventDefault()
           toggle()
@@ -85,11 +85,11 @@ export function SessionTodoDock(props: { todos: Todo[]; title: string; collapseL
             size="normal"
             variant="ghost"
             classList={{ "rotate-180": !store.collapsed }}
-            onMouseDown={(event) => {
+            onMouseDown={(event: MouseEvent) => {
               event.preventDefault()
               event.stopPropagation()
             }}
-            onClick={(event) => {
+            onClick={(event: MouseEvent) => {
               event.stopPropagation()
               toggle()
             }}
