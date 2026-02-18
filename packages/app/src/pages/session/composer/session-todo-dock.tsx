@@ -1,7 +1,7 @@
-import type { Todo } from "@opencode-ai/sdk/v2"
-import { Checkbox } from "@opencode-ai/ui/checkbox"
-import { DockTray } from "@opencode-ai/ui/dock-surface"
-import { IconButton } from "@opencode-ai/ui/icon-button"
+import type { Todo } from "@opencoder-ai/sdk/v2"
+import { Checkbox } from "@opencoder-ai/ui/checkbox"
+import { DockTray } from "@opencoder-ai/ui/dock-surface"
+import { IconButton } from "@opencoder-ai/ui/icon-button"
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 
@@ -87,12 +87,12 @@ export function SessionTodoDock(props: { todos: Todo[]; title: string; collapseL
             icon="chevron-down"
             size="normal"
             variant="ghost"
-            classList={{ "rotate-180": store.collapsed }}
+            classList={{ "rotate-180": !store.collapsed }}
             onMouseDown={(event) => {
               event.preventDefault()
               event.stopPropagation()
             }}
-            onClick={(event) => {
+            onClick={(event: MouseEvent) => {
               event.stopPropagation()
               toggle()
             }}
