@@ -22,7 +22,10 @@ import { UserMessage } from "@opencoder-ai/sdk/v2"
 import { canAddSelectionContext } from "@/pages/session/session-command-helpers"
 
 export type SessionCommandContext = {
+  activeMessage: () => UserMessage | undefined
+  showAllFiles: () => void
   navigateMessageByOffset: (offset: number) => void
+  setExpanded: (id: string, fn: (open: boolean | undefined) => boolean) => void
   setActiveMessage: (message: UserMessage | undefined) => void
   focusInput: () => void
 }
@@ -34,7 +37,7 @@ const withCategory = (category: string) => {
   })
 }
 
-export const useSessionCommands = (actions: SessionCommandContext) => {
+export const useSessionCommands = (args: SessionCommandContext) => {
   const command = useCommand()
   const dialog = useDialog()
   const file = useFile()
@@ -53,7 +56,6 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
   const tabs = createMemo(() => layout.tabs(sessionKey))
   const view = createMemo(() => layout.view(sessionKey))
   const info = createMemo(() => (params.id ? sync.session.get(params.id) : undefined))
-
   const idle = { type: "idle" as const }
   const status = createMemo(() => sync.data.session_status[params.id ?? ""] ?? idle)
   const messages = createMemo(() => (params.id ? (sync.data.message[params.id] ?? []) : []))
@@ -63,11 +65,6 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
     if (!revert) return userMessages()
     return userMessages().filter((m) => m.id < revert)
   })
-
-  const showAllFiles = () => {
-    if (layout.fileTree.tab() !== "changes") return
-    layout.fileTree.setTab("all")
-  }
 
   const selectionPreview = (path: string, selection: FileSelection) => {
     const content = file.get(path)?.content?.content
@@ -83,10 +80,6 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
     const preview = selectionPreview(path, selection)
     prompt.context.add({ type: "file", path, selection, preview })
   }
-
-  const navigateMessageByOffset = actions.navigateMessageByOffset
-  const setActiveMessage = actions.setActiveMessage
-  const focusInput = actions.focusInput
 
   const sessionCommand = withCategory(language.t("command.category.session"))
   const fileCommand = withCategory(language.t("command.category.file"))
@@ -115,7 +108,7 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       description: language.t("palette.search.placeholder"),
       keybind: "mod+p",
       slash: "open",
-      onSelect: () => dialog.show(() => <DialogSelectFile onOpenFile={showAllFiles} />),
+      onSelect: () => dialog.show(() => <DialogSelectFile onOpenFile={args.showAllFiles} />),
     }),
     fileCommand({
       id: "tab.close",
@@ -185,7 +178,7 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       id: "input.focus",
       title: language.t("command.input.focus"),
       keybind: "ctrl+l",
-      onSelect: () => focusInput(),
+      onSelect: () => args.focusInput(),
     }),
     terminalCommand({
       id: "terminal.new",
@@ -197,6 +190,19 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
         view().terminal.open()
       },
     }),
+    viewCommand({
+      id: "steps.toggle",
+      title: language.t("command.steps.toggle"),
+      description: language.t("command.steps.toggle.description"),
+      keybind: "mod+e",
+      slash: "steps",
+      disabled: !params.id,
+      onSelect: () => {
+        const msg = args.activeMessage()
+        if (!msg) return
+        args.setExpanded(msg.id, (open: boolean | undefined) => !open)
+      },
+    }),
   ])
 
   const messageCommands = createMemo(() => [
@@ -206,7 +212,7 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       description: language.t("command.message.previous.description"),
       keybind: "mod+arrowup",
       disabled: !params.id,
-      onSelect: () => navigateMessageByOffset(-1),
+      onSelect: () => args.navigateMessageByOffset(-1),
     }),
     sessionCommand({
       id: "message.next",
@@ -214,7 +220,7 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       description: language.t("command.message.next.description"),
       keybind: "mod+arrowdown",
       disabled: !params.id,
-      onSelect: () => navigateMessageByOffset(1),
+      onSelect: () => args.navigateMessageByOffset(1),
     }),
   ])
 
@@ -320,7 +326,7 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
           prompt.set(restored)
         }
         const priorMessage = findLast(userMessages(), (x) => x.id < message.id)
-        setActiveMessage(priorMessage)
+        args.setActiveMessage(priorMessage)
       },
     }),
     sessionCommand({
@@ -339,12 +345,12 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
           await sdk.client.session.unrevert({ sessionID })
           prompt.reset()
           const lastMsg = findLast(userMessages(), (x) => x.id >= revertMessageID)
-          setActiveMessage(lastMsg)
+          args.setActiveMessage(lastMsg)
           return
         }
         await sdk.client.session.revert({ sessionID, messageID: nextMessage.id })
         const priorMsg = findLast(userMessages(), (x) => x.id < nextMessage.id)
-        setActiveMessage(priorMsg)
+        args.setActiveMessage(priorMsg)
       },
     }),
     sessionCommand({
@@ -500,6 +506,6 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       permissionCommands(),
       sessionActionCommands(),
       shareCommands(),
-    ].flatMap((x) => x),
+    ].flatMap((section) => section),
   )
 }
