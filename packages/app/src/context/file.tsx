@@ -56,7 +56,7 @@ type FileTree = {
 type FileContext = {
   ready: () => boolean
   normalize: (input: string) => string
-  tab: (input: string) => string | undefined
+  tab: (input: string) => string
   pathFromTab: (input: string) => string
   tree: FileTree
   get: (input: string) => FileState | undefined

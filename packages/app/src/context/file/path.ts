@@ -132,10 +132,7 @@ export function createPathHelpers(scope: () => string) {
     return `file://${encodeFilePath(path)}`
   }
 
-  const pathFromTab = (tabValue: string) => {
-    if (!tabValue.startsWith("file://")) return
-    return normalize(tabValue)
-  }
+  const pathFromTab = (tabValue: string) => normalize(tabValue)
 
   const normalizeDir = (input: string) => normalize(input).replace(/\/+$/, "")
 
