@@ -10,6 +10,7 @@ const ctx = {
   messageID: "",
   callID: "",
   agent: "build",
+  model: { providerID: "openai", modelID: "gpt-4o" },
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

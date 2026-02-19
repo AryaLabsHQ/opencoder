@@ -1,5 +1,6 @@
 import { Show } from "solid-js"
 import { Tabs } from "@opencoder-ai/ui/tabs"
+import type { useLanguage } from "@/context/language"
 
 export function SessionMobileTabs(props: {
   open: boolean
@@ -8,7 +9,7 @@ export function SessionMobileTabs(props: {
   reviewCount: number
   onSession: () => void
   onChanges: () => void
-  t: (key: string, vars?: Record<string, string | number | boolean>) => string
+  t: ReturnType<typeof useLanguage>["t"]
 }) {
   return (
     <Show when={props.open}>

@@ -11,7 +11,20 @@ const abortError = z.object({
   name: z.literal("AbortError"),
 })
 
-export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleContext({
+type GlobalSDK = {
+  url: string
+  client: ReturnType<typeof createSdkForServer>
+  event: ReturnType<
+    typeof createGlobalEmitter<{
+      [key: string]: Event
+    }>
+  >
+  createClient: (
+    opts: Omit<Parameters<typeof createSdkForServer>[0], "server" | "fetch">,
+  ) => ReturnType<typeof createSdkForServer>
+}
+
+const ctx = createSimpleContext<GlobalSDK, {}>({
   name: "GlobalSDK",
   init: () => {
     const server = useServer()
@@ -215,3 +228,6 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     }
   },
 })
+
+export const useGlobalSDK = ctx.use
+export const GlobalSDKProvider = ctx.provider

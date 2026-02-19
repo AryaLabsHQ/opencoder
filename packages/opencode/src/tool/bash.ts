@@ -1,4 +1,5 @@
 import z from "zod"
+import { spawn } from "child_process"
 import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
@@ -53,7 +54,8 @@ const parser = lazy(async () => {
 
 // TODO: we may wanna rename this tool so it works better on other shells
 export const BashTool = Tool.define("bash", async () => {
-  log.info("bash tool using shell", { shell: Shell.acceptable() })
+  const shell = Shell.acceptable()
+  log.info("bash tool using shell", { shell })
 
   return {
     description: DESCRIPTION.replaceAll("${directory}", Instance.directory)

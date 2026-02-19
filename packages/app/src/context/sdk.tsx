@@ -8,9 +8,19 @@ type SDKEventMap = {
   [key in Event["type"]]: Extract<Event, { type: key }>
 }
 
-export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
+type GlobalSDK = ReturnType<typeof useGlobalSDK>
+
+type SDKContext = {
+  directory: string
+  client: ReturnType<GlobalSDK["createClient"]>
+  event: ReturnType<typeof createGlobalEmitter<SDKEventMap>>
+  url: string
+  createClient: (opts: Parameters<GlobalSDK["createClient"]>[0]) => ReturnType<GlobalSDK["createClient"]>
+}
+
+const ctx = createSimpleContext<SDKContext, { directory: Accessor<string> }>({
   name: "SDK",
-  init: (props: { directory: Accessor<string> }) => {
+  init: (props) => {
     const globalSDK = useGlobalSDK()
 
     const directory = createMemo(props.directory)
@@ -47,3 +57,6 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
     }
   },
 })
+
+export const useSDK = ctx.use
+export const SDKProvider = ctx.provider
