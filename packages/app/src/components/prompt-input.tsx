@@ -20,6 +20,7 @@ import { useParams } from "@solidjs/router"
 import { useSync } from "@/context/sync"
 import { useComments } from "@/context/comments"
 import { Button } from "@opencoder-ai/ui/button"
+import { DockShellForm, DockTray } from "@opencoder-ai/ui/dock-surface"
 import { Icon } from "@opencoder-ai/ui/icon"
 import { ProviderIcon } from "@opencoder-ai/ui/provider-icon"
 import type { IconName } from "@opencoder-ai/ui/icons/provider"
@@ -403,15 +404,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [composing, setComposing] = createSignal(false)
   const isImeComposing = (event: KeyboardEvent) => event.isComposing || composing() || event.keyCode === 229
 
-  createEffect(() => {
-    if (!isFocused()) closePopover()
-  })
-
-  // Safety: reset composing state on focus change to prevent stuck state
-  // This handles edge cases where compositionend event may not fire
-  createEffect(() => {
-    if (!isFocused()) setComposing(false)
-  })
+  const handleBlur = () => {
+    closePopover()
+    setComposing(false)
+  }
 
   const agentList = createMemo(() =>
     sync.data.agent
@@ -1050,12 +1046,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         commandKeybind={command.keybind}
         t={(key) => language.t(key as Parameters<typeof language.t>[0])}
       />
-      <form
+      <DockShellForm
         onSubmit={handleSubmit}
         classList={{
           "group/prompt-input": true,
-          "bg-surface-raised-stronger-non-alpha shadow-xs-border relative z-10": true,
-          "rounded-[12px] overflow-clip focus-within:shadow-xs-border": true,
+          "focus-within:shadow-xs-border": true,
           "border-icon-info-active border-dashed": store.draggingType !== null,
           [props.class ?? ""]: !!props.class,
         }}
@@ -1118,6 +1113,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               onPaste={handlePaste}
               onCompositionStart={() => setComposing(true)}
               onCompositionEnd={() => setComposing(false)}
+              onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               classList={{
                 "select-text": true,
@@ -1247,10 +1243,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </div>
           </Show>
         </div>
-      </form>
+      </DockShellForm>
       <Show when={store.mode === "normal" || store.mode === "shell"}>
-        <div class="-mt-3.5 bg-background-base border border-border-weak-base relative z-0 rounded-[12px] rounded-tl-0 rounded-tr-0 overflow-clip">
-          <div class="px-2 pt-5.5 pb-2 flex items-center gap-2 min-w-0">
+        <DockTray attach="top">
+          <div class="px-1.75 pt-5.5 pb-2 flex items-center gap-2 min-w-0">
             <div class="flex items-center gap-1.5 min-w-0 flex-1">
               <Show when={store.mode === "shell"}>
                 <div class="h-7 flex items-center gap-1.5 max-w-[160px] min-w-0" style={{ padding: "0 4px 0 8px" }}>
@@ -1258,7 +1254,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <div class="size-4 shrink-0" />
                 </div>
               </Show>
-
               <Show when={store.mode === "normal"}>
                 <TooltipKeybind
                   placement="top"
@@ -1358,7 +1353,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 </TooltipKeybind>
               </Show>
             </div>
-            <div class="shrink-0" data-component="prompt-mode-toggle">
+            <div class="shrink-0">
               <RadioGroup
                 options={["shell", "normal"] as const}
                 current={store.mode}
@@ -1367,7 +1362,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <TooltipKeybind
                     placement="top"
                     gutter={4}
-                    title={language.t(mode === "shell" ? "command.prompt.mode.shell" : "command.prompt.mode.normal")}
+                    openDelay={2000}
+                    title={language.t(mode === "shell" ? "prompt.mode.shell" : "prompt.mode.normal")}
                     keybind={command.keybind(mode === "shell" ? "prompt.mode.shell" : "prompt.mode.normal")}
                     class="size-full flex items-center justify-center"
                   >
@@ -1388,7 +1384,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               />
             </div>
           </div>
-        </div>
+        </DockTray>
       </Show>
     </div>
   )

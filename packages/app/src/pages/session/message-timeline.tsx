@@ -1,12 +1,16 @@
-import { For, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { For, createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createStore, produce } from "solid-js/store"
+import { useNavigate, useParams } from "@solidjs/router"
 import { Button } from "@opencoder-ai/ui/button"
 import { Icon } from "@opencoder-ai/ui/icon"
 import { IconButton } from "@opencoder-ai/ui/icon-button"
 import { DropdownMenu } from "@opencoder-ai/ui/dropdown-menu"
+import { Dialog } from "@opencoder-ai/ui/dialog"
 import { InlineInput } from "@opencoder-ai/ui/inline-input"
 import { Tooltip } from "@opencoder-ai/ui/tooltip"
 import { SessionTurn } from "@opencoder-ai/ui/session-turn"
 import type { UserMessage } from "@opencoder-ai/sdk/v2"
+import { showToast } from "@opencoder-ai/ui/toast"
 import { shouldMarkBoundaryGesture, normalizeWheelDelta } from "@/pages/session/message-gesture"
 
 const boundaryTarget = (root: HTMLElement, target: EventTarget | null) => {
@@ -86,7 +90,6 @@ export function MessageTimeline(props: {
   anchor: (id: string) => string
   onRegisterMessage: (el: HTMLDivElement, id: string) => void
   onUnregisterMessage: (id: string) => void
-  onFirstTurnMount?: () => void
   lastUserMessageID?: string
   expanded: Record<string, boolean>
   onToggleExpanded: (id: string) => void
@@ -159,7 +162,10 @@ export function MessageTimeline(props: {
           }}
           onClick={props.onAutoScrollInteraction}
           class="relative min-w-0 w-full h-full overflow-y-auto session-scroller"
-          style={{ "--session-title-height": props.showHeader ? "40px" : "0px" }}
+          style={{
+            "--session-title-height": props.showHeader ? "40px" : "0px",
+            "--sticky-accordion-top": props.showHeader ? "48px" : "0px",
+          }}
         >
           <Show when={props.showHeader}>
             <div
@@ -294,39 +300,33 @@ export function MessageTimeline(props: {
               </div>
             </Show>
             <For each={props.renderedUserMessages}>
-              {(message) => {
-                if (import.meta.env.DEV && props.onFirstTurnMount) {
-                  onMount(() => props.onFirstTurnMount?.())
-                }
-
-                return (
-                  <div
-                    id={props.anchor(message.id)}
-                    data-message-id={message.id}
-                    ref={(el) => {
-                      props.onRegisterMessage(el, message.id)
-                      onCleanup(() => props.onUnregisterMessage(message.id))
+              {(message) => (
+                <div
+                  id={props.anchor(message.id)}
+                  data-message-id={message.id}
+                  ref={(el) => {
+                    props.onRegisterMessage(el, message.id)
+                    onCleanup(() => props.onUnregisterMessage(message.id))
+                  }}
+                  classList={{
+                    "min-w-0 w-full max-w-full": true,
+                    "md:max-w-200 2xl:max-w-[1000px]": props.centered,
+                  }}
+                >
+                  <SessionTurn
+                    sessionID={props.sessionID}
+                    messageID={message.id}
+                    lastUserMessageID={props.lastUserMessageID}
+                    stepsExpanded={props.expanded[message.id] ?? false}
+                    onStepsExpandedToggle={() => props.onToggleExpanded(message.id)}
+                    classes={{
+                      root: "min-w-0 w-full relative",
+                      content: "flex flex-col justify-between !overflow-visible",
+                      container: "w-full px-4 md:px-6",
                     }}
-                    classList={{
-                      "min-w-0 w-full max-w-full": true,
-                      "md:max-w-200 2xl:max-w-[1000px]": props.centered,
-                    }}
-                  >
-                    <SessionTurn
-                      sessionID={props.sessionID}
-                      messageID={message.id}
-                      lastUserMessageID={props.lastUserMessageID}
-                      stepsExpanded={props.expanded[message.id] ?? false}
-                      onStepsExpandedToggle={() => props.onToggleExpanded(message.id)}
-                      classes={{
-                        root: "min-w-0 w-full relative",
-                        content: "flex flex-col justify-between !overflow-visible",
-                        container: "w-full px-4 md:px-6",
-                      }}
-                    />
-                  </div>
-                )
-              }}
+                  />
+                </div>
+              )}
             </For>
           </div>
         </div>
