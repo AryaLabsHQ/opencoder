@@ -10,13 +10,11 @@ import { cycleModelVariant, getConfiguredAgentVariant, resolveModelVariant } fro
 
 export type ModelKey = { providerID: string; modelID: string }
 
-export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
-  name: "Local",
-  init: () => {
-    const sdk = useSDK()
-    const sync = useSync()
-    const providers = useProviders()
-    const connected = createMemo(() => new Set(providers.connected().map((provider) => provider.id)))
+const createLocalContext = () => {
+  const sdk = useSDK()
+  const sync = useSync()
+  const providers = useProviders()
+  const connected = createMemo(() => new Set(providers.connected().map((provider) => provider.id)))
 
     function isModelValid(model: ModelKey) {
       const provider = providers.all().find((x) => x.id === model.providerID)
@@ -232,11 +230,20 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       }
     })()
 
-    const result = {
-      slug: createMemo(() => base64Encode(sdk.directory)),
-      model,
-      agent,
-    }
-    return result
-  },
+  const result = {
+    slug: createMemo(() => base64Encode(sdk.directory)),
+    model,
+    agent,
+  }
+  return result
+}
+
+type LocalContext = ReturnType<typeof createLocalContext>
+
+const ctx = createSimpleContext<LocalContext, {}>({
+  name: "Local",
+  init: createLocalContext,
 })
+
+export const useLocal: () => LocalContext = ctx.use
+export const LocalProvider = ctx.provider

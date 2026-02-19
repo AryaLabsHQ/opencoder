@@ -90,11 +90,9 @@ function setOptimisticRemove(setStore: (...args: unknown[]) => void, input: Opti
   })
 }
 
-export const { use: useSync, provider: SyncProvider } = createSimpleContext({
-  name: "Sync",
-  init: () => {
-    const globalSync = useGlobalSync()
-    const sdk = useSDK()
+const createSyncContext = () => {
+  const globalSync = useGlobalSync()
+  const sdk = useSDK()
 
     type Child = ReturnType<(typeof globalSync)["child"]>
     type Setter = Child[1]
@@ -171,208 +169,217 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         })
     }
 
-    return {
-      get data() {
-        return current()[0]
-      },
-      get set(): Setter {
-        return current()[1]
-      },
-      get status() {
-        return current()[0].status
-      },
-      get ready() {
-        return current()[0].status !== "loading"
-      },
-      get project() {
-        const store = current()[0]
-        const match = Binary.search(globalSync.data.project, store.project, (p) => p.id)
-        if (match.found) return globalSync.data.project[match.index]
-        return undefined
-      },
-      session: {
-        get: getSession,
-        optimistic: {
-          add(input: { directory?: string; sessionID: string; message: Message; parts: Part[] }) {
-            const [, setStore] = target(input.directory)
-            setOptimisticAdd(setStore as (...args: unknown[]) => void, input)
-          },
-          remove(input: { directory?: string; sessionID: string; messageID: string }) {
-            const [, setStore] = target(input.directory)
-            setOptimisticRemove(setStore as (...args: unknown[]) => void, input)
-          },
+  return {
+    get data() {
+      return current()[0]
+    },
+    get set(): Setter {
+      return current()[1]
+    },
+    get status() {
+      return current()[0].status
+    },
+    get ready() {
+      return current()[0].status !== "loading"
+    },
+    get project() {
+      const store = current()[0]
+      const match = Binary.search(globalSync.data.project, store.project, (p) => p.id)
+      if (match.found) return globalSync.data.project[match.index]
+      return undefined
+    },
+    session: {
+      get: getSession,
+      optimistic: {
+        add(input: { directory?: string; sessionID: string; message: Message; parts: Part[] }) {
+          const [, setStore] = target(input.directory)
+          setOptimisticAdd(setStore as (...args: unknown[]) => void, input)
         },
-        addOptimisticMessage(input: {
-          sessionID: string
-          messageID: string
-          parts: Part[]
-          agent: string
-          model: { providerID: string; modelID: string }
-        }) {
-          const message: Message = {
-            id: input.messageID,
-            sessionID: input.sessionID,
-            role: "user",
-            time: { created: Date.now() },
-            agent: input.agent,
-            model: input.model,
-          }
-          const [, setStore] = target()
-          setOptimisticAdd(setStore as (...args: unknown[]) => void, {
-            sessionID: input.sessionID,
-            message,
-            parts: input.parts,
-          })
+        remove(input: { directory?: string; sessionID: string; messageID: string }) {
+          const [, setStore] = target(input.directory)
+          setOptimisticRemove(setStore as (...args: unknown[]) => void, input)
         },
-        async sync(sessionID: string) {
-          const directory = sdk.directory
-          const client = sdk.client
-          const [store, setStore] = globalSync.child(directory)
-          const key = keyFor(directory, sessionID)
-          const hasSession = (() => {
-            const match = Binary.search(store.session, sessionID, (s) => s.id)
-            return match.found
-          })()
+      },
+      addOptimisticMessage(input: {
+        sessionID: string
+        messageID: string
+        parts: Part[]
+        agent: string
+        model: { providerID: string; modelID: string }
+      }) {
+        const message: Message = {
+          id: input.messageID,
+          sessionID: input.sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: input.agent,
+          model: input.model,
+        }
+        const [, setStore] = target()
+        setOptimisticAdd(setStore as (...args: unknown[]) => void, {
+          sessionID: input.sessionID,
+          message,
+          parts: input.parts,
+        })
+      },
+      async sync(sessionID: string) {
+        const directory = sdk.directory
+        const client = sdk.client
+        const [store, setStore] = globalSync.child(directory)
+        const key = keyFor(directory, sessionID)
+        const hasSession = (() => {
+          const match = Binary.search(store.session, sessionID, (s) => s.id)
+          return match.found
+        })()
 
-          const hasMessages = store.message[sessionID] !== undefined
-          const hydrated = meta.limit[key] !== undefined
-          if (hasSession && hasMessages && hydrated) return
+        const hasMessages = store.message[sessionID] !== undefined
+        const hydrated = meta.limit[key] !== undefined
+        if (hasSession && hasMessages && hydrated) return
 
-          const count = store.message[sessionID]?.length ?? 0
-          const limit = hydrated ? (meta.limit[key] ?? messagePageSize) : limitFor(count)
+        const count = store.message[sessionID]?.length ?? 0
+        const limit = hydrated ? (meta.limit[key] ?? messagePageSize) : limitFor(count)
 
-          const sessionReq = hasSession
+        const sessionReq = hasSession
+          ? Promise.resolve()
+          : retry(() => client.session.get({ sessionID })).then((session) => {
+              const data = session.data
+              if (!data) return
+              setStore(
+                "session",
+                produce((draft) => {
+                  const match = Binary.search(draft, sessionID, (s) => s.id)
+                  if (match.found) {
+                    draft[match.index] = data
+                    return
+                  }
+                  draft.splice(match.index, 0, data)
+                }),
+              )
+            })
+
+        const messagesReq =
+          hasMessages && hydrated
             ? Promise.resolve()
-            : retry(() => client.session.get({ sessionID })).then((session) => {
-                const data = session.data
-                if (!data) return
-                setStore(
-                  "session",
-                  produce((draft) => {
-                    const match = Binary.search(draft, sessionID, (s) => s.id)
-                    if (match.found) {
-                      draft[match.index] = data
-                      return
-                    }
-                    draft.splice(match.index, 0, data)
-                  }),
-                )
+            : loadMessages({
+                directory,
+                client,
+                setStore,
+                sessionID,
+                limit,
               })
 
-          const messagesReq =
-            hasMessages && hydrated
-              ? Promise.resolve()
-              : loadMessages({
-                  directory,
-                  client,
-                  setStore,
-                  sessionID,
-                  limit,
-                })
+        return runInflight(inflight, key, () => Promise.all([sessionReq, messagesReq]).then(() => {}))
+      },
+      async diff(sessionID: string) {
+        const directory = sdk.directory
+        const client = sdk.client
+        const [store, setStore] = globalSync.child(directory)
+        if (store.session_diff[sessionID] !== undefined) return
 
-          return runInflight(inflight, key, () => Promise.all([sessionReq, messagesReq]).then(() => {}))
-        },
-        async diff(sessionID: string) {
-          const directory = sdk.directory
-          const client = sdk.client
-          const [store, setStore] = globalSync.child(directory)
-          if (store.session_diff[sessionID] !== undefined) return
-
-          const key = keyFor(directory, sessionID)
-          return runInflight(inflightDiff, key, () =>
-            retry(() => client.session.diff({ sessionID })).then((diff) => {
-              setStore("session_diff", sessionID, reconcile(diff.data ?? [], { key: "file" }))
-            }),
-          )
-        },
-        async todo(sessionID: string) {
-          const directory = sdk.directory
-          const client = sdk.client
-          const [store, setStore] = globalSync.child(directory)
-          const existing = store.todo[sessionID]
-          if (existing !== undefined) {
-            if (globalSync.data.session_todo[sessionID] === undefined) {
-              globalSync.todo.set(sessionID, existing)
-            }
-            return
+        const key = keyFor(directory, sessionID)
+        return runInflight(inflightDiff, key, () =>
+          retry(() => client.session.diff({ sessionID })).then((diff) => {
+            setStore("session_diff", sessionID, reconcile(diff.data ?? [], { key: "file" }))
+          }),
+        )
+      },
+      async todo(sessionID: string) {
+        const directory = sdk.directory
+        const client = sdk.client
+        const [store, setStore] = globalSync.child(directory)
+        const existing = store.todo[sessionID]
+        if (existing !== undefined) {
+          if (globalSync.data.session_todo[sessionID] === undefined) {
+            globalSync.todo.set(sessionID, existing)
           }
+          return
+        }
 
-          const cached = globalSync.data.session_todo[sessionID]
-          if (cached !== undefined) {
-            setStore("todo", sessionID, reconcile(cached, { key: "id" }))
-          }
+        const cached = globalSync.data.session_todo[sessionID]
+        if (cached !== undefined) {
+          setStore("todo", sessionID, reconcile(cached, { key: "id" }))
+        }
 
-          const key = keyFor(directory, sessionID)
-          return runInflight(inflightTodo, key, () =>
-            retry(() => client.session.todo.list({ sessionID })).then((todo) => {
-              const list = todo.data ?? []
-              setStore("todo", sessionID, reconcile(list, { key: "id" }))
-              globalSync.todo.set(sessionID, list)
-            }),
-          )
+        const key = keyFor(directory, sessionID)
+        return runInflight(inflightTodo, key, () =>
+          retry(() => client.session.todo.list({ sessionID })).then((todo) => {
+            const list = todo.data ?? []
+            setStore("todo", sessionID, reconcile(list, { key: "id" }))
+            globalSync.todo.set(sessionID, list)
+          }),
+        )
+      },
+      history: {
+        more(sessionID: string) {
+          const store = current()[0]
+          const key = keyFor(sdk.directory, sessionID)
+          if (store.message[sessionID] === undefined) return false
+          if (meta.limit[key] === undefined) return false
+          if (meta.complete[key]) return false
+          return true
         },
-        history: {
-          more(sessionID: string) {
-            const store = current()[0]
-            const key = keyFor(sdk.directory, sessionID)
-            if (store.message[sessionID] === undefined) return false
-            if (meta.limit[key] === undefined) return false
-            if (meta.complete[key]) return false
-            return true
-          },
-          loading(sessionID: string) {
-            const key = keyFor(sdk.directory, sessionID)
-            return meta.loading[key] ?? false
-          },
-          async loadMore(sessionID: string, count = messagePageSize) {
-            const directory = sdk.directory
-            const client = sdk.client
-            const [, setStore] = globalSync.child(directory)
-            const key = keyFor(directory, sessionID)
-            if (meta.loading[key]) return
-            if (meta.complete[key]) return
-
-            const currentLimit = meta.limit[key] ?? messagePageSize
-            await loadMessages({
-              directory,
-              client,
-              setStore,
-              sessionID,
-              limit: currentLimit + count,
-            })
-          },
+        loading(sessionID: string) {
+          const key = keyFor(sdk.directory, sessionID)
+          return meta.loading[key] ?? false
         },
-        fetch: async (count = 10) => {
-          const directory = sdk.directory
-          const client = sdk.client
-          const [store, setStore] = globalSync.child(directory)
-          setStore("limit", (x) => x + count)
-          await client.session.list().then((x) => {
-            const sessions = (x.data ?? [])
-              .filter((s) => !!s?.id)
-              .sort((a, b) => cmp(a.id, b.id))
-              .slice(0, store.limit)
-            setStore("session", reconcile(sessions, { key: "id" }))
-          })
-        },
-        more: createMemo(() => current()[0].session.length >= current()[0].limit),
-        archive: async (sessionID: string) => {
+        async loadMore(sessionID: string, count = messagePageSize) {
           const directory = sdk.directory
           const client = sdk.client
           const [, setStore] = globalSync.child(directory)
-          await client.session.update({ sessionID, time: { archived: Date.now() } })
-          setStore(
-            produce((draft) => {
-              const match = Binary.search(draft.session, sessionID, (s) => s.id)
-              if (match.found) draft.session.splice(match.index, 1)
-            }),
-          )
+          const key = keyFor(directory, sessionID)
+          if (meta.loading[key]) return
+          if (meta.complete[key]) return
+
+          const currentLimit = meta.limit[key] ?? messagePageSize
+          await loadMessages({
+            directory,
+            client,
+            setStore,
+            sessionID,
+            limit: currentLimit + count,
+          })
         },
       },
-      absolute,
-      get directory() {
-        return current()[0].path.directory
+      fetch: async (count = 10) => {
+        const directory = sdk.directory
+        const client = sdk.client
+        const [store, setStore] = globalSync.child(directory)
+        setStore("limit", (x) => x + count)
+        await client.session.list().then((x) => {
+          const sessions = (x.data ?? [])
+            .filter((s) => !!s?.id)
+            .sort((a, b) => cmp(a.id, b.id))
+            .slice(0, store.limit)
+          setStore("session", reconcile(sessions, { key: "id" }))
+        })
       },
-    }
-  },
+      more: createMemo(() => current()[0].session.length >= current()[0].limit),
+      archive: async (sessionID: string) => {
+        const directory = sdk.directory
+        const client = sdk.client
+        const [, setStore] = globalSync.child(directory)
+        await client.session.update({ sessionID, time: { archived: Date.now() } })
+        setStore(
+          produce((draft) => {
+            const match = Binary.search(draft.session, sessionID, (s) => s.id)
+            if (match.found) draft.session.splice(match.index, 1)
+          }),
+        )
+      },
+    },
+    absolute,
+    get directory() {
+      return current()[0].path.directory
+    },
+  }
+}
+
+type SyncContext = ReturnType<typeof createSyncContext>
+
+const ctx = createSimpleContext<SyncContext, {}>({
+  name: "Sync",
+  init: createSyncContext,
 })
+
+export const useSync: () => SyncContext = ctx.use
+export const SyncProvider = ctx.provider

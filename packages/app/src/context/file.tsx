@@ -49,39 +49,36 @@ function errorMessage(error: unknown) {
   return "Unknown error"
 }
 
-export const { use: useFile, provider: FileProvider } = createSimpleContext({
-  name: "File",
-  gate: false,
-  init: () => {
-    const sdk = useSDK()
-    useSync()
-    const params = useParams()
-    const language = useLanguage()
-    const layout = useLayout()
+const createFileContext = () => {
+  const sdk = useSDK()
+  useSync()
+  const params = useParams()
+  const language = useLanguage()
+  const layout = useLayout()
 
-    const scope = createMemo(() => sdk.directory)
-    const path = createPathHelpers(scope)
-    const tabs = layout.tabs(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
+  const scope = createMemo(() => sdk.directory)
+  const path = createPathHelpers(scope)
+  const tabs = layout.tabs(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
 
-    const inflight = new Map<string, Promise<void>>()
-    const [store, setStore] = createStore<{
-      file: Record<string, FileState>
-    }>({
-      file: {},
-    })
+  const inflight = new Map<string, Promise<void>>()
+  const [store, setStore] = createStore<{
+    file: Record<string, FileState>
+  }>({
+    file: {},
+  })
 
-    const tree = createFileTreeStore({
-      scope,
-      normalizeDir: path.normalizeDir,
-      list: (dir) => sdk.client.file.list({ path: dir }).then((x) => x.data ?? []),
-      onError: (message) => {
-        showToast({
-          variant: "error",
-          title: language.t("toast.file.listFailed.title"),
-          description: message,
-        })
-      },
-    })
+  const tree = createFileTreeStore({
+    scope,
+    normalizeDir: path.normalizeDir,
+    list: (dir) => sdk.client.file.list({ path: dir }).then((x) => x.data ?? []),
+    onError: (message) => {
+      showToast({
+        variant: "error",
+        title: language.t("toast.file.listFailed.title"),
+        description: message,
+      })
+    },
+  })
 
     const evictContent = (keep?: Set<string>) => {
       evictContentLru(keep, (target) => {
@@ -245,36 +242,46 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       viewCache.clear()
     })
 
-    return {
-      ready: () => view().ready(),
-      normalize: path.normalize,
-      tab: path.tab,
-      pathFromTab: path.pathFromTab,
-      tree: {
-        list: tree.listDir,
-        refresh: (input: string) => tree.listDir(input, { force: true }),
-        state: tree.dirState,
-        children: tree.children,
-        expand: tree.expandDir,
-        collapse: tree.collapseDir,
-        toggle(input: string) {
-          if (tree.dirState(input)?.expanded) {
-            tree.collapseDir(input)
-            return
-          }
-          tree.expandDir(input)
-        },
+  return {
+    ready: () => view().ready(),
+    normalize: path.normalize,
+    tab: path.tab,
+    pathFromTab: path.pathFromTab,
+    tree: {
+      list: tree.listDir,
+      refresh: (input: string) => tree.listDir(input, { force: true }),
+      state: tree.dirState,
+      children: tree.children,
+      expand: tree.expandDir,
+      collapse: tree.collapseDir,
+      toggle(input: string) {
+        if (tree.dirState(input)?.expanded) {
+          tree.collapseDir(input)
+          return
+        }
+        tree.expandDir(input)
       },
-      get,
-      load,
-      scrollTop,
-      scrollLeft,
-      setScrollTop,
-      setScrollLeft,
-      selectedLines,
-      setSelectedLines,
-      searchFiles: (query: string) => search(query, "false"),
-      searchFilesAndDirectories: (query: string) => search(query, "true"),
-    }
-  },
+    },
+    get,
+    load,
+    scrollTop,
+    scrollLeft,
+    setScrollTop,
+    setScrollLeft,
+    selectedLines,
+    setSelectedLines,
+    searchFiles: (query: string) => search(query, "false"),
+    searchFilesAndDirectories: (query: string) => search(query, "true"),
+  }
+}
+
+type FileContext = ReturnType<typeof createFileContext>
+
+const ctx = createSimpleContext<FileContext, {}>({
+  name: "File",
+  gate: false,
+  init: createFileContext,
 })
+
+export const useFile: () => FileContext = ctx.use
+export const FileProvider = ctx.provider
