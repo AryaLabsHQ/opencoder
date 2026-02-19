@@ -10,7 +10,7 @@ import { useSettings } from "@/context/settings"
 import { Binary } from "@opencoder-ai/util/binary"
 import { base64Encode } from "@opencoder-ai/util/encode"
 import { decode64 } from "@/utils/base64"
-import { EventSessionError } from "@opencoder-ai/sdk/v2"
+import { EventSessionError } from "@opencoder-ai/sdk/v2/client"
 import { Persist, persisted } from "@/utils/persist"
 import { playSound, soundSrc } from "@/utils/sound"
 

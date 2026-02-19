@@ -50,7 +50,12 @@ type CommentItem = {
   preview?: string
 }
 
-export function createPromptSubmit(input: PromptSubmitInput) {
+type PromptSubmit = {
+  abort: () => Promise<void>
+  handleSubmit: (event: Event) => Promise<void>
+}
+
+export function createPromptSubmit(input: PromptSubmitInput): PromptSubmit {
   const navigate = useNavigate()
   const sdk = useSDK()
   const sync = useSync()

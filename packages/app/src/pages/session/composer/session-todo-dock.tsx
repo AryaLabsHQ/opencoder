@@ -1,4 +1,4 @@
-import type { Todo } from "@opencoder-ai/sdk/v2"
+import type { Todo } from "@opencoder-ai/sdk/v2/client"
 import { Checkbox } from "@opencoder-ai/ui/checkbox"
 import { DockTray } from "@opencoder-ai/ui/dock-surface"
 import { IconButton } from "@opencoder-ai/ui/icon-button"

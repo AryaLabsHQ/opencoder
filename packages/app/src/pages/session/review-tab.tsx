@@ -1,6 +1,6 @@
 import { createEffect, on, onCleanup, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
-import type { FileDiff } from "@opencoder-ai/sdk/v2"
+import type { FileDiff } from "@opencoder-ai/sdk/v2/client"
 import { SessionReview } from "@opencoder-ai/ui/session-review"
 import type { SelectedLineRange } from "@/context/file"
 import { useSDK } from "@/context/sdk"

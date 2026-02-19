@@ -18,7 +18,7 @@ import { DialogFork } from "@/components/dialog-fork"
 import { showToast } from "@opencoder-ai/ui/toast"
 import { findLast } from "@opencoder-ai/util/array"
 import { extractPromptFromParts } from "@/utils/prompt"
-import { UserMessage } from "@opencoder-ai/sdk/v2"
+import { UserMessage } from "@opencoder-ai/sdk/v2/client"
 import { canAddSelectionContext } from "@/pages/session/session-command-helpers"
 
 export type SessionCommandContext = {

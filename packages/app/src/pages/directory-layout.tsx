@@ -6,7 +6,7 @@ import { SyncProvider, useSync } from "@/context/sync"
 import { LocalProvider } from "@/context/local"
 
 import { DataProvider } from "@opencoder-ai/ui/context"
-import type { QuestionAnswer } from "@opencoder-ai/sdk/v2"
+import type { QuestionAnswer } from "@opencoder-ai/sdk/v2/client"
 import { decode64 } from "@/utils/base64"
 import { showToast } from "@opencoder-ai/ui/toast"
 import { useLanguage } from "@/context/language"

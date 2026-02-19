@@ -4,7 +4,7 @@ import { Button } from "@opencoder-ai/ui/button"
 import { DockPrompt } from "@opencoder-ai/ui/dock-prompt"
 import { Icon } from "@opencoder-ai/ui/icon"
 import { showToast } from "@opencoder-ai/ui/toast"
-import type { QuestionAnswer, QuestionRequest } from "@opencoder-ai/sdk/v2"
+import type { QuestionAnswer, QuestionRequest } from "@opencoder-ai/sdk/v2/client"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 

@@ -19,7 +19,7 @@ import {
   type ParentProps,
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import type { FileNode } from "@opencoder-ai/sdk/v2"
+import type { FileNode } from "@opencoder-ai/sdk/v2/client"
 
 const MAX_DEPTH = 128
 

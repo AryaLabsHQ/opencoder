@@ -1,6 +1,6 @@
 import { createEffect, createMemo, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
-import type { PermissionRequest, QuestionRequest, Todo } from "@opencoder-ai/sdk/v2"
+import type { PermissionRequest, QuestionRequest, Todo } from "@opencoder-ai/sdk/v2/client"
 import { useParams } from "@solidjs/router"
 import { showToast } from "@opencoder-ai/ui/toast"
 import { useGlobalSync } from "@/context/global-sync"
