@@ -1,5 +1,5 @@
 import { createStore } from "solid-js/store"
-import { batch, createMemo } from "solid-js"
+import { batch, createMemo, type Accessor } from "solid-js"
 import { createSimpleContext } from "@opencoder-ai/ui/context"
 import { useSDK } from "./sdk"
 import { useSync } from "./sync"
@@ -7,10 +7,46 @@ import { base64Encode } from "@opencoder-ai/util/encode"
 import { useProviders } from "@/hooks/use-providers"
 import { useModels } from "@/context/models"
 import { cycleModelVariant, getConfiguredAgentVariant, resolveModelVariant } from "./model-variant"
+import type { Agent } from "@opencoder-ai/sdk/v2/client"
 
 export type ModelKey = { providerID: string; modelID: string }
 
-const createLocalContext = () => {
+type ModelsContext = ReturnType<typeof useModels>
+type ModelItem = ReturnType<ModelsContext["find"]>
+
+type AgentState = {
+  list: Accessor<Agent[]>
+  current: () => Agent | undefined
+  set: (name: string | undefined) => void
+  move: (direction: 1 | -1) => void
+}
+
+type ModelState = {
+  ready: ModelsContext["ready"]
+  current: () => ModelItem | undefined
+  recent: () => Array<ModelItem | undefined>
+  list: ModelsContext["list"]
+  cycle: (direction: 1 | -1) => void
+  set: (model: ModelKey | undefined, options?: { recent?: boolean }) => void
+  visible: (model: ModelKey) => boolean
+  setVisibility: (model: ModelKey, visible: boolean) => void
+  variant: {
+    configured: () => string | undefined
+    selected: () => string | undefined
+    current: () => string | undefined
+    list: () => string[]
+    set: (value: string | undefined) => void
+    cycle: () => void
+  }
+}
+
+type LocalContext = {
+  slug: Accessor<string>
+  model: ModelState
+  agent: AgentState
+}
+
+const createLocalContext = (): LocalContext => {
   const sdk = useSDK()
   const sync = useSync()
   const providers = useProviders()

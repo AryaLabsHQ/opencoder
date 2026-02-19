@@ -94,6 +94,7 @@ export function createPromptSubmit(input: PromptSubmitInput): PromptSubmit {
       .abort({
         sessionID,
       })
+      .then(() => {})
       .catch(() => {})
   }
 

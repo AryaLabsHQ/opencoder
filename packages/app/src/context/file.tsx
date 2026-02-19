@@ -43,13 +43,41 @@ export {
   touchFileContent,
 }
 
+type FileTree = {
+  list: (input: string) => Promise<void>
+  refresh: (input: string) => Promise<void>
+  state: ReturnType<typeof createFileTreeStore>["dirState"]
+  children: ReturnType<typeof createFileTreeStore>["children"]
+  expand: ReturnType<typeof createFileTreeStore>["expandDir"]
+  collapse: ReturnType<typeof createFileTreeStore>["collapseDir"]
+  toggle: (input: string) => void
+}
+
+type FileContext = {
+  ready: () => boolean
+  normalize: (input: string) => string
+  tab: (input: string) => string
+  pathFromTab: (input: string) => string
+  tree: FileTree
+  get: (input: string) => FileState | undefined
+  load: (input: string, options?: { force?: boolean }) => Promise<void>
+  scrollTop: (input: string) => number | undefined
+  scrollLeft: (input: string) => number | undefined
+  selectedLines: (input: string) => SelectedLineRange | null | undefined
+  setScrollTop: (input: string, top: number) => void
+  setScrollLeft: (input: string, left: number) => void
+  setSelectedLines: (input: string, range: SelectedLineRange | null) => void
+  searchFiles: (query: string) => Promise<string[]>
+  searchFilesAndDirectories: (query: string) => Promise<string[]>
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message
   if (typeof error === "string" && error) return error
   return "Unknown error"
 }
 
-const createFileContext = () => {
+const createFileContext = (): FileContext => {
   const sdk = useSDK()
   useSync()
   const params = useParams()

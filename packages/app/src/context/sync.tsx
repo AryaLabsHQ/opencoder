@@ -1,11 +1,12 @@
-import { batch, createMemo } from "solid-js"
+import { batch, createMemo, type Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { Binary } from "@opencoder-ai/util/binary"
 import { retry } from "@opencoder-ai/util/retry"
 import { createSimpleContext } from "@opencoder-ai/ui/context"
 import { useGlobalSync } from "./global-sync"
 import { useSDK } from "./sdk"
-import type { Message, Part } from "@opencoder-ai/sdk/v2/client"
+import type { Message, Part, Project } from "@opencoder-ai/sdk/v2/client"
+import type { State } from "./global-sync/types"
 
 function sortParts(parts: Part[]) {
   return parts.filter((part) => !!part?.id).sort((a, b) => cmp(a.id, b.id))
@@ -39,6 +40,45 @@ type OptimisticAddInput = {
 type OptimisticRemoveInput = {
   sessionID: string
   messageID: string
+}
+
+type Setter = (...args: unknown[]) => void
+
+type SyncSession = {
+  get: (sessionID: string) => State["session"][number] | undefined
+  optimistic: {
+    add: (input: { directory?: string; sessionID: string; message: Message; parts: Part[] }) => void
+    remove: (input: { directory?: string; sessionID: string; messageID: string }) => void
+  }
+  addOptimisticMessage: (input: {
+    sessionID: string
+    messageID: string
+    parts: Part[]
+    agent: string
+    model: { providerID: string; modelID: string }
+  }) => void
+  sync: (sessionID: string) => Promise<void>
+  diff: (sessionID: string) => Promise<void>
+  todo: (sessionID: string) => Promise<void>
+  history: {
+    more: (sessionID: string) => boolean
+    loading: (sessionID: string) => boolean
+    loadMore: (sessionID: string, count?: number) => Promise<void>
+  }
+  fetch: (count?: number) => Promise<void>
+  more: Accessor<boolean>
+  archive: (sessionID: string) => Promise<void>
+}
+
+type SyncContext = {
+  data: State
+  set: Setter
+  status: State["status"]
+  ready: boolean
+  project: Project | undefined
+  session: SyncSession
+  absolute: (path: string) => string
+  directory: string
 }
 
 export function applyOptimisticAdd(draft: OptimisticStore, input: OptimisticAddInput) {
@@ -90,12 +130,11 @@ function setOptimisticRemove(setStore: (...args: unknown[]) => void, input: Opti
   })
 }
 
-const createSyncContext = () => {
+const createSyncContext = (): SyncContext => {
   const globalSync = useGlobalSync()
   const sdk = useSDK()
 
     type Child = ReturnType<(typeof globalSync)["child"]>
-    type Setter = Child[1]
 
     const current = createMemo(() => globalSync.child(sdk.directory))
     const target = (directory?: string) => {
