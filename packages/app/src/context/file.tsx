@@ -56,7 +56,7 @@ type FileTree = {
 type FileContext = {
   ready: () => boolean
   normalize: (input: string) => string
-  tab: (input: string) => string
+  tab: (input: string) => string | undefined
   pathFromTab: (input: string) => string
   tree: FileTree
   get: (input: string) => FileState | undefined
@@ -254,7 +254,7 @@ const createFileContext = (): FileContext => {
       return state
     }
 
-    function withPath(input: string, action: (file: string) => unknown) {
+    function withPath<T>(input: string, action: (file: string) => T) {
       return action(path.normalize(input))
     }
     const scrollTop = (input: string) => withPath(input, (file) => view().scrollTop(file))
@@ -302,8 +302,6 @@ const createFileContext = (): FileContext => {
     searchFilesAndDirectories: (query: string) => search(query, "true"),
   }
 }
-
-type FileContext = ReturnType<typeof createFileContext>
 
 const ctx = createSimpleContext<FileContext, {}>({
   name: "File",

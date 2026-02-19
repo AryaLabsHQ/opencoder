@@ -274,8 +274,6 @@ const createLocalContext = (): LocalContext => {
   return result
 }
 
-type LocalContext = ReturnType<typeof createLocalContext>
-
 const ctx = createSimpleContext<LocalContext, {}>({
   name: "Local",
   init: createLocalContext,

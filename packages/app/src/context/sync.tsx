@@ -1,5 +1,5 @@
 import { batch, createMemo, type Accessor } from "solid-js"
-import { createStore, produce, reconcile } from "solid-js/store"
+import { createStore, produce, reconcile, type SetStoreFunction } from "solid-js/store"
 import { Binary } from "@opencoder-ai/util/binary"
 import { retry } from "@opencoder-ai/util/retry"
 import { createSimpleContext } from "@opencoder-ai/ui/context"
@@ -42,7 +42,7 @@ type OptimisticRemoveInput = {
   messageID: string
 }
 
-type Setter = (...args: unknown[]) => void
+type Setter = SetStoreFunction<State>
 
 type SyncSession = {
   get: (sessionID: string) => State["session"][number] | undefined
@@ -412,8 +412,6 @@ const createSyncContext = (): SyncContext => {
     },
   }
 }
-
-type SyncContext = ReturnType<typeof createSyncContext>
 
 const ctx = createSimpleContext<SyncContext, {}>({
   name: "Sync",
