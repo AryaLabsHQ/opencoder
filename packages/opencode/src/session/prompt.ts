@@ -19,8 +19,8 @@ import { ProviderTransform } from "../provider/transform"
 import { SystemPrompt } from "./system"
 import { InstructionPrompt } from "./instruction"
 import { Plugin } from "../plugin"
-import BUILD_SWITCH from "../session/prompt/build-switch.txt"
 import PROMPT_PLAN from "../session/prompt/plan.txt"
+import BUILD_SWITCH from "../session/prompt/build-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { defer } from "../util/defer"
 import { ToolRegistry } from "../tool/registry"
@@ -30,6 +30,7 @@ import { ReadTool } from "../tool/read"
 import { FileTime } from "../file/time"
 import { Flag } from "../flag/flag"
 import { ulid } from "ulid"
+import { spawn } from "child_process"
 import { Command } from "../command"
 import { $ } from "bun"
 import { pathToFileURL, fileURLToPath } from "url"
@@ -411,7 +412,6 @@ export namespace SessionPrompt {
             tool: "task",
             sessionID,
             callID: part.id,
-            agent: task.agent,
           },
           { args: taskArgs },
         )
@@ -419,11 +419,11 @@ export namespace SessionPrompt {
         const taskAgent = await Agent.get(task.agent)
         const taskCtx: Tool.Context = {
           agent: task.agent,
+          model: { providerID: taskModel.providerID, modelID: taskModel.id },
           messageID: assistantMessage.id,
           sessionID: sessionID,
           abort,
           callID: part.callID,
-          model: { providerID: taskModel.providerID, modelID: taskModel.id },
           extra: { bypassAgentCheck: true },
           messages: msgs,
           async metadata(input) {
@@ -462,7 +462,6 @@ export namespace SessionPrompt {
             sessionID,
             callID: part.id,
             args: taskArgs,
-            agent: task.agent,
           },
           result,
         )
@@ -761,7 +760,7 @@ export namespace SessionPrompt {
       messageID: input.processor.message.id,
       callID: options.toolCallId,
       model: { providerID: input.model.providerID, modelID: input.model.id },
-      extra: { bypassAgentCheck: input.bypassAgentCheck },
+      extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
       agent: input.agent.name,
       messages: input.messages,
       metadata: async (val: { title?: string; metadata?: any }) => {
@@ -808,7 +807,6 @@ export namespace SessionPrompt {
               tool: item.id,
               sessionID: ctx.sessionID,
               callID: ctx.callID,
-              agent: input.agent.name,
             },
             {
               args,
@@ -831,7 +829,6 @@ export namespace SessionPrompt {
               sessionID: ctx.sessionID,
               callID: ctx.callID,
               args,
-              agent: input.agent.name,
             },
             output,
           )
@@ -856,7 +853,6 @@ export namespace SessionPrompt {
             tool: key,
             sessionID: ctx.sessionID,
             callID: opts.toolCallId,
-            agent: input.agent.name,
           },
           {
             args,
@@ -879,7 +875,6 @@ export namespace SessionPrompt {
             sessionID: ctx.sessionID,
             callID: opts.toolCallId,
             args,
-            agent: input.agent.name,
           },
           result,
         )
@@ -1157,14 +1152,14 @@ export namespace SessionPrompt {
 
                 await ReadTool.init()
                   .then(async (t) => {
-                    const model = info.model ?? (await Provider.defaultModel())
+                    const model = await Provider.getModel(info.model.providerID, info.model.modelID)
                     const readCtx: Tool.Context = {
                       sessionID: input.sessionID,
                       abort: new AbortController().signal,
                       agent: input.agent!,
+                      model: { providerID: model.providerID, modelID: model.id },
                       messageID: info.id,
-                      model,
-                      extra: { bypassCwdCheck: true },
+                      extra: { bypassCwdCheck: true, model },
                       messages: [],
                       metadata: async () => {},
                       ask: async () => {},
@@ -1218,13 +1213,13 @@ export namespace SessionPrompt {
 
               if (part.mime === "application/x-directory") {
                 const args = { filePath: filepath }
-                const model = info.model ?? (await Provider.defaultModel())
+                const model = await Provider.getModel(info.model.providerID, info.model.modelID)
                 const listCtx: Tool.Context = {
                   sessionID: input.sessionID,
                   abort: new AbortController().signal,
                   agent: input.agent!,
+                  model: { providerID: model.providerID, modelID: model.id },
                   messageID: info.id,
-                  model,
                   extra: { bypassCwdCheck: true },
                   messages: [],
                   metadata: async () => {},
@@ -1342,17 +1337,6 @@ export namespace SessionPrompt {
     const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
     if (!userMessage) return input.messages
 
-    // If reminder is false or undefined, skip injection
-    if (typeof input.agent.reminder === "string") {
-      userMessage.parts.push({
-        id: Identifier.ascending("part"),
-        messageID: userMessage.info.id,
-        sessionID: userMessage.info.sessionID,
-        type: "text",
-        text: input.agent.reminder,
-        synthetic: true,
-      })
-    }
     // Original logic when experimental plan mode is disabled
     if (!Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE) {
       if (input.agent.name === "plan") {
@@ -1593,7 +1577,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       },
     }
     await Session.updatePart(part)
-
     const shell = Shell.preferred()
     const shellName = (
       process.platform === "win32" ? path.win32.basename(shell, ".exe") : path.basename(shell)
