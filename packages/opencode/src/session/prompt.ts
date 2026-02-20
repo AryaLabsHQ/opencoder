@@ -2,6 +2,7 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import z from "zod"
+import { Filesystem } from "../util/filesystem"
 import { Identifier } from "../id/id"
 import { MessageV2 } from "./message-v2"
 import { Log } from "../util/log"
@@ -21,7 +22,6 @@ import BUILD_SWITCH from "../session/prompt/build-switch.txt"
 import PROMPT_PLAN from "../session/prompt/plan.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { defer } from "../util/defer"
-import { clone } from "remeda"
 import { ToolRegistry } from "../tool/registry"
 import { MCP } from "../mcp"
 import { LSP } from "../lsp"
@@ -628,11 +628,9 @@ export namespace SessionPrompt {
         })
       }
 
-      const sessionMessages = clone(msgs)
-
       // Ephemerally wrap queued user messages with a reminder to stay on track
       if (step > 1 && lastFinished) {
-        for (const msg of sessionMessages) {
+        for (const msg of msgs) {
           if (msg.info.role !== "user" || msg.info.id <= lastFinished.id) continue
           for (const part of msg.parts) {
             if (part.type !== "text" || part.ignored || part.synthetic) continue
@@ -649,7 +647,7 @@ export namespace SessionPrompt {
         }
       }
 
-      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: sessionMessages })
+      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
       // Build system prompt, adding structured output instruction if needed
       const system = [...(await SystemPrompt.environment(model)), ...(await InstructionPrompt.system())]
@@ -665,7 +663,7 @@ export namespace SessionPrompt {
         sessionID,
         system,
         messages: [
-          ...MessageV2.toModelMessages(sessionMessages, model),
+          ...MessageV2.toModelMessages(msgs, model),
           ...(isLastStep
             ? [
                 {
@@ -915,7 +913,12 @@ export namespace SessionPrompt {
           title: "",
           metadata,
           output: truncated.content,
-          attachments,
+          attachments: attachments.map((attachment) => ({
+            ...attachment,
+            id: Identifier.ascending("part"),
+            sessionID: ctx.sessionID,
+            messageID: input.processor.message.id,
+          })),
           content: result.content, // directly return content to preserve ordering when outputting to model
         }
       }
@@ -1089,11 +1092,9 @@ export namespace SessionPrompt {
               // have to normalize, symbol search returns absolute paths
               // Decode the pathname since URL constructor doesn't automatically decode it
               const filepath = fileURLToPath(part.url)
-              const stat = await Bun.file(filepath)
-                .stat()
-                .catch(() => undefined)
+              const s = Filesystem.stat(filepath)
 
-              if (stat?.isDirectory()) {
+              if (s?.isDirectory()) {
                 part.mime = "application/x-directory"
               }
 
@@ -1243,14 +1244,13 @@ export namespace SessionPrompt {
                 ]
               }
 
-              const file = Bun.file(filepath)
               FileTime.read(input.sessionID, filepath)
               return [
                 {
                   messageID: info.id,
                   sessionID: input.sessionID,
                   type: "text",
-                  text: `Called the Read tool with the following input: {\"filePath\":\"${filepath}\"}`,
+                  text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
                   synthetic: true,
                 },
                 {
@@ -1258,7 +1258,7 @@ export namespace SessionPrompt {
                   messageID: info.id,
                   sessionID: input.sessionID,
                   type: "file",
-                  url: `data:${part.mime};base64,` + Buffer.from(await file.bytes()).toString("base64"),
+                  url: `data:${part.mime};base64,` + (await Filesystem.readBytes(filepath)).toString("base64"),
                   mime: part.mime,
                   filename: part.filename!,
                   source: part.source,
@@ -1375,7 +1375,7 @@ export namespace SessionPrompt {
     // Switching from plan mode to build mode
     if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
       const plan = Session.plan(input.session)
-      const exists = await Bun.file(plan).exists()
+      const exists = await Filesystem.exists(plan)
       if (exists) {
         const part = await Session.updatePart({
           id: Identifier.ascending("part"),
@@ -1394,7 +1394,7 @@ export namespace SessionPrompt {
     // Entering plan mode
     if (input.agent.name === "plan" && assistantMessage?.info.agent !== "plan") {
       const plan = Session.plan(input.session)
-      const exists = await Bun.file(plan).exists()
+      const exists = await Filesystem.exists(plan)
       if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
       const part = await Session.updatePart({
         id: Identifier.ascending("part"),
@@ -1584,28 +1584,128 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     }
     await Session.updatePart(part)
 
-    let currentOutput = ""
+    const shell = Shell.preferred()
+    const shellName = (
+      process.platform === "win32" ? path.win32.basename(shell, ".exe") : path.basename(shell)
+    ).toLowerCase()
 
-    const result = await Shell.execute({
-      command: input.command,
-      cwd: Instance.directory,
-      shell: Shell.preferred(),
-      loadRcFiles: true,
-      abort,
-      onOutput: (output) => {
-        currentOutput = output
-        if (part.state.status === "running") {
-          part.state.metadata = {
-            output,
-            description: "",
-          }
-          Session.updatePart(part)
-        }
+    const invocations: Record<string, { args: string[] }> = {
+      nu: {
+        args: ["-c", input.command],
+      },
+      fish: {
+        args: ["-c", input.command],
+      },
+      zsh: {
+        args: [
+          "-c",
+          "-l",
+          `
+            [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
+            [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
+            eval ${JSON.stringify(input.command)}
+          `,
+        ],
+      },
+      bash: {
+        args: [
+          "-c",
+          "-l",
+          `
+            shopt -s expand_aliases
+            [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
+            eval ${JSON.stringify(input.command)}
+          `,
+        ],
+      },
+      // Windows cmd
+      cmd: {
+        args: ["/c", input.command],
+      },
+      // Windows PowerShell
+      powershell: {
+        args: ["-NoProfile", "-Command", input.command],
+      },
+      pwsh: {
+        args: ["-NoProfile", "-Command", input.command],
+      },
+      // Fallback: any shell that doesn't match those above
+      //  - No -l, for max compatibility
+      "": {
+        args: ["-c", `${input.command}`],
+      },
+    }
+
+    const matchingInvocation = invocations[shellName] ?? invocations[""]
+    const args = matchingInvocation?.args
+
+    const cwd = Instance.directory
+    const shellEnv = await Plugin.trigger(
+      "shell.env",
+      { cwd, sessionID: input.sessionID, callID: part.callID },
+      { env: {} },
+    )
+    const proc = spawn(shell, args, {
+      cwd,
+      detached: process.platform !== "win32",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        ...shellEnv.env,
+        TERM: "dumb",
       },
     })
 
-    let output = currentOutput
-    if (result.aborted) {
+    let output = ""
+
+    proc.stdout?.on("data", (chunk) => {
+      output += chunk.toString()
+      if (part.state.status === "running") {
+        part.state.metadata = {
+          output: output,
+          description: "",
+        }
+        Session.updatePart(part)
+      }
+    })
+
+    proc.stderr?.on("data", (chunk) => {
+      output += chunk.toString()
+      if (part.state.status === "running") {
+        part.state.metadata = {
+          output: output,
+          description: "",
+        }
+        Session.updatePart(part)
+      }
+    })
+
+    let aborted = false
+    let exited = false
+
+    const kill = () => Shell.killTree(proc, { exited: () => exited })
+
+    if (abort.aborted) {
+      aborted = true
+      await kill()
+    }
+
+    const abortHandler = () => {
+      aborted = true
+      void kill()
+    }
+
+    abort.addEventListener("abort", abortHandler, { once: true })
+
+    await new Promise<void>((resolve) => {
+      proc.on("close", () => {
+        exited = true
+        abort.removeEventListener("abort", abortHandler)
+        resolve()
+      })
+    })
+
+    if (aborted) {
       output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
     }
     msg.time.completed = Date.now()

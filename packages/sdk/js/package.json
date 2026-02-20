@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencoder-ai/sdk",
-  "version": "1.2.6",
+  "version": "1.2.10",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -28,6 +28,10 @@
     "./v2/client": {
       "types": "./dist/v2/client.d.ts",
       "default": "./src/v2/client.ts"
+    },
+    "./v2/gen/client": {
+      "types": "./dist/v2/gen/client/index.d.ts",
+      "default": "./src/v2/gen/client/index.ts"
     },
     "./v2/server": {
       "types": "./dist/v2/server.d.ts",

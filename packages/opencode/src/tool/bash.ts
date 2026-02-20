@@ -162,6 +162,24 @@ export const BashTool = Tool.define("bash", async () => {
         })
       }
 
+      const shellEnv = await Plugin.trigger(
+        "shell.env",
+        { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
+        { env: {} },
+      )
+      const proc = spawn(params.command, {
+        shell,
+        cwd,
+        env: {
+          ...process.env,
+          ...shellEnv.env,
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: process.platform !== "win32",
+      })
+
+      let output = ""
+
       // Initialize metadata with empty output
       ctx.metadata({
         metadata: {
@@ -170,40 +188,69 @@ export const BashTool = Tool.define("bash", async () => {
         },
       })
 
-      let currentOutput = ""
-
-      const result = await Shell.execute({
-        command: params.command,
-        cwd,
-        loadRcFiles: true,
-        timeout,
-        abort: ctx.abort,
-        onOutput: (output) => {
-          currentOutput = output
-          if (output.length <= MAX_OUTPUT_LENGTH) {
-            ctx.metadata({
-              metadata: {
-                output,
-                description: params.description,
-              },
-            })
-          }
-        },
-      })
-
-      let output = currentOutput
-      const resultMetadata: string[] = []
-
-      if (output.length > MAX_OUTPUT_LENGTH) {
-        output = output.slice(0, MAX_OUTPUT_LENGTH)
-        resultMetadata.push(`bash tool truncated output as it exceeded ${MAX_OUTPUT_LENGTH} char limit`)
+      const append = (chunk: Buffer) => {
+        output += chunk.toString()
+        ctx.metadata({
+          metadata: {
+            // truncate the metadata to avoid GIANT blobs of data (has nothing to do w/ what agent can access)
+            output: output.length > MAX_METADATA_LENGTH ? output.slice(0, MAX_METADATA_LENGTH) + "\n\n..." : output,
+            description: params.description,
+          },
+        })
       }
 
-      if (result.timedOut) {
+      proc.stdout?.on("data", append)
+      proc.stderr?.on("data", append)
+
+      let timedOut = false
+      let aborted = false
+      let exited = false
+
+      const kill = () => Shell.killTree(proc, { exited: () => exited })
+
+      if (ctx.abort.aborted) {
+        aborted = true
+        await kill()
+      }
+
+      const abortHandler = () => {
+        aborted = true
+        void kill()
+      }
+
+      ctx.abort.addEventListener("abort", abortHandler, { once: true })
+
+      const timeoutTimer = setTimeout(() => {
+        timedOut = true
+        void kill()
+      }, timeout + 100)
+
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          clearTimeout(timeoutTimer)
+          ctx.abort.removeEventListener("abort", abortHandler)
+        }
+
+        proc.once("exit", () => {
+          exited = true
+          cleanup()
+          resolve()
+        })
+
+        proc.once("error", (error) => {
+          exited = true
+          cleanup()
+          reject(error)
+        })
+      })
+
+      const resultMetadata: string[] = []
+
+      if (timedOut) {
         resultMetadata.push(`bash tool terminated command after exceeding timeout ${timeout} ms`)
       }
 
-      if (result.aborted) {
+      if (aborted) {
         resultMetadata.push("User aborted the command")
       }
 
@@ -215,7 +262,7 @@ export const BashTool = Tool.define("bash", async () => {
         title: params.description,
         metadata: {
           output: output.length > MAX_METADATA_LENGTH ? output.slice(0, MAX_METADATA_LENGTH) + "\n\n..." : output,
-          exit: result.exitCode,
+          exit: proc.exitCode,
           description: params.description,
         },
         output,

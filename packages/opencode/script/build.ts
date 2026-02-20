@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
-import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
-import path from "path"
-import fs from "fs"
 import { $ } from "bun"
+import fs from "fs"
+import path from "path"
 import { fileURLToPath } from "url"
+import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -26,7 +26,11 @@ await Bun.write(
 console.log("Generated models-snapshot.ts")
 
 // Load migrations from migration directories
-const migrationDirs = (await fs.promises.readdir(path.join(dir, "migration"), { withFileTypes: true }))
+const migrationDirs = (
+  await fs.promises.readdir(path.join(dir, "migration"), {
+    withFileTypes: true,
+  })
+)
   .filter((entry) => entry.isDirectory() && /^\d{4}\d{2}\d{2}\d{2}\d{2}\d{2}/.test(entry.name))
   .map((entry) => entry.name)
   .sort()
@@ -173,7 +177,6 @@ for (const item of targets) {
     compile: {
       autoloadBunfig: false,
       autoloadDotenv: false,
-      //@ts-ignore (bun types aren't up to date)
       autoloadTsconfig: true,
       autoloadPackageJson: true,
       target: name.replace(pkg.name, "bun") as any,
@@ -216,7 +219,7 @@ if (Script.release) {
       await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}/bin`)
     }
   }
-  await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber`
+  await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`
 }
 
 export { binaries }
