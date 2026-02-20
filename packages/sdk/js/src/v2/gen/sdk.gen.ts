@@ -1010,7 +1010,7 @@ export class Workspace extends HeyApiClient {
   }
 }
 
-export class Session extends HeyApiClient {
+export class ExperimentalSession extends HeyApiClient {
   /**
    * List sessions
    *
@@ -1079,9 +1079,9 @@ export class Experimental extends HeyApiClient {
     return (this._workspace ??= new Workspace({ client: this.client }))
   }
 
-  private _session?: Session
-  get session(): Session {
-    return (this._session ??= new Session({ client: this.client }))
+  private _session?: ExperimentalSession
+  get session(): ExperimentalSession {
+    return (this._session ??= new ExperimentalSession({ client: this.client }))
   }
 
   private _resource?: Resource
