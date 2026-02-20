@@ -1,5 +1,6 @@
 import {
   AssistantMessage,
+  type FileDiff,
   FilePart,
   Message as MessageType,
   Part as PartType,
@@ -9,10 +10,13 @@ import {
   ToolPart,
 } from "@opencoder-ai/sdk/v2/client"
 import { useData } from "../context"
+import { useDiffComponent } from "../context/diff"
 import { type UiI18nKey, type UiI18nParams, useI18n } from "../context/i18n"
 
 import { Binary } from "@opencoder-ai/util/binary"
+import { getDirectory, getFilename } from "@opencoder-ai/util/path"
 import { createEffect, createMemo, createSignal, For, Match, on, onCleanup, ParentProps, Show, Switch } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import { Message, Part } from "./message-part"
 import { Markdown } from "./markdown"
 import { IconButton } from "./icon-button"
@@ -142,6 +146,19 @@ function list<T>(value: T[] | undefined | null, fallback: T[]) {
   return fallback
 }
 
+const hidden = new Set(["todowrite", "todoread"])
+
+function visible(part: PartType) {
+  if (part.type === "tool") {
+    if (hidden.has(part.tool)) return false
+    if (part.tool === "question") return part.state.status !== "pending" && part.state.status !== "running"
+    return true
+  }
+  if (part.type === "text") return !!part.text?.trim()
+  if (part.type === "reasoning") return !!part.text?.trim()
+  return false
+}
+
 function AssistantMessageItem(props: {
   message: AssistantMessage
   responsePartId: string | undefined
@@ -207,11 +224,13 @@ export function SessionTurn(
 ) {
   const i18n = useI18n()
   const data = useData()
+  const diffComponent = useDiffComponent()
 
   const emptyMessages: MessageType[] = []
   const emptyParts: PartType[] = []
   const emptyFiles: FilePart[] = []
   const emptyAssistant: AssistantMessage[] = []
+  const emptyDiffs: FileDiff[] = []
   const emptyPermissions: PermissionRequest[] = []
   const emptyQuestions: QuestionRequest[] = []
   const emptyQuestionParts: { part: ToolPart; message: AssistantMessage }[] = []
@@ -261,6 +280,34 @@ export function SessionTurn(
     if (!msg) return emptyParts
     return list(data.store.part?.[msg.id], emptyParts)
   })
+
+  const diffs = createMemo(() => {
+    const files = message()?.summary?.diffs
+    if (!files?.length) return emptyDiffs
+
+    const seen = new Set<string>()
+    return files
+      .reduceRight<FileDiff[]>((result, diff) => {
+        if (seen.has(diff.file)) return result
+        seen.add(diff.file)
+        result.push(diff)
+        return result
+      }, [])
+      .reverse()
+  })
+  const edited = createMemo(() => diffs().length)
+  const [open, setOpen] = createSignal(false)
+  const [expanded, setExpanded] = createSignal<string[]>([])
+
+  createEffect(
+    on(
+      open,
+      (value, prev) => {
+        if (!value && prev) setExpanded([])
+      },
+      { defer: true },
+    ),
+  )
 
   const attachmentParts = createMemo(() => {
     const msgParts = parts()
@@ -651,7 +698,6 @@ export function SessionTurn(
                 data-slot="session-turn-message-container"
                 class={props.classes?.container}
               >
-                <Switch>
                 <Switch>
                   <Match when={isShellMode()}>
                     <Part part={shellModePart()!} message={msg()} defaultOpen />
