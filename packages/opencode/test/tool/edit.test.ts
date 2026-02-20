@@ -11,6 +11,7 @@ const ctx = {
   messageID: "",
   callID: "",
   agent: "build",
+  model: { providerID: "test", modelID: "test" },
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

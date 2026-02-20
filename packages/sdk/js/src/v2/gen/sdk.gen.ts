@@ -904,7 +904,7 @@ export class Worktree extends HeyApiClient {
   }
 }
 
-export class ExperimentalSession extends HeyApiClient {
+export class Session extends HeyApiClient {
   /**
    * List sessions
    *
@@ -968,9 +968,9 @@ export class Resource extends HeyApiClient {
 }
 
 export class Experimental extends HeyApiClient {
-  private _session?: ExperimentalSession
-  get session(): ExperimentalSession {
-    return (this._session ??= new ExperimentalSession({ client: this.client }))
+  private _session?: Session
+  get session(): Session {
+    return (this._session ??= new Session({ client: this.client }))
   }
 
   private _resource?: Resource
@@ -1048,7 +1048,7 @@ export class Todo extends HeyApiClient {
   }
 }
 
-export class Session extends HeyApiClient {
+export class Session2 extends HeyApiClient {
   /**
    * List sessions
    *
@@ -3364,9 +3364,9 @@ export class OpencodeClient extends HeyApiClient {
     return (this._experimental ??= new Experimental({ client: this.client }))
   }
 
-  private _session?: Session
-  get session(): Session {
-    return (this._session ??= new Session({ client: this.client }))
+  private _session?: Session2
+  get session(): Session2 {
+    return (this._session ??= new Session2({ client: this.client }))
   }
 
   private _part?: Part
