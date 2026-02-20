@@ -9,23 +9,19 @@ import { Select } from "@opencoder-ai/ui/select"
 import { createAutoScroll } from "@opencoder-ai/ui/hooks"
 import { Mark } from "@opencoder-ai/ui/logo"
 
-import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { useSync } from "@/context/sync"
 import { useLayout } from "@/context/layout"
 import { checksum, base64Encode } from "@opencoder-ai/util/encode"
 import { useDialog } from "@opencoder-ai/ui/context/dialog"
-import { useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
 import { useNavigate, useParams } from "@solidjs/router"
-import { UserMessage } from "@opencoder-ai/sdk/v2/client"
+import { UserMessage } from "@opencoder-ai/sdk/v2"
 import { useSDK } from "@/context/sdk"
 import { usePrompt } from "@/context/prompt"
 import { useComments } from "@/context/comments"
-import { useTerminal, type LocalPTY } from "@/context/terminal"
 import { SessionHeader, NewSessionView } from "@/components/session"
 import { same } from "@/utils/same"
-import { getDraggableId } from "@/utils/solid-dnd"
-import { focusTerminalById, createOpenReviewFile } from "@/pages/session/helpers"
+import { createOpenReviewFile } from "@/pages/session/helpers"
 import { createScrollSpy } from "@/pages/session/scroll-spy"
 import { SessionReviewTab, type DiffStyle, type SessionReviewTabProps } from "@/pages/session/review-tab"
 import { TerminalPanel } from "@/pages/session/terminal-panel"
@@ -36,24 +32,18 @@ import { SessionMobileTabs } from "@/pages/session/session-mobile-tabs"
 import { SessionSidePanel } from "@/pages/session/session-side-panel"
 import { useSessionHashScroll } from "@/pages/session/use-session-hash-scroll"
 
-const handoff = {
-  terminal: new Map<string, string[]>(),
-}
-
 export default function Page() {
   const layout = useLayout()
   const local = useLocal()
   const file = useFile()
   const sync = useSync()
   const dialog = useDialog()
-  const command = useCommand()
   const language = useLanguage()
   const params = useParams()
   const navigate = useNavigate()
   const sdk = useSDK()
   const prompt = usePrompt()
   const comments = useComments()
-  const terminal = useTerminal()
 
   const [ui, setUi] = createStore({
     pendingMessage: undefined as string | undefined,
@@ -220,7 +210,6 @@ export default function Page() {
   )
 
   const [store, setStore] = createStore({
-    activeTerminalDraggable: undefined as string | undefined,
     messageId: undefined as string | undefined,
     turnStart: 0,
     mobileTab: "session" as "session" | "changes",
@@ -411,33 +400,6 @@ export default function Page() {
       if (composer.blocked()) return
       inputRef?.focus()
     }
-  }
-
-  const handleTerminalDragStart = (event: unknown) => {
-    const id = getDraggableId(event)
-    if (!id) return
-    setStore("activeTerminalDraggable", id)
-  }
-
-  const handleTerminalDragOver = (event: DragEvent) => {
-    const { draggable, droppable } = event
-    if (draggable && droppable) {
-      const terminals = terminal.all()
-      const fromIndex = terminals.findIndex((t: LocalPTY) => t.id === draggable.id.toString())
-      const toIndex = terminals.findIndex((t: LocalPTY) => t.id === droppable.id.toString())
-      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-        terminal.move(draggable.id.toString(), toIndex)
-      }
-    }
-  }
-
-  const handleTerminalDragEnd = () => {
-    setStore("activeTerminalDraggable", undefined)
-    const activeId = terminal.active()
-    if (!activeId) return
-    setTimeout(() => {
-      focusTerminalById(activeId)
-    }, 0)
   }
 
   const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
@@ -1037,7 +999,6 @@ export default function Page() {
           reviewCount={reviewCount()}
           onSession={() => setStore("mobileTab", "session")}
           onChanges={() => setStore("mobileTab", "changes")}
-          t={language.t}
         />
 
         {/* Session panel */}
@@ -1157,21 +1118,7 @@ export default function Page() {
         <SessionSidePanel reviewPanel={reviewPanel} activeDiff={tree.activeDiff} focusReviewDiff={focusReviewDiff} />
       </div>
 
-      <TerminalPanel
-        open={view().terminal.opened()}
-        height={layout.terminal.height()}
-        resize={layout.terminal.resize}
-        close={view().terminal.close}
-        terminal={terminal}
-        language={language}
-        command={command}
-        handoff={() => handoff.terminal.get(params.dir ?? "") ?? []}
-        activeTerminalDraggable={() => store.activeTerminalDraggable}
-        handleTerminalDragStart={handleTerminalDragStart}
-        handleTerminalDragOver={handleTerminalDragOver}
-        handleTerminalDragEnd={handleTerminalDragEnd}
-        onCloseTab={() => {}}
-      />
+      <TerminalPanel />
     </div>
   )
 }
