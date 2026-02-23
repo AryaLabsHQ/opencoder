@@ -5,7 +5,8 @@ import { Billing } from "@opencoder-ai/console-core/billing.js"
 import { Database, eq, and, isNull, sql } from "@opencoder-ai/console-core/drizzle/index.js"
 import { BillingTable, SubscriptionTable } from "@opencoder-ai/console-core/schema/billing.sql.js"
 import { Actor } from "@opencoder-ai/console-core/actor.js"
-import { Black } from "@opencoder-ai/console-core/black.js"
+import { Subscription } from "@opencoder-ai/console-core/subscription.js"
+import { BlackData } from "@opencoder-ai/console-core/black.js"
 import { withActor } from "~/context/auth.withActor"
 import { queryBillingInfo } from "../../common"
 import styles from "./black-section.module.css"
@@ -31,17 +32,19 @@ const querySubscription = query(async (workspaceID: string) => {
         .then((r) => r[0]),
     )
     if (!row?.subscription) return null
+    const blackData = BlackData.getLimits({ plan: row.subscription.plan })
 
     return {
       plan: row.subscription.plan,
       useBalance: row.subscription.useBalance ?? false,
-      rollingUsage: Black.analyzeRollingUsage({
-        plan: row.subscription.plan,
+      rollingUsage: Subscription.analyzeRollingUsage({
+        limit: blackData.rollingLimit,
+        window: blackData.rollingWindow,
         usage: row.rollingUsage ?? 0,
         timeUpdated: row.timeRollingUpdated ?? new Date(),
       }),
-      weeklyUsage: Black.analyzeWeeklyUsage({
-        plan: row.subscription.plan,
+      weeklyUsage: Subscription.analyzeWeeklyUsage({
+        limit: blackData.fixedLimit,
         usage: row.fixedUsage ?? 0,
         timeUpdated: row.timeFixedUpdated ?? new Date(),
       }),
