@@ -395,7 +395,7 @@ export function SessionTurn(
   })
 
   const answeredQuestionParts = createMemo(() => {
-    if (props.stepsExpanded) return emptyQuestionParts
+    if (stepsExpanded()) return emptyQuestionParts
     if (questions().length > 0) return emptyQuestionParts
 
     const result: { part: ToolPart; message: AssistantMessage }[] = []
@@ -433,6 +433,15 @@ export function SessionTurn(
   })
 
   const isShellMode = createMemo(() => !!shellModePart())
+  const [steps, setSteps] = createSignal(false)
+  const stepsExpanded = createMemo(() => props.stepsExpanded ?? steps())
+  const toggleSteps = () => {
+    if (props.onStepsExpandedToggle) {
+      props.onStepsExpandedToggle()
+      return
+    }
+    setSteps((value) => !value)
+  }
 
   const rawStatus = createMemo(() => {
     const msgs = assistantMessages()
@@ -725,14 +734,14 @@ export function SessionTurn(
                             data-slot="session-turn-collapsible-trigger-content"
                             variant="ghost"
                             size="small"
-                            onClick={props.onStepsExpandedToggle ?? (() => {})}
-                            aria-expanded={props.stepsExpanded}
+                            onClick={toggleSteps}
+                            aria-expanded={stepsExpanded()}
                           >
                             <Switch>
                               <Match when={working()}>
                                 <Spinner />
                               </Match>
-                              <Match when={!props.stepsExpanded}>
+                              <Match when={!stepsExpanded()}>
                                 <svg
                                   width="10"
                                   height="10"
@@ -749,7 +758,7 @@ export function SessionTurn(
                                   />
                                 </svg>
                               </Match>
-                              <Match when={props.stepsExpanded}>
+                              <Match when={stepsExpanded()}>
                                 <svg
                                   width="10"
                                   height="10"
@@ -802,10 +811,10 @@ export function SessionTurn(
                                   {store.status ?? i18n.t("ui.sessionTurn.status.consideringNextSteps")}
                                 </span>
                               </Match>
-                              <Match when={props.stepsExpanded}>
+                              <Match when={stepsExpanded()}>
                                 <span data-slot="session-turn-status-text">{i18n.t("ui.sessionTurn.steps.hide")}</span>
                               </Match>
-                              <Match when={!props.stepsExpanded}>
+                              <Match when={!stepsExpanded()}>
                                 <span data-slot="session-turn-status-text">{i18n.t("ui.sessionTurn.steps.show")}</span>
                               </Match>
                             </Switch>
@@ -816,7 +825,7 @@ export function SessionTurn(
                       </Show>
                     </div>
                     {/* Response */}
-                    <Show when={props.stepsExpanded && assistantMessages().length > 0}>
+                    <Show when={stepsExpanded() && assistantMessages().length > 0}>
                       <div data-slot="session-turn-collapsible-content-inner" aria-hidden={working()}>
                         <For each={assistantMessages()}>
                           {(assistantMessage) => (
@@ -836,7 +845,7 @@ export function SessionTurn(
                         </Show>
                       </div>
                     </Show>
-                    <Show when={!props.stepsExpanded && answeredQuestionParts().length > 0}>
+                    <Show when={!stepsExpanded() && answeredQuestionParts().length > 0}>
                       <div data-slot="session-turn-answered-question-parts">
                         <For each={answeredQuestionParts()}>
                           {({ part, message }) => <Part part={part} message={message} />}
@@ -984,7 +993,7 @@ export function SessionTurn(
                         </Collapsible>
                       </div>
                     </Show>
-                    <Show when={error() && !props.stepsExpanded}>
+                    <Show when={error() && !stepsExpanded()}>
                       <Card variant="error" class="error-card">
                         {errorText()}
                       </Card>
