@@ -16,6 +16,7 @@ import { useDialog } from "@opencoder-ai/ui/context/dialog"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
+import { useSettings } from "@/context/settings"
 
 const boundaryTarget = (root: HTMLElement, target: EventTarget | null) => {
   const current = target instanceof Element ? target : undefined
@@ -82,6 +83,7 @@ export function MessageTimeline(props: {
   const sync = useSync()
   const dialog = useDialog()
   const language = useLanguage()
+  const settings = useSettings()
 
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const sessionID = createMemo(() => params.id)
@@ -101,6 +103,7 @@ export function MessageTimeline(props: {
     menuOpen: false,
     pendingRename: false,
   })
+  const [expanded, setExpanded] = createStore<Record<string, boolean>>({})
   let titleRef: HTMLInputElement | undefined
 
   const errorMessage = (err: unknown) => {
@@ -118,6 +121,11 @@ export function MessageTimeline(props: {
       () => setTitle({ draft: "", editing: false, saving: false, menuOpen: false, pendingRename: false }),
       { defer: true },
     ),
+  )
+  createEffect(
+    on(sessionKey, () => setExpanded({}), {
+      defer: true,
+    }),
   )
 
   const openTitleEditor = () => {
@@ -531,14 +539,19 @@ export function MessageTimeline(props: {
                     "md:max-w-200 2xl:max-w-[1000px]": props.centered,
                   }}
                 >
-                  <SessionTurn
-                    sessionID={sessionID() ?? ""}
-                    messageID={message.id}
-                    lastUserMessageID={props.lastUserMessageID}
-                    classes={{
-                      root: "min-w-0 w-full relative",
-                      content: "flex flex-col justify-between !overflow-visible",
-                      container: "w-full px-4 md:px-5",
+                    <SessionTurn
+                      sessionID={sessionID() ?? ""}
+                      messageID={message.id}
+                      lastUserMessageID={props.lastUserMessageID}
+                      showReasoningSummaries={settings.general.showReasoningSummaries()}
+                      shellToolDefaultOpen={settings.general.shellToolPartsExpanded()}
+                      editToolDefaultOpen={settings.general.editToolPartsExpanded()}
+                      stepsExpanded={expanded[message.id] ?? false}
+                      onStepsExpandedToggle={() => setExpanded(message.id, (value) => !value)}
+                      classes={{
+                        root: "min-w-0 w-full relative",
+                        content: "flex flex-col justify-between !overflow-visible",
+                        container: "w-full px-4 md:px-5",
                     }}
                   />
                 </div>
