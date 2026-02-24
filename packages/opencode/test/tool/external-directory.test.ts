@@ -67,7 +67,7 @@ describe("tool.assertExternalDirectory", () => {
 
     const directory = "/tmp/project"
     const target = "/tmp/outside/file.txt"
-    const expected = path.join(path.dirname(target), "*")
+    const expected = path.join(path.dirname(target), "*").replaceAll("\\", "/")
 
     await Instance.provide({
       directory,
@@ -93,7 +93,7 @@ describe("tool.assertExternalDirectory", () => {
 
     const directory = "/tmp/project"
     const target = "/tmp/outside"
-    const expected = path.join(target, "*")
+    const expected = path.join(target, "*").replaceAll("\\", "/")
 
     await Instance.provide({
       directory,
