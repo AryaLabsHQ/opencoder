@@ -1,4 +1,4 @@
-import { base64Encode } from "@opencode-ai/util/encode"
+import { base64Encode } from "@opencoder-ai/util/encode"
 
 export function acceptKey(sessionID: string, directory?: string) {
   if (!directory) return sessionID
