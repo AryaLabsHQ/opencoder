@@ -18,6 +18,20 @@ export interface SessionReviewTabProps {
   onDiffStyleChange?: (style: DiffStyle) => void
   onViewFile?: (file: string) => void
   onLineComment?: (comment: { file: string; selection: SelectedLineRange; comment: string; preview?: string }) => void
+  onLineCommentUpdate?: (comment: {
+    id: string
+    file: string
+    selection: SelectedLineRange
+    comment: string
+    preview?: string
+  }) => void
+  onLineCommentDelete?: (comment: { id: string; file: string }) => void
+  lineCommentActions?: {
+    moreLabel: string
+    editLabel: string
+    deleteLabel: string
+    saveLabel: string
+  }
   comments?: LineComment[]
   focusedComment?: { file: string; id: string } | null
   onFocusedCommentChange?: (focus: { file: string; id: string } | null) => void
