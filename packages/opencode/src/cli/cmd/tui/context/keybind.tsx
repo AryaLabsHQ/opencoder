@@ -14,7 +14,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
   init: () => {
     const sync = useSync()
     const keybinds = createMemo(() => {
-      const parsed = Config.Keybinds.safeParse(sync.data.config.keybinds ?? {})
+      const parsed = Config.Keybinds.safeParse((sync.data.config as { keybinds?: unknown }).keybinds ?? {})
       const values = parsed.success ? parsed.data : Config.Keybinds.parse({})
       return pipe(
         values,
