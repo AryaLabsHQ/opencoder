@@ -35,6 +35,7 @@ const OPEN_APPS = [
   "terminal",
   "iterm2",
   "ghostty",
+  "warp",
   "xcode",
   "android-studio",
   "powershell",
@@ -53,6 +54,7 @@ const MAC_APPS = [
   { id: "terminal", label: "Terminal", icon: "terminal", openWith: "Terminal" },
   { id: "iterm2", label: "iTerm2", icon: "iterm2", openWith: "iTerm" },
   { id: "ghostty", label: "Ghostty", icon: "ghostty", openWith: "Ghostty" },
+  { id: "warp", label: "Warp", icon: "warp", openWith: "Warp" },
   { id: "xcode", label: "Xcode", icon: "xcode", openWith: "Xcode" },
   { id: "android-studio", label: "Android Studio", icon: "android-studio", openWith: "Android Studio" },
   { id: "sublime-text", label: "Sublime Text", icon: "sublime-text", openWith: "Sublime Text" },
@@ -364,7 +366,7 @@ export function SessionHeader() {
                           <div class="flex size-5 shrink-0 items-center justify-center">
                             <AppIcon id={current().icon} class="size-4" />
                           </div>
-                          <span class="text-12-regular text-text-strong">Open</span>
+                          <span class="text-12-regular text-text-strong">{language.t("common.open")}</span>
                         </Button>
                         <div class="self-stretch w-px bg-border-weak-base" />
                         <DropdownMenu
