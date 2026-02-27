@@ -1,4 +1,4 @@
-import "@opencode-ai/ui/styles"
+import "@opencoder-ai/ui/styles"
 
 import { createEffect, onCleanup, onMount } from "solid-js"
 import addonA11y from "@storybook/addon-a11y"
@@ -7,14 +7,14 @@ import { MetaProvider } from "@solidjs/meta"
 import { addons } from "storybook/preview-api"
 import { GLOBALS_UPDATED } from "storybook/internal/core-events"
 import { createJSXDecorator, definePreview } from "storybook-solidjs-vite"
-import { Code } from "@opencode-ai/ui/code"
-import { CodeComponentProvider } from "@opencode-ai/ui/context/code"
-import { DialogProvider } from "@opencode-ai/ui/context/dialog"
-import { DiffComponentProvider } from "@opencode-ai/ui/context/diff"
-import { MarkedProvider } from "@opencode-ai/ui/context/marked"
-import { Diff } from "@opencode-ai/ui/diff"
-import { ThemeProvider, useTheme, type ColorScheme } from "@opencode-ai/ui/theme"
-import { Font } from "@opencode-ai/ui/font"
+import { Code } from "@opencoder-ai/ui/code"
+import { CodeComponentProvider } from "@opencoder-ai/ui/context/code"
+import { DialogProvider } from "@opencoder-ai/ui/context/dialog"
+import { DiffComponentProvider } from "@opencoder-ai/ui/context/diff"
+import { MarkedProvider } from "@opencoder-ai/ui/context/marked"
+import { Diff } from "@opencoder-ai/ui/diff"
+import { ThemeProvider, useTheme, type ColorScheme } from "@opencoder-ai/ui/theme"
+import { Font } from "@opencoder-ai/ui/font"
 
 function resolveScheme(value: unknown): ColorScheme {
   if (value === "light" || value === "dark" || value === "system") return value
