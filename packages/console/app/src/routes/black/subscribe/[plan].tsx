@@ -17,7 +17,7 @@ import { Billing } from "@opencoder-ai/console-core/billing.js"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 import { formError } from "~/lib/form-error"
-import { Resource } from "@opencode-ai/console-resource"
+import { Resource } from "@opencoder-ai/console-resource"
 
 const getEnabled = query(async () => {
   "use server"
