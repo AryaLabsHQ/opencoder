@@ -516,8 +516,7 @@ export default function Page() {
       }
       onSelect={(option) => option && setStore("changes", option)}
       variant="ghost"
-      size="small"
-      valueClass="text-14-medium"
+      size="large"
     />
   )
 
