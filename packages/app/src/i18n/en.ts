@@ -219,6 +219,7 @@ export const dict = {
   "common.loading": "Loading",
   "common.loading.ellipsis": "...",
   "common.cancel": "Cancel",
+  "common.open": "Open",
   "common.connect": "Connect",
   "common.disconnect": "Disconnect",
   "common.submit": "Submit",
@@ -310,12 +311,17 @@ export const dict = {
   "dialog.server.description": "Switch which OpenCode server this app connects to.",
   "dialog.server.search.placeholder": "Search servers",
   "dialog.server.empty": "No servers yet",
-  "dialog.server.add.title": "Add a server",
-  "dialog.server.add.url": "Server URL",
+  "dialog.server.add.title": "Add server",
+  "dialog.server.add.url": "Server address",
   "dialog.server.add.placeholder": "http://localhost:4096",
   "dialog.server.add.error": "Could not connect to server",
   "dialog.server.add.checking": "Checking...",
   "dialog.server.add.button": "Add server",
+  "dialog.server.add.name": "Server name (optional)",
+  "dialog.server.add.namePlaceholder": "Localhost",
+  "dialog.server.add.username": "Username (optional)",
+  "dialog.server.add.password": "Password (optional)",
+  "dialog.server.edit.title": "Edit server",
   "dialog.server.default.title": "Default server",
   "dialog.server.default.description":
     "Connect to this server on app launch instead of starting a local server. Requires restart.",
@@ -342,6 +348,11 @@ export const dict = {
   "dialog.project.edit.worktree.startup": "Workspace startup script",
   "dialog.project.edit.worktree.startup.description": "Runs after creating a new workspace (worktree).",
   "dialog.project.edit.worktree.startup.placeholder": "e.g. bun install",
+
+  "dialog.releaseNotes.action.getStarted": "Get started",
+  "dialog.releaseNotes.action.next": "Next",
+  "dialog.releaseNotes.action.hideFuture": "Don't show these in the future",
+  "dialog.releaseNotes.media.alt": "Release preview",
 
   "context.breakdown.title": "Context Breakdown",
   "context.breakdown.note": 'Approximate breakdown of input tokens. "Other" includes tool definitions and overhead.',
@@ -393,6 +404,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.language.title": "Language",
   "toast.language.description": "Switched to {{language}}",
@@ -431,6 +443,7 @@ export const dict = {
   "toast.session.unshare.failed.description": "An error occurred while unsharing the session",
 
   "toast.session.listFailed.title": "Failed to load sessions for {{project}}",
+  "toast.project.reloadFailed.title": "Failed to reload {{project}}",
 
   "toast.update.title": "Update available",
   "toast.update.description": "A new version of OpenCode ({{version}}) is now available to install.",
@@ -455,6 +468,7 @@ export const dict = {
   "directory.error.invalidUrl": "Invalid directory in URL.",
 
   "error.chain.unknown": "Unknown error",
+  "error.server.invalidConfiguration": "Invalid configuration",
   "error.chain.causedBy": "Caused by:",
   "error.chain.apiError": "API error",
   "error.chain.status": "Status: {{status}}",
@@ -565,6 +579,7 @@ export const dict = {
 
   "common.closeTab": "Close tab",
   "common.dismiss": "Dismiss",
+  "common.moreCountSuffix": " (+{{count}} more)",
   "common.requestFailed": "Request failed",
   "common.moreOptions": "More options",
   "common.learnMore": "Learn more",
@@ -576,6 +591,11 @@ export const dict = {
   "common.edit": "Edit",
   "common.loadMore": "Load more",
   "common.key.esc": "ESC",
+
+  "common.time.justNow": "Just now",
+  "common.time.minutesAgo.short": "{{count}}m ago",
+  "common.time.hoursAgo.short": "{{count}}h ago",
+  "common.time.daysAgo.short": "{{count}}d ago",
 
   "sidebar.menu.toggle": "Toggle menu",
   "sidebar.nav.projectsAndSessions": "Projects and sessions",
@@ -737,7 +757,9 @@ export const dict = {
   "settings.providers.description": "Provider settings will be configurable here.",
   "settings.providers.section.connected": "Connected providers",
   "settings.providers.connected.empty": "No connected providers",
+  "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.section.popular": "Popular providers",
+  "settings.providers.custom.description": "Add an OpenAI-compatible provider by base URL.",
   "settings.providers.tag.environment": "Environment",
   "settings.providers.tag.config": "Config",
   "settings.providers.tag.custom": "Custom",
