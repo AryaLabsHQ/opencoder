@@ -3021,6 +3021,7 @@ export type SessionTodoUpdateData = {
   }
   query?: {
     directory?: string
+    workspace?: string
   }
   url: "/session/{sessionID}/todo"
 }
