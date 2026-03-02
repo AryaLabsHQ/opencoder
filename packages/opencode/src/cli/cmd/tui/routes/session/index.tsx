@@ -2116,7 +2116,6 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
     if (props.metadata.todos && props.metadata.todos.length > 0) {
       return props.metadata.todos
     }
-
     // Priority 2: Try to parse todos from output JSON
     if (props.output) {
       try {
@@ -2131,7 +2130,6 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
         // JSON parse failed, continue to fallback
       }
     }
-
     return null
   })
 
