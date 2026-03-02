@@ -1,23 +1,22 @@
 import { For, createEffect, createMemo, on, onCleanup, Show, startTransition, type JSX } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { useNavigate, useParams } from "@solidjs/router"
-import { Button } from "@opencode-ai/ui/button"
-import { FileIcon } from "@opencode-ai/ui/file-icon"
-import { Icon } from "@opencode-ai/ui/icon"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
-import { Dialog } from "@opencode-ai/ui/dialog"
-import { InlineInput } from "@opencode-ai/ui/inline-input"
-import { SessionTurn } from "@opencode-ai/ui/session-turn"
-import { ScrollView } from "@opencode-ai/ui/scroll-view"
-import type { Part, TextPart, UserMessage } from "@opencode-ai/sdk/v2"
-import { showToast } from "@opencode-ai/ui/toast"
-import { getFilename } from "@opencode-ai/util/path"
+import { Button } from "@opencoder-ai/ui/button"
+import { FileIcon } from "@opencoder-ai/ui/file-icon"
+import { Icon } from "@opencoder-ai/ui/icon"
+import { IconButton } from "@opencoder-ai/ui/icon-button"
+import { DropdownMenu } from "@opencoder-ai/ui/dropdown-menu"
+import { Dialog } from "@opencoder-ai/ui/dialog"
+import { InlineInput } from "@opencoder-ai/ui/inline-input"
+import { SessionTurn } from "@opencoder-ai/ui/session-turn"
+import { ScrollView } from "@opencoder-ai/ui/scroll-view"
+import type { Part, TextPart, UserMessage } from "@opencoder-ai/sdk/v2"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { getFilename } from "@opencoder-ai/util/path"
 import { shouldMarkBoundaryGesture, normalizeWheelDelta } from "@/pages/session/message-gesture"
 import { SessionContextUsage } from "@/components/session-context-usage"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { useDialog } from "@opencoder-ai/ui/context/dialog"
 import { useLanguage } from "@/context/language"
-import { useSettings } from "@/context/settings"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
 import { parseCommentNote, readCommentMetadata } from "@/utils/comment-note"
@@ -209,7 +208,6 @@ export function MessageTimeline(props: {
   const navigate = useNavigate()
   const sdk = useSDK()
   const sync = useSync()
-  const settings = useSettings()
   const dialog = useDialog()
   const language = useLanguage()
 
@@ -702,9 +700,6 @@ export function MessageTimeline(props: {
                     <SessionTurn
                       sessionID={sessionID() ?? ""}
                       messageID={message.id}
-                      showReasoningSummaries={settings.general.showReasoningSummaries()}
-                      shellToolDefaultOpen={settings.general.shellToolPartsExpanded()}
-                      editToolDefaultOpen={settings.general.editToolPartsExpanded()}
                       classes={{
                         root: "min-w-0 w-full relative",
                         content: "flex flex-col justify-between !overflow-visible",
