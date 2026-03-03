@@ -924,6 +924,7 @@ export function Session() {
       keybind: "session_parent",
       category: "Session",
       hidden: true,
+      enabled: !!session()?.parentID,
       onSelect: childSessionHandler((dialog) => {
         const parentID = session()?.parentID
         if (parentID) {
@@ -941,6 +942,7 @@ export function Session() {
       keybind: "session_child_cycle",
       category: "Session",
       hidden: true,
+      enabled: !!session()?.parentID,
       onSelect: childSessionHandler((dialog) => {
         moveChild(1)
         dialog.clear()
@@ -952,6 +954,7 @@ export function Session() {
       keybind: "session_child_cycle_reverse",
       category: "Session",
       hidden: true,
+      enabled: !!session()?.parentID,
       onSelect: childSessionHandler((dialog) => {
         moveChild(-1)
         dialog.clear()
@@ -2116,7 +2119,6 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
     if (props.metadata.todos && props.metadata.todos.length > 0) {
       return props.metadata.todos
     }
-
     // Priority 2: Try to parse todos from output JSON
     if (props.output) {
       try {
@@ -2131,7 +2133,6 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
         // JSON parse failed, continue to fallback
       }
     }
-
     return null
   })
 

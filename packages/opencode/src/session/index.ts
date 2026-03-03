@@ -773,8 +773,7 @@ export namespace Session {
         .run()
       Database.effect(() =>
         Bus.publish(MessageV2.Event.PartUpdated, {
-          part,
-          delta,
+          part: structuredClone(part),
         }),
       )
     })
