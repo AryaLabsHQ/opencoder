@@ -1,23 +1,23 @@
 import { createEffect, createMemo, Match, on, onCleanup, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
-import type { FileSearchHandle } from "@opencode-ai/ui/file"
-import { useFileComponent } from "@opencode-ai/ui/context/file"
-import { cloneSelectedLineRange, previewSelectedLines } from "@opencode-ai/ui/pierre/selection-bridge"
-import { createLineCommentController } from "@opencode-ai/ui/line-comment-annotations"
-import { sampledChecksum } from "@opencode-ai/util/encode"
-import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { Tabs } from "@opencode-ai/ui/tabs"
-import { ScrollView } from "@opencode-ai/ui/scroll-view"
-import { showToast } from "@opencode-ai/ui/toast"
+import { useParams } from "@solidjs/router"
+import type { FileSearchHandle } from "@opencoder-ai/ui/file"
+import { useFileComponent } from "@opencoder-ai/ui/context/file"
+import { cloneSelectedLineRange, previewSelectedLines } from "@opencoder-ai/ui/pierre/selection-bridge"
+import { createLineCommentController } from "@opencoder-ai/ui/line-comment-annotations"
+import { sampledChecksum } from "@opencoder-ai/util/encode"
+import { DropdownMenu } from "@opencoder-ai/ui/dropdown-menu"
+import { IconButton } from "@opencoder-ai/ui/icon-button"
+import { Tabs } from "@opencoder-ai/ui/tabs"
+import { ScrollView } from "@opencoder-ai/ui/scroll-view"
+import { showToast } from "@opencoder-ai/ui/toast"
+import { useLayout } from "@/context/layout"
 import { selectionFromLines, useFile, type FileSelection, type SelectedLineRange } from "@/context/file"
 import { useComments } from "@/context/comments"
 import { useLanguage } from "@/context/language"
 import { usePrompt } from "@/context/prompt"
 import { getSessionHandoff } from "@/pages/session/handoff"
-import { useSessionLayout } from "@/pages/session/session-layout"
-import { createSessionTabs } from "@/pages/session/helpers"
 
 function FileCommentMenu(props: {
   moreLabel: string
@@ -53,17 +53,17 @@ function FileCommentMenu(props: {
 }
 
 export function FileTabContent(props: { tab: string }) {
+  const params = useParams()
+  const layout = useLayout()
   const file = useFile()
   const comments = useComments()
   const language = useLanguage()
   const prompt = usePrompt()
   const fileComponent = useFileComponent()
-  const { sessionKey, tabs, view } = useSessionLayout()
-  const activeFileTab = createSessionTabs({
-    tabs,
-    pathFromTab: file.pathFromTab,
-    normalizeTab: (tab) => (tab.startsWith("file://") ? file.tab(tab) : tab),
-  }).activeFileTab
+
+  const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
+  const tabs = createMemo(() => layout.tabs(sessionKey))
+  const view = createMemo(() => layout.view(sessionKey))
 
   let scroll: HTMLDivElement | undefined
   let scrollFrame: number | undefined
@@ -234,7 +234,8 @@ export function FileTabContent(props: { tab: string }) {
     if (typeof window === "undefined") return
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (activeFileTab() !== props.tab) return
+      if (event.defaultPrevented) return
+      if (tabs().active() !== props.tab) return
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return
       if (event.key.toLowerCase() !== "f") return
 
@@ -262,7 +263,7 @@ export function FileTabContent(props: { tab: string }) {
     const p = path()
     if (!focus || !p) return
     if (focus.file !== p) return
-    if (activeFileTab() !== props.tab) return
+    if (tabs().active() !== props.tab) return
 
     const target = fileComments().find((comment) => comment.id === focus.id)
     if (!target) return
@@ -382,7 +383,7 @@ export function FileTabContent(props: { tab: string }) {
   createEffect(() => {
     const loaded = !!state()?.loaded
     const ready = file.ready()
-    const active = activeFileTab() === props.tab
+    const active = tabs().active() === props.tab
     const restore = (loaded && !prev.loaded) || (ready && !prev.ready) || (active && loaded && !prev.active)
     prev = { loaded, ready, active }
     if (!restore) return
