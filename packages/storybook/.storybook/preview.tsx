@@ -1,4 +1,4 @@
-import "@opencoder-ai/ui/styles"
+import "@opencoder-ai/ui/styles/tailwind"
 
 import { createEffect, onCleanup, onMount } from "solid-js"
 import addonA11y from "@storybook/addon-a11y"
@@ -7,12 +7,8 @@ import { MetaProvider } from "@solidjs/meta"
 import { addons } from "storybook/preview-api"
 import { GLOBALS_UPDATED } from "storybook/internal/core-events"
 import { createJSXDecorator, definePreview } from "storybook-solidjs-vite"
-import { Code } from "@opencoder-ai/ui/code"
-import { CodeComponentProvider } from "@opencoder-ai/ui/context/code"
 import { DialogProvider } from "@opencoder-ai/ui/context/dialog"
-import { DiffComponentProvider } from "@opencoder-ai/ui/context/diff"
 import { MarkedProvider } from "@opencoder-ai/ui/context/marked"
-import { Diff } from "@opencoder-ai/ui/diff"
 import { ThemeProvider, useTheme, type ColorScheme } from "@opencoder-ai/ui/theme"
 import { Font } from "@opencoder-ai/ui/font"
 
@@ -58,20 +54,16 @@ const frame = createJSXDecorator((Story, context) => {
         <Scheme value={scheme} />
         <DialogProvider>
           <MarkedProvider>
-            <DiffComponentProvider component={Diff}>
-              <CodeComponentProvider component={Code}>
-                <div
-                  style={{
-                    "min-height": "100vh",
-                    padding: "24px",
-                    "background-color": "var(--background-base)",
-                    color: "var(--text-base)",
-                  }}
-                >
-                  <Story />
-                </div>
-              </CodeComponentProvider>
-            </DiffComponentProvider>
+            <div
+              style={{
+                "min-height": "100vh",
+                padding: "24px",
+                "background-color": "var(--background-base)",
+                color: "var(--text-base)",
+              }}
+            >
+              <Story />
+            </div>
           </MarkedProvider>
         </DialogProvider>
       </ThemeProvider>

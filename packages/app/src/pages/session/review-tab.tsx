@@ -1,11 +1,11 @@
-import { createEffect, on, onCleanup, type JSX } from "solid-js"
-import type { FileDiff } from "@opencoder-ai/sdk/v2"
-import { SessionReview } from "@opencoder-ai/ui/session-review"
+import { createEffect, onCleanup, type JSX } from "solid-js"
+import type { FileDiff } from "@opencode-ai/sdk/v2"
+import { SessionReview } from "@opencode-ai/ui/session-review"
 import type {
   SessionReviewCommentActions,
   SessionReviewCommentDelete,
   SessionReviewCommentUpdate,
-} from "@opencoder-ai/ui/session-review"
+} from "@opencode-ai/ui/session-review"
 import type { SelectedLineRange } from "@/context/file"
 import { useSDK } from "@/context/sdk"
 import { useLayout } from "@/context/layout"
@@ -119,32 +119,12 @@ export function SessionReviewTab(props: SessionReviewTabProps) {
     })
   }
 
-  createEffect(
-    on(
-      () => props.diffs().length,
-      () => queueRestore(),
-      { defer: true },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => props.diffStyle,
-      () => queueRestore(),
-      { defer: true },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => layout.ready(),
-      (ready) => {
-        if (!ready) return
-        queueRestore()
-      },
-      { defer: true },
-    ),
-  )
+  createEffect(() => {
+    props.diffs().length
+    props.diffStyle
+    if (!layout.ready()) return
+    queueRestore()
+  })
 
   onCleanup(() => {
     if (restoreFrame !== undefined) cancelAnimationFrame(restoreFrame)
@@ -176,7 +156,7 @@ export function SessionReviewTab(props: SessionReviewTabProps) {
       open={props.view().review.open()}
       onOpenChange={props.view().review.setOpen}
       classes={{
-        root: props.classes?.root ?? "pb-6 pr-3",
+        root: props.classes?.root ?? "pr-3",
         header: props.classes?.header ?? "px-3",
         container: props.classes?.container ?? "pl-3",
       }}

@@ -1,6 +1,6 @@
 {
-  "name": "@opencoder-ai/util",
-  "version": "1.2.10",
+  "name": "@opencode-ai/util",
+  "version": "1.2.16",
   "private": true,
   "type": "module",
   "license": "MIT",
