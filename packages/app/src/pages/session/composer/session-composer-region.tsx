@@ -1,18 +1,15 @@
-import { Show, createEffect, createMemo, onCleanup } from "solid-js"
+import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
-import { useSpring } from "@opencode-ai/ui/motion-spring"
+import { useParams } from "@solidjs/router"
+import { useSpring } from "@opencoder-ai/ui/motion-spring"
 import { PromptInput } from "@/components/prompt-input"
 import { useLanguage } from "@/context/language"
 import { usePrompt } from "@/context/prompt"
 import { getSessionHandoff, setSessionHandoff } from "@/pages/session/handoff"
-import { useSessionKey } from "@/pages/session/session-layout"
 import { SessionPermissionDock } from "@/pages/session/composer/session-permission-dock"
 import { SessionQuestionDock } from "@/pages/session/composer/session-question-dock"
-import { SessionFollowupDock } from "@/pages/session/composer/session-followup-dock"
-import { SessionRevertDock } from "@/pages/session/composer/session-revert-dock"
 import type { SessionComposerState } from "@/pages/session/composer/session-composer-state"
 import { SessionTodoDock } from "@/pages/session/composer/session-todo-dock"
-import type { FollowupDraft } from "@/components/prompt-input/submit"
 
 export function SessionComposerRegion(props: {
   state: SessionComposerState
@@ -23,30 +20,31 @@ export function SessionComposerRegion(props: {
   onNewSessionWorktreeReset: () => void
   onSubmit: () => void
   onResponseSubmit: () => void
-  followup?: {
-    queue: () => boolean
-    items: { id: string; text: string }[]
-    sending?: string
-    edit?: { id: string; prompt: FollowupDraft["prompt"]; context: FollowupDraft["context"] }
-    onQueue: (draft: FollowupDraft) => void
-    onAbort: () => void
-    onSend: (id: string) => void
-    onEdit: (id: string) => void
-    onEditLoaded: () => void
-  }
-  revert?: {
-    items: { id: string; text: string }[]
-    restoring?: string
-    disabled?: boolean
-    onRestore: (id: string) => void
-  }
   setPromptDockRef: (el: HTMLDivElement) => void
+  visualDuration?: number
+  bounce?: number
+  dockOpenVisualDuration?: number
+  dockOpenBounce?: number
+  dockCloseVisualDuration?: number
+  dockCloseBounce?: number
+  drawerExpandVisualDuration?: number
+  drawerExpandBounce?: number
+  drawerCollapseVisualDuration?: number
+  drawerCollapseBounce?: number
+  subtitleDuration?: number
+  subtitleTravel?: number
+  subtitleEdge?: number
+  countDuration?: number
+  countMask?: number
+  countMaskHeight?: number
+  countWidthDuration?: number
 }) {
+  const params = useParams()
   const prompt = usePrompt()
   const language = useLanguage()
-  const route = useSessionKey()
 
-  const handoffPrompt = createMemo(() => getSessionHandoff(route.sessionKey())?.prompt)
+  const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
+  const handoffPrompt = createMemo(() => getSessionHandoff(sessionKey())?.prompt)
 
   const previewPrompt = () =>
     prompt
@@ -62,13 +60,11 @@ export function SessionComposerRegion(props: {
 
   createEffect(() => {
     if (!prompt.ready()) return
-    setSessionHandoff(route.sessionKey(), { prompt: previewPrompt() })
+    setSessionHandoff(sessionKey(), { prompt: previewPrompt() })
   })
 
-  const [store, setStore] = createStore({
+  const [gate, setGate] = createStore({
     ready: false,
-    height: 320,
-    body: undefined as HTMLDivElement | undefined,
   })
   let timer: number | undefined
   let frame: number | undefined
@@ -85,18 +81,18 @@ export function SessionComposerRegion(props: {
   }
 
   createEffect(() => {
-    route.sessionKey()
+    sessionKey()
     const ready = props.ready
     const delay = 140
 
     clear()
-    setStore("ready", false)
+    setGate("ready", false)
     if (!ready) return
 
     frame = requestAnimationFrame(() => {
       frame = undefined
       timer = window.setTimeout(() => {
-        setStore("ready", true)
+        setGate("ready", true)
         timer = undefined
       }, delay)
     })
@@ -104,19 +100,30 @@ export function SessionComposerRegion(props: {
 
   onCleanup(clear)
 
-  const open = createMemo(() => store.ready && props.state.dock() && !props.state.closing())
-  const progress = useSpring(() => (open() ? 1 : 0), { visualDuration: 0.3, bounce: 0 })
+  const open = createMemo(() => gate.ready && props.state.dock() && !props.state.closing())
+  const config = createMemo(() =>
+    open()
+      ? {
+          visualDuration: props.dockOpenVisualDuration ?? props.visualDuration ?? 0.3,
+          bounce: props.dockOpenBounce ?? props.bounce ?? 0,
+        }
+      : {
+          visualDuration: props.dockCloseVisualDuration ?? props.visualDuration ?? 0.3,
+          bounce: props.dockCloseBounce ?? props.bounce ?? 0,
+        },
+  )
+  const progress = useSpring(() => (open() ? 1 : 0), config)
   const value = createMemo(() => Math.max(0, Math.min(1, progress())))
-  const dock = createMemo(() => (store.ready && props.state.dock()) || value() > 0.001)
-  const rolled = createMemo(() => (props.revert?.items.length ? props.revert : undefined))
-  const lift = createMemo(() => (rolled() ? 18 : 36 * value()))
-  const full = createMemo(() => Math.max(78, store.height))
+  const [height, setHeight] = createSignal(320)
+  const dock = createMemo(() => (gate.ready && props.state.dock()) || value() > 0.001)
+  const full = createMemo(() => Math.max(78, height()))
+  const [contentRef, setContentRef] = createSignal<HTMLDivElement>()
 
   createEffect(() => {
-    const el = store.body
+    const el = contentRef()
     if (!el) return
     const update = () => {
-      setStore("height", el.getBoundingClientRect().height)
+      setHeight(el.getBoundingClientRect().height)
     }
     update()
     const observer = new ResizeObserver(update)
@@ -163,23 +170,9 @@ export function SessionComposerRegion(props: {
           <Show
             when={prompt.ready()}
             fallback={
-              <>
-                <Show when={rolled()} keyed>
-                  {(revert) => (
-                    <div class="pb-2">
-                      <SessionRevertDock
-                        items={revert.items}
-                        restoring={revert.restoring}
-                        disabled={revert.disabled}
-                        onRestore={revert.onRestore}
-                      />
-                    </div>
-                  )}
-                </Show>
-                <div class="w-full min-h-32 md:min-h-40 rounded-md border border-border-weak-base bg-background-base/50 px-4 py-3 text-text-weak whitespace-pre-wrap pointer-events-none">
-                  {handoffPrompt() || language.t("prompt.loading")}
-                </div>
-              </>
+              <div class="w-full min-h-32 md:min-h-40 rounded-md border border-border-weak-base bg-background-base/50 px-4 py-3 text-text-weak whitespace-pre-wrap pointer-events-none">
+                {handoffPrompt() || language.t("prompt.loading")}
+              </div>
             }
           >
             <Show when={dock()}>
@@ -192,58 +185,42 @@ export function SessionComposerRegion(props: {
                   "max-height": `${full() * value()}px`,
                 }}
               >
-                <div ref={(el) => setStore("body", el)}>
+                <div ref={setContentRef}>
                   <SessionTodoDock
-                    sessionID={route.params.id}
                     todos={props.state.todos()}
+                    title={language.t("session.todo.title")}
                     collapseLabel={language.t("session.todo.collapse")}
                     expandLabel={language.t("session.todo.expand")}
                     dockProgress={value()}
+                    visualDuration={props.visualDuration}
+                    bounce={props.bounce}
+                    expandVisualDuration={props.drawerExpandVisualDuration}
+                    expandBounce={props.drawerExpandBounce}
+                    collapseVisualDuration={props.drawerCollapseVisualDuration}
+                    collapseBounce={props.drawerCollapseBounce}
+                    subtitleDuration={props.subtitleDuration}
+                    subtitleTravel={props.subtitleTravel}
+                    subtitleEdge={props.subtitleEdge}
+                    countDuration={props.countDuration}
+                    countMask={props.countMask}
+                    countMaskHeight={props.countMaskHeight}
+                    countWidthDuration={props.countWidthDuration}
                   />
                 </div>
               </div>
-            </Show>
-            <Show when={rolled()} keyed>
-              {(revert) => (
-                <div
-                  style={{
-                    "margin-top": `${-36 * value()}px`,
-                  }}
-                >
-                  <SessionRevertDock
-                    items={revert.items}
-                    restoring={revert.restoring}
-                    disabled={revert.disabled}
-                    onRestore={revert.onRestore}
-                  />
-                </div>
-              )}
             </Show>
             <div
               classList={{
                 "relative z-10": true,
               }}
               style={{
-                "margin-top": `${-lift()}px`,
+                "margin-top": `${-36 * value()}px`,
               }}
             >
-              <Show when={props.followup?.items.length}>
-                <SessionFollowupDock
-                  items={props.followup!.items}
-                  sending={props.followup!.sending}
-                  onSend={props.followup!.onSend}
-                  onEdit={props.followup!.onEdit}
-                />
-              </Show>
               <PromptInput
                 ref={props.inputRef}
                 newSessionWorktree={props.newSessionWorktree}
                 onNewSessionWorktreeReset={props.onNewSessionWorktreeReset}
-                edit={props.followup?.edit}
-                onEditLoaded={props.followup?.onEditLoaded}
-                shouldQueue={props.followup?.queue}
-                onQueue={props.followup?.onQueue}
-                onAbort={props.followup?.onAbort}
                 onSubmit={props.onSubmit}
               />
             </div>

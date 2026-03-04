@@ -1,18 +1,13 @@
-import type { Todo } from "@opencode-ai/sdk/v2"
-import { AnimatedNumber } from "@opencode-ai/ui/animated-number"
-import { Checkbox } from "@opencode-ai/ui/checkbox"
-import { DockTray } from "@opencode-ai/ui/dock-surface"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { useSpring } from "@opencode-ai/ui/motion-spring"
-import { TextReveal } from "@opencode-ai/ui/text-reveal"
-import { TextStrikethrough } from "@opencode-ai/ui/text-strikethrough"
-import { Index, createEffect, createMemo, on, onCleanup } from "solid-js"
+import type { Todo } from "@opencoder-ai/sdk/v2"
+import { AnimatedNumber } from "@opencoder-ai/ui/animated-number"
+import { Checkbox } from "@opencoder-ai/ui/checkbox"
+import { DockTray } from "@opencoder-ai/ui/dock-surface"
+import { IconButton } from "@opencoder-ai/ui/icon-button"
+import { useSpring } from "@opencoder-ai/ui/motion-spring"
+import { TextReveal } from "@opencoder-ai/ui/text-reveal"
+import { TextStrikethrough } from "@opencoder-ai/ui/text-strikethrough"
+import { Index, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
-import { composerEnabled, composerProbe } from "@/testing/session-composer"
-import { useLanguage } from "@/context/language"
-
-const doneToken = "\u0000done\u0000"
-const totalToken = "\u0000total\u0000"
 
 function dot(status: Todo["status"]) {
   if (status !== "in_progress") return undefined
@@ -40,28 +35,34 @@ function dot(status: Todo["status"]) {
 }
 
 export function SessionTodoDock(props: {
-  sessionID?: string
   todos: Todo[]
+  title: string
   collapseLabel: string
   expandLabel: string
-  dockProgress: number
+  dockProgress?: number
+  visualDuration?: number
+  bounce?: number
+  expandVisualDuration?: number
+  expandBounce?: number
+  collapseVisualDuration?: number
+  collapseBounce?: number
+  subtitleDuration?: number
+  subtitleTravel?: number
+  subtitleEdge?: number
+  countDuration?: number
+  countMask?: number
+  countMaskHeight?: number
+  countWidthDuration?: number
 }) {
-  const language = useLanguage()
   const [store, setStore] = createStore({
     collapsed: false,
-    height: 320,
   })
 
   const toggle = () => setStore("collapsed", (value) => !value)
 
   const total = createMemo(() => props.todos.length)
   const done = createMemo(() => props.todos.filter((todo) => todo.status === "completed").length)
-  const label = createMemo(() => language.t("session.todo.progress", { done: done(), total: total() }))
-  const progress = createMemo(() =>
-    language
-      .t("session.todo.progress", { done: doneToken, total: totalToken })
-      .split(/(\u0000done\u0000|\u0000total\u0000)/),
-  )
+  const label = createMemo(() => `${done()} of ${total()} ${props.title.toLowerCase()} completed`)
 
   const active = createMemo(
     () =>
@@ -72,45 +73,38 @@ export function SessionTodoDock(props: {
   )
 
   const preview = createMemo(() => active()?.content ?? "")
-  const collapse = useSpring(() => (store.collapsed ? 1 : 0), { visualDuration: 0.3, bounce: 0 })
-  const dock = createMemo(() => Math.max(0, Math.min(1, props.dockProgress)))
+  const config = createMemo(() =>
+    store.collapsed
+      ? {
+          visualDuration: props.collapseVisualDuration ?? props.visualDuration ?? 0.3,
+          bounce: props.collapseBounce ?? props.bounce ?? 0,
+        }
+      : {
+          visualDuration: props.expandVisualDuration ?? props.visualDuration ?? 0.3,
+          bounce: props.expandBounce ?? props.bounce ?? 0,
+        },
+  )
+  const collapse = useSpring(() => (store.collapsed ? 1 : 0), config)
+  const dock = createMemo(() => Math.max(0, Math.min(1, props.dockProgress ?? 1)))
   const shut = createMemo(() => 1 - dock())
   const value = createMemo(() => Math.max(0, Math.min(1, collapse())))
   const hide = createMemo(() => Math.max(value(), shut()))
   const off = createMemo(() => hide() > 0.98)
   const turn = createMemo(() => Math.max(0, Math.min(1, value())))
-  const full = createMemo(() => Math.max(78, store.height))
-  const e2e = composerEnabled()
-  const probe = composerProbe(props.sessionID)
+  const [height, setHeight] = createSignal(320)
+  const full = createMemo(() => Math.max(78, height()))
   let contentRef: HTMLDivElement | undefined
 
   createEffect(() => {
     const el = contentRef
     if (!el) return
     const update = () => {
-      setStore("height", el.getBoundingClientRect().height)
+      setHeight(el.getBoundingClientRect().height)
     }
     update()
     const observer = new ResizeObserver(update)
     observer.observe(el)
     onCleanup(() => observer.disconnect())
-  })
-
-  createEffect(() => {
-    if (!e2e) return
-
-    probe.set({
-      mounted: true,
-      collapsed: store.collapsed,
-      hidden: store.collapsed || off(),
-      count: props.todos.length,
-      states: props.todos.map((todo) => todo.status),
-    })
-  })
-
-  onCleanup(() => {
-    if (!e2e) return
-    probe.drop()
   })
 
   return (
@@ -136,28 +130,21 @@ export function SessionTodoDock(props: {
           }}
         >
           <span
-            class="text-14-regular text-text-strong cursor-default inline-flex items-baseline shrink-0 overflow-visible"
+            class="text-14-regular text-text-strong cursor-default inline-flex items-baseline shrink-0 whitespace-nowrap overflow-visible"
             aria-label={label()}
             style={{
-              "--tool-motion-odometer-ms": "600ms",
-              "--tool-motion-mask": "18%",
-              "--tool-motion-mask-height": "0px",
-              "--tool-motion-spring-ms": "560ms",
-              "white-space": "pre",
+              "--tool-motion-odometer-ms": `${props.countDuration ?? 600}ms`,
+              "--tool-motion-mask": `${props.countMask ?? 18}%`,
+              "--tool-motion-mask-height": `${props.countMaskHeight ?? 0}px`,
+              "--tool-motion-spring-ms": `${props.countWidthDuration ?? 560}ms`,
               opacity: `${Math.max(0, Math.min(1, 1 - shut()))}`,
+              filter: `blur(${Math.max(0, Math.min(1, shut())) * 2}px)`,
             }}
           >
-            <Index each={progress()}>
-              {(item) =>
-                item() === doneToken ? (
-                  <AnimatedNumber value={done()} />
-                ) : item() === totalToken ? (
-                  <AnimatedNumber value={total()} />
-                ) : (
-                  <span>{item()}</span>
-                )
-              }
-            </Index>
+            <AnimatedNumber value={done()} />
+            <span class="mx-1">of</span>
+            <AnimatedNumber value={total()} />
+            <span>&nbsp;{props.title.toLowerCase()} completed</span>
           </span>
           <div
             data-slot="session-todo-preview"
@@ -170,9 +157,9 @@ export function SessionTodoDock(props: {
             <TextReveal
               class="text-14-regular text-text-base cursor-default"
               text={store.collapsed ? preview() : undefined}
-              duration={600}
-              travel={25}
-              edge={17}
+              duration={props.subtitleDuration ?? 600}
+              travel={props.subtitleTravel ?? 25}
+              edge={props.subtitleEdge ?? 17}
               spring="cubic-bezier(0.34, 1, 0.64, 1)"
               springSoft="cubic-bezier(0.34, 1, 0.64, 1)"
               growOnly
@@ -209,6 +196,7 @@ export function SessionTodoDock(props: {
           style={{
             visibility: off() ? "hidden" : "visible",
             opacity: `${Math.max(0, Math.min(1, 1 - hide()))}`,
+            filter: `blur(${Math.max(0, Math.min(1, hide())) * 2}px)`,
           }}
         >
           <TodoList todos={props.todos} open={!store.collapsed} />
@@ -219,10 +207,8 @@ export function SessionTodoDock(props: {
 }
 
 function TodoList(props: { todos: Todo[]; open: boolean }) {
-  const [store, setStore] = createStore({
-    stuck: false,
-    scrolling: false,
-  })
+  const [stuck, setStuck] = createSignal(false)
+  const [scrolling, setScrolling] = createSignal(false)
   let scrollRef!: HTMLDivElement
   let timer: number | undefined
 
@@ -230,7 +216,7 @@ function TodoList(props: { todos: Todo[]; open: boolean }) {
 
   const ensure = () => {
     if (!props.open) return
-    if (store.scrolling) return
+    if (scrolling()) return
     if (!scrollRef || scrollRef.offsetParent === null) return
 
     const el = scrollRef.querySelector("[data-in-progress]")
@@ -251,7 +237,7 @@ function TodoList(props: { todos: Todo[]; open: boolean }) {
       scrollRef.scrollTop = bottom - (scrollRef.clientHeight - bottomFade)
     }
 
-    setStore("stuck", scrollRef.scrollTop > 0)
+    setStuck(scrollRef.scrollTop > 0)
   }
 
   createEffect(
@@ -273,11 +259,11 @@ function TodoList(props: { todos: Todo[]; open: boolean }) {
         ref={scrollRef}
         style={{ "overflow-anchor": "none" }}
         onScroll={(e) => {
-          setStore("stuck", e.currentTarget.scrollTop > 0)
-          setStore("scrolling", true)
+          setStuck(e.currentTarget.scrollTop > 0)
+          setScrolling(true)
           if (timer) window.clearTimeout(timer)
           timer = window.setTimeout(() => {
-            setStore("scrolling", false)
+            setScrolling(false)
             if (inProgress() < 0) return
             requestAnimationFrame(ensure)
           }, 250)
@@ -322,7 +308,7 @@ function TodoList(props: { todos: Todo[]; open: boolean }) {
         class="pointer-events-none absolute top-0 left-0 right-0 h-4 transition-opacity duration-150"
         style={{
           background: "linear-gradient(to bottom, var(--background-base), transparent)",
-          opacity: store.stuck ? 1 : 0,
+          opacity: stuck() ? 1 : 0,
         }}
       />
     </div>
