@@ -13,8 +13,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@opencoder-ai/app": "workspace:*",
-    "@opencoder-ai/ui": "workspace:*",
+    "@opencode-ai/app": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
     "@solid-primitives/i18n": "2.2.1",
     "@solid-primitives/storage": "catalog:",
     "@tauri-apps/api": "^2",
