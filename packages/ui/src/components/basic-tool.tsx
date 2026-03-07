@@ -383,6 +383,7 @@ function ToolCallRoot(props: ToolCallProps) {
   return <ToolCallPanel {...rest} />
 }
 export const ToolCall = ToolCallRoot
+export const BasicTool = ToolCall
 
 export function GenericTool(props: {
   tool: string

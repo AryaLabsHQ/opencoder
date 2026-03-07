@@ -3,7 +3,6 @@ import type { SessionStatus } from "@opencoder-ai/sdk/v2"
 import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 
-import { same } from "@opencoder-ai/util/array"
 import { Binary } from "@opencoder-ai/util/binary"
 import { getDirectory, getFilename } from "@opencoder-ai/util/path"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, ParentProps, Show } from "solid-js"
@@ -24,6 +23,14 @@ import { SessionRetry } from "./session-retry"
 import { Tooltip } from "./tooltip"
 import { createAutoScroll } from "../hooks"
 import { useI18n } from "../context/i18n"
+
+function same<T>(a: readonly T[] | undefined, b: readonly T[] | undefined) {
+  if (a === b) return true
+  if (!a || !b) return false
+  if (a.length !== b.length) return false
+  return a.every((x, i) => x === b[i])
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
 }
