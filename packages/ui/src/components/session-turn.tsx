@@ -3,7 +3,7 @@ import type { SessionStatus } from "@opencoder-ai/sdk/v2"
 import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 
-import { same } from "@opencoder-ai/util/array"
+import { same } from "@opencode-ai/util/array"
 import { Binary } from "@opencoder-ai/util/binary"
 import { getDirectory, getFilename } from "@opencoder-ai/util/path"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, ParentProps, Show } from "solid-js"
