@@ -89,7 +89,6 @@ const ProjectTile = (props: {
       modal={!props.sidebarHovering()}
       onOpenChange={(value) => {
         props.setMenu(value)
-        props.setSuppressHover(value)
         if (value) props.setOpen(false)
       }}
     >
@@ -109,7 +108,6 @@ const ProjectTile = (props: {
         onPointerDown={(event) => {
           if (!props.overlay()) return
           if (event.button !== 2 && !(event.button === 0 && event.ctrlKey)) return
-          props.setSuppressHover(true)
           event.preventDefault()
         }}
         onMouseEnter={(event: MouseEvent) => {
