@@ -25,7 +25,7 @@ export namespace Plugin {
     const client = createOpencodeClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
-      fetch: async (...args) => Server.Default().fetch(...args),
+      fetch: ((input, init) => Server.Default().fetch(new Request(input, init))) as typeof fetch,
     })
 
     const config = await Config.get()

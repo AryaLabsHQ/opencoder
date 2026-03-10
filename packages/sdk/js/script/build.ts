@@ -6,6 +6,7 @@ process.chdir(dir)
 
 import { $ } from "bun"
 import path from "path"
+import fs from "fs/promises"
 
 import { createClient } from "@hey-api/openapi-ts"
 
@@ -16,7 +17,7 @@ await createClient({
   output: {
     path: "./src/v2/gen",
     tsConfigPath: path.join(dir, "tsconfig.json"),
-    clean: true,
+    clean: false,
   },
   plugins: [
     {
@@ -37,6 +38,16 @@ await createClient({
     },
   ],
 })
+
+const gen = path.join(dir, "src/v2/gen")
+const tr = new Bun.Transpiler({
+  loader: "ts",
+})
+for (const file of await Array.fromAsync(new Bun.Glob("**/*.ts").scan({ cwd: gen }))) {
+  const js = file.replace(/\.ts$/, ".js")
+  const txt = await fs.readFile(path.join(gen, file), "utf8")
+  await fs.writeFile(path.join(gen, js), tr.transformSync(txt))
+}
 
 await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`
