@@ -1,0 +1,88 @@
+import { serializeArrayParam, serializeObjectParam, serializePrimitiveParam } from "./pathSerializer.gen.js"
+export const PATH_PARAM_RE = /\{[^{}]+\}/g
+export const defaultPathSerializer = ({ path, url: _url }) => {
+  let url = _url
+  const matches = _url.match(PATH_PARAM_RE)
+  if (matches) {
+    for (const match of matches) {
+      let explode = false
+      let name = match.substring(1, match.length - 1)
+      let style = "simple"
+      if (name.endsWith("*")) {
+        explode = true
+        name = name.substring(0, name.length - 1)
+      }
+      if (name.startsWith(".")) {
+        name = name.substring(1)
+        style = "label"
+      } else if (name.startsWith(";")) {
+        name = name.substring(1)
+        style = "matrix"
+      }
+      const value = path[name]
+      if (value === undefined || value === null) {
+        continue
+      }
+      if (Array.isArray(value)) {
+        url = url.replace(match, serializeArrayParam({ explode, name, style, value }))
+        continue
+      }
+      if (typeof value === "object") {
+        url = url.replace(
+          match,
+          serializeObjectParam({
+            explode,
+            name,
+            style,
+            value,
+            valueOnly: true,
+          }),
+        )
+        continue
+      }
+      if (style === "matrix") {
+        url = url.replace(
+          match,
+          `;${serializePrimitiveParam({
+            name,
+            value,
+          })}`,
+        )
+        continue
+      }
+      const replaceValue = encodeURIComponent(style === "label" ? `.${value}` : value)
+      url = url.replace(match, replaceValue)
+    }
+  }
+  return url
+}
+export const getUrl = ({ baseUrl, path, query, querySerializer, url: _url }) => {
+  const pathUrl = _url.startsWith("/") ? _url : `/${_url}`
+  let url = (baseUrl ?? "") + pathUrl
+  if (path) {
+    url = defaultPathSerializer({ path, url })
+  }
+  let search = query ? querySerializer(query) : ""
+  if (search.startsWith("?")) {
+    search = search.substring(1)
+  }
+  if (search) {
+    url += `?${search}`
+  }
+  return url
+}
+export function getValidRequestBody(options) {
+  const hasBody = options.body !== undefined
+  const isSerializedBody = hasBody && options.bodySerializer
+  if (isSerializedBody) {
+    if ("serializedBody" in options) {
+      const hasSerializedBody = options.serializedBody !== undefined && options.serializedBody !== ""
+      return hasSerializedBody ? options.serializedBody : null
+    }
+    return options.body !== "" ? options.body : null
+  }
+  if (hasBody) {
+    return options.body
+  }
+  return
+}
