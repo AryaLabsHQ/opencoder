@@ -2,9 +2,9 @@ import { Tool } from "./tool"
 import DESCRIPTION from "./task.txt"
 import z from "zod"
 import { Session } from "../session"
+import { SessionID, MessageID } from "../session/schema"
 import { Bus } from "../bus"
 import { MessageV2 } from "../session/message-v2"
-import { Identifier } from "../id/id"
 import { Agent } from "../agent/agent"
 import { SessionPrompt } from "../session/prompt"
 import { iife } from "@/util/iife"
@@ -67,7 +67,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
 
       const session = await iife(async () => {
         if (params.task_id) {
-          const found = await Session.get(params.task_id).catch(() => {})
+          const found = await Session.get(SessionID.make(params.task_id)).catch(() => {})
           if (found) return found
         }
 
@@ -126,7 +126,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         },
       })
 
-      const messageID = Identifier.ascending("message")
+      const messageID = MessageID.ascending()
       const parts: Record<string, { id: string; tool: string; state: { status: string; title?: string } }> = {}
       const unsub = Bus.subscribe(MessageV2.Event.PartUpdated, async (evt) => {
         if (evt.properties.part.sessionID !== session.id) return

@@ -9,6 +9,7 @@ import { type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useModels } from "@/context/models"
 import { popularProviders } from "@/hooks/use-providers"
+import { SettingsList } from "./settings-list"
 
 type ModelItem = ReturnType<ReturnType<typeof useModels>["list"]>[number]
 
@@ -101,7 +102,7 @@ export const SettingsModels: Component = () => {
                     <ProviderIcon id={group.category as IconName} class="size-5 shrink-0 icon-strong-base" />
                     <span class="text-14-medium text-text-strong">{group.items[0].provider.name}</span>
                   </div>
-                  <div class="bg-surface-raised-base px-4 rounded-lg">
+                  <SettingsList>
                     <For each={group.items}>
                       {(item) => {
                         const key = { providerID: item.provider.id, modelID: item.id }
@@ -125,7 +126,7 @@ export const SettingsModels: Component = () => {
                         )
                       }}
                     </For>
-                  </div>
+                  </SettingsList>
                 </div>
               )}
             </For>
