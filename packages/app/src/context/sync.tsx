@@ -293,9 +293,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       limit: number
       before?: string
     }) => {
-      const messages = await retry(() =>
-        input.client.session.messages({ sessionID: input.sessionID, limit: input.limit, before: input.before }),
-      )
+      const messages = await retry(() => input.client.session.messages({ sessionID: input.sessionID, limit: input.limit }))
       const items = (messages.data ?? []).filter((x) => !!x?.info?.id)
       const session = items.map((x) => x.info).sort((a, b) => cmp(a.id, b.id))
       const part = items.map((message) => ({ id: message.info.id, part: sortParts(message.parts) }))

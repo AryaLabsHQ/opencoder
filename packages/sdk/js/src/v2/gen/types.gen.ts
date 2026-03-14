@@ -1826,6 +1826,7 @@ export type File = {
   removed: number
   status: "added" | "deleted" | "modified"
 }
+
 export type McpStatusConnected = {
   status: "connected"
 }
@@ -2974,7 +2975,7 @@ export type SessionChildrenResponses = {
 
 export type SessionChildrenResponse = SessionChildrenResponses[keyof SessionChildrenResponses]
 
-export type SessionTodoListData = {
+export type SessionTodoData = {
   body?: never
   path: {
     sessionID: string
@@ -2986,7 +2987,7 @@ export type SessionTodoListData = {
   url: "/session/{sessionID}/todo"
 }
 
-export type SessionTodoListErrors = {
+export type SessionTodoErrors = {
   /**
    * Bad request
    */
@@ -2997,55 +2998,16 @@ export type SessionTodoListErrors = {
   404: NotFoundError
 }
 
-export type SessionTodoListError = SessionTodoListErrors[keyof SessionTodoListErrors]
+export type SessionTodoError = SessionTodoErrors[keyof SessionTodoErrors]
 
-export type SessionTodoListResponses = {
+export type SessionTodoResponses = {
   /**
    * Todo list
    */
   200: Array<Todo>
 }
 
-export type SessionTodoListResponse = SessionTodoListResponses[keyof SessionTodoListResponses]
-
-export type SessionTodoUpdateData = {
-  body?: {
-    todos: Array<Todo>
-  }
-  path: {
-    /**
-     * Session ID
-     */
-    sessionID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/session/{sessionID}/todo"
-}
-
-export type SessionTodoUpdateErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type SessionTodoUpdateError = SessionTodoUpdateErrors[keyof SessionTodoUpdateErrors]
-
-export type SessionTodoUpdateResponses = {
-  /**
-   * Updated todo list
-   */
-  200: Array<Todo>
-}
-
-export type SessionTodoUpdateResponse = SessionTodoUpdateResponses[keyof SessionTodoUpdateResponses]
+export type SessionTodoResponse = SessionTodoResponses[keyof SessionTodoResponses]
 
 export type SessionInitData = {
   body?: {
@@ -3282,6 +3244,9 @@ export type SessionMessagesData = {
      * Maximum number of messages to return
      */
     limit?: number
+    /**
+     * Opaque cursor for loading older messages
+     */
     before?: string
   }
   url: "/session/{sessionID}/message"

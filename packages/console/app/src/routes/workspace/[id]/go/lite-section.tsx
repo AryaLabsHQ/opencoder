@@ -170,7 +170,7 @@ export function LiteSection() {
         {(sub) => (
           <section class={styles.root}>
             <div data-slot="section-title">
-              <h2>{i18n.t("workspace.lite.subscription.title")}</h2>
+              <h2>OpenCode Go</h2>
               <div data-slot="title-row">
                 <p>{i18n.t("workspace.lite.subscription.message")}</p>
                 <button
@@ -251,7 +251,7 @@ export function LiteSection() {
       <Show when={lite() && !lite()!.mine}>
         <section class={styles.root}>
           <div data-slot="section-title">
-            <h2>{i18n.t("workspace.lite.other.title")}</h2>
+            <h2>OpenCode Go</h2>
           </div>
           <p data-slot="other-message">{i18n.t("workspace.lite.other.message")}</p>
         </section>
@@ -259,7 +259,7 @@ export function LiteSection() {
       <Show when={lite() === null}>
         <section class={styles.root}>
           <div data-slot="section-title">
-            <h2>{i18n.t("workspace.lite.promo.title")}</h2>
+            <h2>OpenCode Go</h2>
           </div>
           <p data-slot="promo-description">{i18n.t("workspace.lite.promo.description")}</p>
           <h3 data-slot="promo-models-title">{i18n.t("workspace.lite.promo.modelsTitle")}</h3>
