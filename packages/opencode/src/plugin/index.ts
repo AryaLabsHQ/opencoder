@@ -1,17 +1,17 @@
-import type { PluginInput, Hooks } from "@opencoder-ai/plugin"
-import type { Plugin as PluginFn } from "@opencoder-ai/plugin"
+import type { Hooks, PluginInput, Plugin as PluginInstance } from "@opencode-ai/plugin"
 import { Config } from "../config/config"
 import { Bus } from "../bus"
 import { Log } from "../util/log"
-import { createOpencodeClient } from "@opencoder-ai/sdk/v2"
+import { createOpencodeClient } from "@opencode-ai/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "../session"
-import { NamedError } from "@opencoder-ai/util/error"
+import { NamedError } from "@opencode-ai/util/error"
 import { CopilotAuthPlugin } from "./copilot"
+import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
@@ -19,7 +19,11 @@ export namespace Plugin {
   const BUILTIN = ["opencode-anthropic-auth@0.0.13"]
 
   // Built-in plugins that are directly imported (not installed from npm)
-  const INTERNAL_PLUGINS: PluginFn[] = [CodexAuthPlugin, CopilotAuthPlugin]
+  const INTERNAL_PLUGINS: PluginInstance[] = [
+    CodexAuthPlugin as unknown as PluginInstance,
+    CopilotAuthPlugin as unknown as PluginInstance,
+    GitlabAuthPlugin as unknown as PluginInstance,
+  ]
 
   const state = Instance.state(async () => {
     const client = createOpencodeClient({
@@ -30,14 +34,12 @@ export namespace Plugin {
             Authorization: `Basic ${Buffer.from(`${Flag.OPENCODE_SERVER_USERNAME ?? "opencode"}:${Flag.OPENCODE_SERVER_PASSWORD}`).toString("base64")}`,
           }
         : undefined,
-      fetch: async (...args) => Server.Default().fetch(...args),
+      fetch: ((...args) => Server.Default().fetch(args[0] instanceof Request ? args[0] : new Request(args[0], args[1]))) as typeof fetch,
     })
-
     const config = await Config.get()
     const hooks: Hooks[] = []
-
     const input: PluginInput = {
-      client,
+      client: client as unknown as PluginInput["client"],
       project: Instance.project,
       worktree: Instance.worktree,
       directory: Instance.directory,
@@ -82,30 +84,27 @@ export namespace Plugin {
         })
         if (!plugin) continue
       }
-      const mod = await import(plugin).catch((err) => {
-        const message = err instanceof Error ? err.message : String(err)
-        log.error("failed to load plugin", { path: plugin, error: message })
-        Bus.publish(Session.Event.Error, {
-          error: new NamedError.Unknown({
-            message: `Failed to load plugin ${plugin}: ${message}`,
-          }).toObject(),
-        })
-        return null
-      })
-      if (!mod) continue
-
       // Prevent duplicate initialization when plugins export the same function
       // as both a named export and default export (e.g., `export const X` and `export default X`).
       // Object.entries(mod) would return both entries pointing to the same function reference.
-      const seen = new Set<PluginFn>()
-      for (const [_name, fn] of Object.entries(mod)) {
-        if (typeof fn !== "function") continue
-        const pluginFn = fn as PluginFn
-        if (seen.has(pluginFn)) continue
-        seen.add(pluginFn)
-        const init = await pluginFn(input)
-        hooks.push(init)
-      }
+      await import(plugin)
+        .then(async (mod) => {
+          const seen = new Set<PluginInstance>()
+          for (const [_name, fn] of Object.entries<PluginInstance>(mod)) {
+            if (seen.has(fn)) continue
+            seen.add(fn)
+            hooks.push(await fn(input))
+          }
+        })
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : String(err)
+          log.error("failed to load plugin", { path: plugin, error: message })
+          Bus.publish(Session.Event.Error, {
+            error: new NamedError.Unknown({
+              message: `Failed to load plugin ${plugin}: ${message}`,
+            }).toObject(),
+          })
+        })
     }
 
     return {
@@ -139,7 +138,7 @@ export namespace Plugin {
     const hooks = await state().then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
-      await hook.config?.(config)
+      await hook.config?.(config as never)
     }
     Bus.subscribeAll(async (input) => {
       const hooks = await state().then((x) => x.hooks)

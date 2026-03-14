@@ -6,10 +6,10 @@ import { SyncProvider, useSync } from "@/context/sync"
 import { LocalProvider } from "@/context/local"
 import { useGlobalSDK } from "@/context/global-sdk"
 
-import { DataProvider } from "@opencoder-ai/ui/context"
-import { base64Encode } from "@opencoder-ai/util/encode"
+import { DataProvider } from "@opencode-ai/ui/context"
+import { base64Encode } from "@opencode-ai/util/encode"
 import { decode64 } from "@/utils/base64"
-import { showToast } from "@opencoder-ai/ui/toast"
+import { showToast } from "@opencode-ai/ui/toast"
 import { useLanguage } from "@/context/language"
 function DirectoryDataProvider(props: ParentProps<{ directory: string }>) {
   const navigate = useNavigate()

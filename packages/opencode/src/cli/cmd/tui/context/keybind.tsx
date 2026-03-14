@@ -1,23 +1,22 @@
 import { createMemo } from "solid-js"
-import { useSync } from "@tui/context/sync"
 import { Keybind } from "@/util/keybind"
-import { Config } from "@/config/config"
 import { pipe, mapValues } from "remeda"
-import type { KeybindsConfig } from "@/config/config"
+import type { TuiConfig } from "@/config/tui"
 import type { ParsedKey, Renderable } from "@opentui/core"
 import { createStore } from "solid-js/store"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "./helper"
+import { useTuiConfig } from "./tui-config"
+
+export type KeybindKey = keyof NonNullable<TuiConfig.Info["keybinds"]> & string
 
 export const { use: useKeybind, provider: KeybindProvider } = createSimpleContext({
   name: "Keybind",
   init: () => {
-    const sync = useSync()
-    const keybinds = createMemo(() => {
-      const parsed = Config.Keybinds.safeParse((sync.data.config as { keybinds?: unknown }).keybinds ?? {})
-      const values = parsed.success ? parsed.data : Config.Keybinds.parse({})
+    const config = useTuiConfig()
+    const keybinds = createMemo<Record<string, Keybind.Info[]>>(() => {
       return pipe(
-        values,
+        (config.keybinds ?? {}) as Record<string, string>,
         mapValues((value) => Keybind.parse(value)),
       )
     })
@@ -81,7 +80,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
         }
         return Keybind.fromParsedKey(evt, store.leader)
       },
-      match(key: keyof KeybindsConfig, evt: ParsedKey) {
+      match(key: KeybindKey, evt: ParsedKey) {
         const keybind = keybinds()[key]
         if (!keybind) return false
         const parsed: Keybind.Info = result.parse(evt)
@@ -91,7 +90,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
           }
         }
       },
-      print(key: keyof KeybindsConfig) {
+      print(key: KeybindKey) {
         const first = keybinds()[key]?.at(0)
         if (!first) return ""
         const result = Keybind.toString(first)

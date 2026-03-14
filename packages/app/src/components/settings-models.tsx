@@ -1,10 +1,9 @@
-import { useFilteredList } from "@opencoder-ai/ui/hooks"
-import { ProviderIcon } from "@opencoder-ai/ui/provider-icon"
-import { Switch } from "@opencoder-ai/ui/switch"
-import { Icon } from "@opencoder-ai/ui/icon"
-import { IconButton } from "@opencoder-ai/ui/icon-button"
-import { TextField } from "@opencoder-ai/ui/text-field"
-import type { IconName } from "@opencoder-ai/ui/icons/provider"
+import { useFilteredList } from "@opencode-ai/ui/hooks"
+import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
+import { Switch } from "@opencode-ai/ui/switch"
+import { Icon } from "@opencode-ai/ui/icon"
+import { IconButton } from "@opencode-ai/ui/icon-button"
+import { TextField } from "@opencode-ai/ui/text-field"
 import { type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useModels } from "@/context/models"
@@ -99,7 +98,7 @@ export const SettingsModels: Component = () => {
               {(group) => (
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2 pb-2">
-                    <ProviderIcon id={group.category as IconName} class="size-5 shrink-0 icon-strong-base" />
+                    <ProviderIcon id={group.category} class="size-5 shrink-0 icon-strong-base" />
                     <span class="text-14-medium text-text-strong">{group.items[0].provider.name}</span>
                   </div>
                   <SettingsList>

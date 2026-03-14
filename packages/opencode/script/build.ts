@@ -12,8 +12,9 @@ const dir = path.resolve(__dirname, "..")
 
 process.chdir(dir)
 
+import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
-import { Script } from "@opencoder-ai/script"
+
 const modelsUrl = process.env.OPENCODE_MODELS_URL || "https://models.dev"
 // Fetch and generate models.dev snapshot
 const modelsData = process.env.MODELS_DEV_API_JSON

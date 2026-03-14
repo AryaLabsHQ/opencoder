@@ -17,7 +17,7 @@ import { Tool } from "./tool"
 import { Instance } from "../project/instance"
 import { Config } from "../config/config"
 import path from "path"
-import { type ToolContext as PluginToolContext, type ToolDefinition, type ToolResult } from "@opencoder-ai/plugin"
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
 import { ProviderID, type ModelID } from "../provider/schema"
@@ -73,20 +73,13 @@ export namespace ToolRegistry {
             ...ctx,
             directory: Instance.directory,
             worktree: Instance.worktree,
-            model: ctx.model,
           } as unknown as PluginToolContext
           const result = await def.execute(args as any, pluginCtx)
-          const normalized = typeof result === "string" ? { title: "", metadata: {}, output: result } : result
-          const out = await Truncate.output(normalized.output, {}, initCtx?.agent)
+          const out = await Truncate.output(result, {}, initCtx?.agent)
           return {
-            title: normalized.title,
-            output: out.truncated ? out.content : normalized.output,
-            metadata: {
-              ...normalized.metadata,
-              truncated: out.truncated,
-              outputPath: out.truncated ? out.outputPath : undefined,
-            },
-            attachments: normalized.attachments,
+            title: "",
+            output: out.truncated ? out.content : result,
+            metadata: { truncated: out.truncated, outputPath: out.truncated ? out.outputPath : undefined },
           }
         },
       }),
