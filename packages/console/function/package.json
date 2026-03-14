@@ -22,7 +22,7 @@
     "@ai-sdk/openai-compatible": "1.0.1",
     "@hono/zod-validator": "catalog:",
     "@opencode-ai/console-core": "workspace:*",
-    "@opencoder-ai/console-resource": "workspace:*",
+    "@opencode-ai/console-resource": "workspace:*",
     "@openauthjs/openauth": "0.0.0-20250322224806",
     "ai": "catalog:",
     "hono": "catalog:",
