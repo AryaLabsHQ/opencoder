@@ -626,7 +626,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const [session, messages, todo, diff] = await Promise.all([
             sdk.client.session.get({ sessionID }, { throwOnError: true }),
             sdk.client.session.messages({ sessionID, limit: 100 }),
-            sdk.client.session.todo.list({ sessionID }),
+            sdk.client.session.todo({ sessionID }),
             sdk.client.session.diff({ sessionID }),
           ])
           const agentHandle = resolveAgentHandle(messages.data ?? [], store.config.default_agent)
@@ -637,7 +637,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               if (match.found) draft.session[match.index] = session.data!
               if (!match.found) draft.session.splice(match.index, 0, session.data!)
               draft.todo[sessionID] = todo.data ?? []
-              draft.message[sessionID] = messages.data!.map((x) => x.info)
+              draft.message[sessionID] = messages.data!.map((x: any) => x.info)
               for (const message of messages.data!) {
                 draft.part[message.info.id] = message.parts
               }
