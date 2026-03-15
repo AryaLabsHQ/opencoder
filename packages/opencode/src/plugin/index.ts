@@ -30,7 +30,10 @@ export namespace Plugin {
             Authorization: `Basic ${Buffer.from(`${Flag.OPENCODE_SERVER_USERNAME ?? "opencode"}:${Flag.OPENCODE_SERVER_PASSWORD}`).toString("base64")}`,
           }
         : undefined,
-      fetch: async (...args) => Server.Default().fetch(...args),
+      fetch: ((input: URL | RequestInfo, init?: BunFetchRequestInit | RequestInit) => {
+        const req = input instanceof Request ? input : new Request(input, init)
+        return Server.Default().fetch(req)
+      }) as typeof fetch,
     })
 
     const config = await Config.get()

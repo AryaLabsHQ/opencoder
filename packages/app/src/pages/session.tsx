@@ -716,8 +716,8 @@ export default function Page() {
           refreshTimer = undefined
           if (params.id !== id) return
           untrack(() => {
-            if (stale) void sync.session.sync(id, { force: true })
-            void sync.session.todo(id, todos ? { force: true } : undefined)
+            if (stale) void sync.session.sync(id)
+            if (todos) void sync.session.todo(id)
           })
         }, 0)
       })
@@ -1152,7 +1152,7 @@ export default function Page() {
           diffTimer = window.setTimeout(() => {
             diffTimer = undefined
             if (sessionKey() !== key) return
-            void sync.session.diff(id, { force: true })
+            void sync.session.diff(id)
           }, 0)
         })
       },
@@ -1755,37 +1755,6 @@ export default function Page() {
               resumeScroll()
             }}
             onResponseSubmit={resumeScroll}
-            followup={
-              params.id
-                ? {
-                    queue: queueEnabled,
-                    items: followupDock(),
-                    sending: sendingFollowup(),
-                    edit: editingFollowup(),
-                    onQueue: queueFollowup,
-                    onAbort: () => {
-                      const id = params.id
-                      if (!id) return
-                      setFollowup("paused", id, true)
-                    },
-                    onSend: (id) => {
-                      void sendFollowup(params.id!, id, { manual: true })
-                    },
-                    onEdit: editFollowup,
-                    onEditLoaded: clearFollowupEdit,
-                  }
-                : undefined
-            }
-            revert={
-              rolled().length > 0
-                ? {
-                    items: rolled(),
-                    restoring: ui.restoring,
-                    disabled: ui.reverting,
-                    onRestore: restore,
-                  }
-                : undefined
-            }
             setPromptDockRef={(el) => {
               promptDock = el
             }}

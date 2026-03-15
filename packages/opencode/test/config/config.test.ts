@@ -782,7 +782,7 @@ test("serializes concurrent config dependency installs", async () => {
       code: 0,
       stdout: Buffer.alloc(0),
       stderr: Buffer.alloc(0),
-    }
+    } as any
   })
 
   try {
