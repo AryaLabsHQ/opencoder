@@ -1,10 +1,10 @@
 import { Component, For, Show, createMemo, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
-import { Button } from "@opencoder-ai/ui/button"
-import { Icon } from "@opencoder-ai/ui/icon"
-import { IconButton } from "@opencoder-ai/ui/icon-button"
-import { TextField } from "@opencoder-ai/ui/text-field"
-import { showToast } from "@opencoder-ai/ui/toast"
+import { Button } from "@opencode-ai/ui/button"
+import { Icon } from "@opencode-ai/ui/icon"
+import { IconButton } from "@opencode-ai/ui/icon-button"
+import { TextField } from "@opencode-ai/ui/text-field"
+import { showToast } from "@opencode-ai/ui/toast"
 import fuzzysort from "fuzzysort"
 import { formatKeybind, parseKeybind, useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
@@ -239,7 +239,7 @@ function useKeyCapture(input: {
         showToast({
           title: input.language.t("settings.shortcuts.conflict.title"),
           description: input.language.t("settings.shortcuts.conflict.description", {
-            keybind: formatKeybind(next, input.language.t),
+            keybind: formatKeybind(next),
             titles: [...conflicts.values()].join(", "),
           }),
         })

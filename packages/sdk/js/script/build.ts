@@ -16,7 +16,7 @@ await createClient({
   output: {
     path: "./src/v2/gen",
     tsConfigPath: path.join(dir, "tsconfig.json"),
-    clean: true,
+    clean: false,
   },
   plugins: [
     {
@@ -37,6 +37,14 @@ await createClient({
     },
   ],
 })
+
+const gen = path.join(dir, "src/v2/gen")
+const trans = new Bun.Transpiler({ loader: "ts" })
+for await (const file of new Bun.Glob("**/*.ts").scan({ cwd: gen, onlyFiles: true })) {
+  const abs = path.join(gen, file)
+  const src = await Bun.file(abs).text()
+  await Bun.write(abs.replace(/\.ts$/, ".js"), trans.transformSync(src))
+}
 
 await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`

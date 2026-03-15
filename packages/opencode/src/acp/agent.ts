@@ -1530,7 +1530,12 @@ export namespace ACP {
   async function defaultModel(config: ACPConfig, cwd?: string): Promise<{ providerID: ProviderID; modelID: ModelID }> {
     const sdk = config.sdk
     const configured = config.defaultModel
-    if (configured) return configured
+    if (configured) {
+      return {
+        providerID: configured.providerID as ProviderID,
+        modelID: configured.modelID as ModelID,
+      }
+    }
 
     const directory = cwd ?? process.cwd()
 

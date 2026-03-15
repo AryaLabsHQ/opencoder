@@ -348,12 +348,13 @@ const createPlatform = (): Platform => {
       await commands.setWslConfig({ enabled })
     },
 
-    getDefaultServerUrl: async () => {
+    getDefaultServer: async () => {
       const result = await commands.getDefaultServerUrl().catch(() => null)
-      return result
+      if (!result) return null
+      return ServerConnection.Key.make(result)
     },
 
-    setDefaultServerUrl: async (url: string | null) => {
+    setDefaultServer: async (url) => {
       await commands.setDefaultServerUrl(url)
     },
 
@@ -412,11 +413,7 @@ void listenForDeepLinks()
 render(() => {
   const platform = createPlatform()
 
-  const [defaultServer] = createResource(() =>
-    platform.getDefaultServerUrl?.().then((url) => {
-      if (url) return ServerConnection.key({ type: "http", http: { url } })
-    }),
-  )
+  const [defaultServer] = createResource(() => platform.getDefaultServer?.())
 
   function handleClick(e: MouseEvent) {
     const link = (e.target as HTMLElement).closest("a.external-link") as HTMLAnchorElement | null
@@ -443,14 +440,12 @@ render(() => {
               username: data.username ?? undefined,
               password: data.password ?? undefined,
             }
-            const server: ServerConnection.Any = data.is_sidecar
-              ? {
-                  displayName: t("desktop.server.local"),
-                  type: "sidecar",
-                  variant: "base",
-                  http,
-                }
-              : { type: "http", http }
+            const server: ServerConnection.Any = {
+              displayName: t("desktop.server.local"),
+              type: "sidecar",
+              variant: "base",
+              http,
+            }
 
             function Inner() {
               const cmd = useCommand()

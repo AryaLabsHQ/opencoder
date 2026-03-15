@@ -313,7 +313,6 @@ render(() => {
                 defaultServer={defaultServer.latest ?? ServerConnection.Key.make("sidecar")}
                 servers={servers()}
                 router={MemoryRouter}
-                disableHealthCheck={(windowCount() ?? 0) > 1}
               >
                 <Inner />
               </AppInterface>
