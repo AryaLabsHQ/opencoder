@@ -11,6 +11,8 @@ import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
 import { Permission } from "@/permission"
+import { Bus } from "../bus"
+import { Provider } from "../provider/provider"
 
 const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
@@ -105,10 +107,18 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const msg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
       if (msg.info.role !== "assistant") throw new Error("Not an assistant message")
 
-      const model = agent.model ?? {
+      const messageModel = {
         modelID: msg.info.modelID,
         providerID: msg.info.providerID,
       }
+      const useMessageModel = msg.info.agent === agent.name
+      const defaultModel = await Provider.defaultModel()
+      const model = useMessageModel
+        ? messageModel
+        : (agent.model ?? {
+            modelID: defaultModel.modelID,
+            providerID: defaultModel.providerID,
+          })
 
       ctx.metadata({
         title: params.description,
@@ -119,6 +129,31 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       })
 
       const messageID = MessageID.ascending()
+      const parts: Record<string, { id: string; tool: string; state: { status: string; title?: string } }> = {}
+      const unsub = Bus.subscribe(MessageV2.Event.PartUpdated, async (evt) => {
+        if (evt.properties.sessionID !== session.id) return
+        if (evt.properties.part.messageID === messageID) return
+        if (evt.properties.part.type !== "tool") return
+        const part = evt.properties.part
+        parts[part.id] = {
+          id: part.id,
+          tool: part.tool,
+          state: {
+            status: part.state.status,
+            title: part.state.status === "completed" ? part.state.title : undefined,
+          },
+        }
+        ctx.metadata({
+          title: params.description,
+          metadata: {
+            summary: Object.values(parts).sort((a, b) => a.id.localeCompare(b.id)),
+            subagent_type: params.subagent_type,
+            sessionId: session.id,
+            model,
+            description: params.description,
+          },
+        })
+      })
 
       function cancel() {
         SessionPrompt.cancel(session.id)
@@ -141,8 +176,22 @@ export const TaskTool = Tool.define("task", async (ctx) => {
           ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
         },
         parts: promptParts,
+      }).finally(() => {
+        unsub()
       })
 
+      const messages = await Session.messages({ sessionID: session.id })
+      const summary = messages
+        .filter((x) => x.info.role === "assistant")
+        .flatMap((msg) => msg.parts.filter((x: any) => x.type === "tool") as MessageV2.ToolPart[])
+        .map((part) => ({
+          id: part.id,
+          tool: part.tool,
+          state: {
+            status: part.state.status,
+            title: part.state.status === "completed" ? part.state.title : undefined,
+          },
+        }))
       const text = result.parts.findLast((x) => x.type === "text")?.text ?? ""
 
       const output = [
@@ -156,8 +205,11 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       return {
         title: params.description,
         metadata: {
+          summary,
+          subagent_type: params.subagent_type,
           sessionId: session.id,
           model,
+          description: params.description,
         },
         output,
       }
