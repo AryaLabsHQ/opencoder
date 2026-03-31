@@ -26,7 +26,7 @@ import type { InitStep, ServerReadyData, SqliteMigrationProgress, WslConfig } fr
 import { checkAppExists, resolveAppPath, wslPath } from "./apps"
 import type { CommandChild } from "./cli"
 import { installCli, syncCli } from "./cli"
-import { fixPath } from "./shell-env"
+import { syncShellPath } from "./shell-env"
 import { CHANNEL, UPDATER_ENABLED } from "./constants"
 import { registerIpcHandlers, sendDeepLinks, sendMenuCommand, sendSqliteMigrationProgress } from "./ipc"
 import { initLogging } from "./logging"
@@ -95,7 +95,14 @@ function setupApp() {
 
   void app.whenReady().then(async () => {
     // migrate()
-    fixPath()
+    try {
+      const result = syncShellPath()
+      if (result?.updated) {
+        logger.log("shell PATH synced", { shell: result.shell, entries: result.entries })
+      }
+    } catch (error) {
+      logger.warn("shell PATH sync failed", error)
+    }
     app.setAsDefaultProtocolClient("opencode")
     setDockIcon()
     setupAutoUpdater()

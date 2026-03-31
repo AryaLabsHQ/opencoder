@@ -9,6 +9,7 @@ import { app } from "electron"
 import treeKill from "tree-kill"
 
 import { WSL_ENABLED_KEY } from "./constants"
+import { buildUnixShellCommand, resolveShell } from "./shell-env"
 import { store } from "./store"
 
 const CLI_INSTALL_DIR = ".opencode/bin"
@@ -232,11 +233,11 @@ function buildCommand(args: string, env: Record<string, string>) {
     return { cmd: sidecar, cmdArgs: args.split(" ") }
   }
 
-  const sidecar = getSidecarPath()
-  const shell = process.env.SHELL || "/bin/sh"
-  const line = shell.endsWith("/nu") ? `^\"${sidecar}\" ${args}` : `\"${sidecar}\" ${args}`
+  const shell = resolveShell(process.env, process.platform)
+  const result = buildUnixShellCommand(args, getSidecarPath(), shell)
+  const line = result.cmdArgs[2] ?? ""
   console.log(`[cli] Unix mode, shell: ${shell}, command: ${line}`)
-  return { cmd: shell, cmdArgs: ["-l", "-c", line] }
+  return result
 }
 
 function envPrefix(env: Record<string, string>) {
